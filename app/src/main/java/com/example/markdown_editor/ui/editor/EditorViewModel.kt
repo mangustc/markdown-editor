@@ -17,6 +17,24 @@ class EditorViewModel : ViewModel() {
     private val _uiState = MutableStateFlow(EditorUiState())
     val uiState: StateFlow<EditorUiState> = _uiState.asStateFlow()
 
+    fun onEvent(event: EditorEvent) {
+        when (event) {
+            is EditorEvent.InsertSyntax -> insertSyntax(event.syntax, event.cursorOffset)
+        }
+    }
+
+    private fun insertSyntax(syntax: String, cursorOffset: Int) {
+        val current = _uiState.value.textFieldValue
+        val cursor = current.selection.start
+        val newText = current.text.substring(0, cursor) + syntax + current.text.substring(cursor)
+        val newCursor = cursor + cursorOffset
+        val newValue = current.copy(
+            text = newText,  // TextFieldValue accepts plain text here
+            selection = androidx.compose.ui.text.TextRange(newCursor)
+        )
+        onContentChanged(newValue)
+    }
+
     fun onContentChanged(newValue: TextFieldValue) {
         val textChanged = newValue.text != _uiState.value.textFieldValue.text
 

@@ -14,15 +14,8 @@ import kotlinx.coroutines.withContext
 
 class EditorViewModel : ViewModel() {
 
-    private val initialContent =
-        "# Example Heading\n*Italic text*\n`Inline code`\n\n```\nCode block\n```"
-
     private val _uiState = MutableStateFlow(EditorUiState())
     val uiState: StateFlow<EditorUiState> = _uiState.asStateFlow()
-
-    init {
-        onContentChanged(TextFieldValue(initialContent))
-    }
 
     fun onContentChanged(newValue: TextFieldValue) {
         val textChanged = newValue.text != _uiState.value.textFieldValue.text

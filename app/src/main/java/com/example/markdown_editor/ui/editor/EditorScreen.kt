@@ -10,9 +10,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.viewmodel.compose.viewModel
 
 @Composable
-fun EditorScreen(viewModel: EditorViewModel) {
+fun EditorScreen(viewModel: EditorViewModel = viewModel()) {
     val uiState by viewModel.uiState.collectAsState()
 
     val visualTransformation = remember(uiState.annotatedString) {

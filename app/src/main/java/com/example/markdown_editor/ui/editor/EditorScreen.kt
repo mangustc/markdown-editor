@@ -15,20 +15,17 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 @Composable
 fun EditorScreen(viewModel: EditorViewModel = viewModel()) {
     val uiState by viewModel.uiState.collectAsState()
-
     val visualTransformation = remember(uiState.annotatedString) {
         MarkdownVisualTransformation(uiState.annotatedString)
     }
 
-    Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-        BasicTextField(
-            value = uiState.textFieldValue,
-            onValueChange = { viewModel.onContentChanged(it) },
-            visualTransformation = visualTransformation,
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(16.dp)
-        )
-    }
+    // No Scaffold here — AppScaffold owns it
+    BasicTextField(
+        value = uiState.textFieldValue,
+        onValueChange = { viewModel.onContentChanged(it) },
+        visualTransformation = visualTransformation,
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    )
 }

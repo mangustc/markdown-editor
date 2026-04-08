@@ -1,8 +1,9 @@
 package com.example.markdown_editor.ui.editor
 
-import com.example.markdown_editor.domain.model.SpanInfo
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.input.TextFieldValue
 
 data class EditorUiState(
-    val content: String = "",
-    val spans: List<SpanInfo> = emptyList()
+    val textFieldValue: TextFieldValue = TextFieldValue(),
+    val annotatedString: AnnotatedString = AnnotatedString("")
 )

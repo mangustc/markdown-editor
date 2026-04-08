@@ -1,11 +1,10 @@
 package com.example.markdown_editor.ui.editor
 
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.markdown_editor.domain.parser.MarkdownParser
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -15,23 +14,34 @@ import kotlinx.coroutines.withContext
 
 class EditorViewModel : ViewModel() {
 
+    private val initialContent =
+        "# Example Heading\n*Italic text*\n`Inline code`\n\n```\nCode block\n```"
+
     private val _uiState = MutableStateFlow(EditorUiState())
     val uiState: StateFlow<EditorUiState> = _uiState.asStateFlow()
 
-    private var parseJob: Job? = null
+    init {
+        onContentChanged(TextFieldValue(initialContent))
+    }
 
-    // Called by the UI when the user types — this is the "event flowing up"
-    fun onContentChanged(text: String) {
-        // Optimistically update content immediately so the cursor never fights us
-        _uiState.update { it.copy(content = text) }
+    fun onContentChanged(newValue: TextFieldValue) {
+        val textChanged = newValue.text != _uiState.value.textFieldValue.text
 
-        parseJob?.cancel()
-        parseJob = viewModelScope.launch {
-            delay(120) // debounce
-            val spans = withContext(Dispatchers.Default) {
-                MarkdownParser.parse(text)
-            }
-            _uiState.update { it.copy(spans = spans) }
+        if (!textChanged) {
+            _uiState.update { it.copy(textFieldValue = newValue) }
+            return
+        }
+
+        // Compute spans synchronously so textFieldValue and annotatedString
+        // are always updated in the same state emission — no gap, no flash.
+        val spans = MarkdownParser.parse(newValue.text)
+        val annotated = MarkdownAnnotator.annotate(newValue.text, spans)
+
+        _uiState.update {
+            it.copy(
+                textFieldValue = newValue,
+                annotatedString = annotated
+            )
         }
     }
 }

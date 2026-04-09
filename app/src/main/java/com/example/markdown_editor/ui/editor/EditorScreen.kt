@@ -1,5 +1,6 @@
 package com.example.markdown_editor.ui.editor
 
+import android.net.Uri
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -10,6 +11,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.FormatBold
 import androidx.compose.material.icons.filled.FormatItalic
+import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -21,7 +23,14 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun EditorScreen(viewModel: EditorViewModel = viewModel()) {
+fun EditorScreen(
+    activeNoteUri: Uri? = null,
+    viewModel: EditorViewModel = viewModel()
+) {
+    // Load note content whenever the active URI changes
+    LaunchedEffect(activeNoteUri) {
+        activeNoteUri?.let { viewModel.onNoteOpened(it) }
+    }
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val visualTransformation = remember(uiState.annotatedString) {
         MarkdownVisualTransformation(uiState.annotatedString)
@@ -46,6 +55,9 @@ fun EditorScreen(viewModel: EditorViewModel = viewModel()) {
                 }
                 IconButton(onClick = { viewModel.onEvent(EditorEvent.InsertSyntax("``", cursorOffset = 1)) }) {
                     Icon(Icons.Default.Code, contentDescription = "Inline code")
+                }
+                IconButton(onClick = { viewModel.onSave() }) {
+                    Icon(Icons.Default.Save, contentDescription = "Save file")
                 }
             }
         }

@@ -1,7 +1,9 @@
 package com.example.markdown_editor.ui.editor
 
+import android.app.Application
+import android.net.Uri
 import androidx.compose.ui.text.input.TextFieldValue
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.markdown_editor.domain.parser.MarkdownParser
 import kotlinx.coroutines.Dispatchers
@@ -12,8 +14,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class EditorViewModel : ViewModel() {
-
+class EditorViewModel(application: Application) : AndroidViewModel(application) {
+    private val context = application
     private val _uiState = MutableStateFlow(EditorUiState())
     val uiState: StateFlow<EditorUiState> = _uiState.asStateFlow()
 
@@ -53,6 +55,31 @@ class EditorViewModel : ViewModel() {
                 textFieldValue = newValue,
                 annotatedString = annotated
             )
+        }
+    }
+
+    fun onNoteOpened(uri: Uri) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val text = context.contentResolver
+                .openInputStream(uri)
+                ?.bufferedReader()
+                ?.readText()
+                ?: return@launch
+            withContext(Dispatchers.Main) {
+                onContentChanged(TextFieldValue(text))
+            }
+            // Track URI so save knows where to write
+            _uiState.update { it.copy(activeNoteUri = uri) }
+        }
+    }
+
+    fun onSave() {
+        val uri = _uiState.value.activeNoteUri ?: return
+        val text = _uiState.value.textFieldValue.text
+        viewModelScope.launch(Dispatchers.IO) {
+            context.contentResolver.openOutputStream(uri, "wt")
+                ?.bufferedWriter()
+                ?.use { it.write(text) }
         }
     }
 }

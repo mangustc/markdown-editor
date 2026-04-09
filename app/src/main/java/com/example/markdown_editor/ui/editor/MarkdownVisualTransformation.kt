@@ -12,7 +12,7 @@ class MarkdownVisualTransformation(
     override fun filter(text: AnnotatedString): TransformedText {
         // Text length is identical — offset mapping is 1:1
         return TransformedText(
-            text = if (annotated.text == text.text) annotated else text,
+            text = annotated,
             offsetMapping = OffsetMapping.Identity
         )
     }

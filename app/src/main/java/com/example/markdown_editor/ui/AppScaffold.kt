@@ -1,18 +1,30 @@
 package com.example.markdown_editor.ui
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.navigation.NavDestination.Companion.hierarchy
-import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.markdown_editor.ui.editor.EditorScreen
 import com.example.markdown_editor.ui.navigation.AppDestination
@@ -25,40 +37,79 @@ fun AppScaffold() {
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
 
-    val navBackStackEntry by navController.currentBackStackEntryAsState()
-    val currentDestination = navBackStackEntry?.destination
+    // Activity-scoped so EditorScreen can share the same instance
+    val appViewModel: AppViewModel = viewModel()
+    val uiState by appViewModel.uiState.collectAsStateWithLifecycle()
 
-    val destinations = listOf(
-        AppDestination.Editor,
-        AppDestination.FileList,
-        AppDestination.Settings,
-    )
+    // Folder picker launcher
+    val folderPicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocumentTree()
+    ) { uri ->
+        uri?.let { appViewModel.onProjectSelected(it) }
+    }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
             ModalDrawerSheet {
-                destinations.forEach { destination ->
-                    val selected = currentDestination
-                        ?.hierarchy
-                        ?.any { it.route == destination.route } == true
+                // Project picker button at the top
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Button(
+                        onClick = { folderPicker.launch(null) },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Default.FolderOpen, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text(uiState.project?.name ?: "Select project folder")
+                    }
+                }
 
-                    NavigationDrawerItem(
-                        label = { Text(destination.route) },
-                        selected = selected,
-                        onClick = {
-                            scope.launch { drawerState.close() }
-                            navController.navigate(destination.route) {
-                                // Pop up to the start destination to avoid
-                                // building up a large back stack
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
-                                }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                        }
+                HorizontalDivider()
+
+                if (uiState.project != null) {
+                    Button(
+                        onClick = { appViewModel.showCreateNoteDialog() },
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
+                    ) {
+                        Text("Create New Note")
+                    }
+                }
+                // Notes list
+                if (uiState.isLoadingNotes) {
+                    Box(
+                        modifier = Modifier.fillMaxWidth().padding(16.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
+                    }
+                } else if (uiState.notes.isEmpty()) {
+                    Text(
+                        text = if (uiState.project == null)
+                            "Open a project folder to see notes"
+                        else
+                            "No notes yet",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(16.dp)
                     )
+                } else {
+                    LazyColumn {
+                        items(uiState.notes) { note ->
+                            NavigationDrawerItem(
+                                label = { Text(note.name) },
+                                selected = note.uri == uiState.activeNoteUri,
+                                onClick = {
+                                    appViewModel.onNoteSelected(note)
+                                    scope.launch { drawerState.close() }
+                                    navController.navigate(AppDestination.Editor.route) {
+                                        launchSingleTop = true
+                                        restoreState = true
+                                    }
+                                },
+                                modifier = Modifier.padding(horizontal = 8.dp)
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -66,7 +117,13 @@ fun AppScaffold() {
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = { Text(currentDestination?.route ?: "") },
+                    title = {
+                        Text(uiState.notes
+                            .find { it.uri == uiState.activeNoteUri }?.name
+                            ?: uiState.project?.name
+                            ?: "Markdown Editor"
+                        )
+                    },
                     navigationIcon = {
                         IconButton(onClick = { scope.launch { drawerState.open() } }) {
                             Icon(Icons.Default.Menu, contentDescription = "Open menu")
@@ -80,8 +137,60 @@ fun AppScaffold() {
                 startDestination = AppDestination.Editor.route,
                 modifier = Modifier.padding(innerPadding)
             ) {
-                composable(AppDestination.Editor.route)   { EditorScreen() }
+                composable(AppDestination.Editor.route) {
+                    EditorScreen(activeNoteUri = uiState.activeNoteUri)
+                }
             }
         }
     }
+    if (uiState.isCreateNoteDialogVisible) {
+        CreateNoteDialog(
+            onDismissRequest = { appViewModel.dismissCreateNoteDialog() },
+            onConfirmCreate = { name ->
+                appViewModel.onCreateNote()
+                appViewModel.dismissCreateNoteDialog()
+            },
+            initialName = uiState.newNoteNameInput,
+            onNameChange = { newName ->
+                appViewModel.updateNewNoteName(newName)
+            }
+        )
+    }
+}
+
+@Composable
+fun CreateNoteDialog(
+    onDismissRequest: () -> Unit,
+    onConfirmCreate: (String) -> Unit,
+    initialName: String,
+    onNameChange: (String) -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismissRequest,
+        title = { Text("New Note") },
+        text = {
+            Column {
+                Text("Enter a name for your new markdown file:")
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = initialName,
+                    onValueChange = { onNameChange(it) },
+                    label = { Text("Note Name") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    if (initialName.isNotBlank()) {
+                        onConfirmCreate("Placeholder Name")
+                    }
+                }
+            ) { Text("Create") }
+        },
+        dismissButton = {
+            OutlinedButton(onClick = onDismissRequest) { Text("Cancel") }
+        }
+    )
 }

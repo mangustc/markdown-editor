@@ -12,4 +12,8 @@ data class AppUiState(
 
     val isCreateNoteDialogVisible: Boolean = false,
     val newNoteNameInput: String = "",
+
+    val searchQuery: String = "",
+    val searchResults: List<Note>? = null,   // null = not searching, empty list = no results
+    val isSearching: Boolean = false
 )

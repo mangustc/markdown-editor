@@ -12,8 +12,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -37,22 +39,22 @@ fun AppScaffold() {
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
 
-    // Activity-scoped so EditorScreen can share the same instance
     val appViewModel: AppViewModel = viewModel()
     val uiState by appViewModel.uiState.collectAsStateWithLifecycle()
 
-    // Folder picker launcher
     val folderPicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocumentTree()
     ) { uri ->
         uri?.let { appViewModel.onProjectSelected(it) }
     }
 
+    val displayedNotes = uiState.searchResults ?: uiState.notes
+    val isSearchActive = uiState.searchQuery.isNotEmpty()
+
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
             ModalDrawerSheet {
-                // Project picker button at the top
                 Column(modifier = Modifier.padding(16.dp)) {
                     Button(
                         onClick = { folderPicker.launch(null) },
@@ -66,48 +68,92 @@ fun AppScaffold() {
 
                 HorizontalDivider()
 
+                // Search bar — only shown when a project is open
                 if (uiState.project != null) {
+                    SearchBar(
+                        inputField = {
+                            SearchBarDefaults.InputField(
+                                query = uiState.searchQuery,
+                                onQueryChange = { appViewModel.onSearchQueryChanged(it) },
+                                onSearch = {},
+                                expanded = false,
+                                onExpandedChange = {},
+                                placeholder = { Text("Search…") },
+                                leadingIcon = {
+                                    Icon(Icons.Default.Search, contentDescription = "Search")
+                                },
+                                trailingIcon = {
+                                    if (isSearchActive) {
+                                        IconButton(onClick = { appViewModel.onSearchQueryChanged("") }) {
+                                            Icon(Icons.Default.Close, contentDescription = "Clear search")
+                                        }
+                                    }
+                                }
+                            )
+                        },
+                        expanded = false,
+                        onExpandedChange = {},
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                    ) {}
+
                     Button(
                         onClick = { appViewModel.showCreateNoteDialog() },
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 4.dp)
                     ) {
                         Text("Create New Note")
                     }
                 }
+
                 // Notes list
                 if (uiState.isLoadingNotes) {
                     Box(
-                        modifier = Modifier.fillMaxWidth().padding(16.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         CircularProgressIndicator()
                     }
-                } else if (uiState.notes.isEmpty()) {
+                } else if (displayedNotes.isEmpty()) {
                     Text(
-                        text = if (uiState.project == null)
-                            "Open a project folder to see notes"
-                        else
-                            "No notes yet",
+                        text = when {
+                            uiState.project == null -> "Open a project folder to see notes"
+                            uiState.searchResults != null -> "No notes match your search"
+                            else -> "No notes yet"
+                        },
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(16.dp)
                     )
                 } else {
-                    LazyColumn {
-                        items(uiState.notes) { note ->
-                            NavigationDrawerItem(
-                                label = { Text(note.name) },
-                                selected = note.uri == uiState.activeNoteUri,
-                                onClick = {
-                                    appViewModel.onNoteSelected(note)
-                                    scope.launch { drawerState.close() }
-                                    navController.navigate(AppDestination.Editor.route) {
-                                        launchSingleTop = true
-                                        restoreState = true
-                                    }
-                                },
-                                modifier = Modifier.padding(horizontal = 8.dp)
-                            )
+                    if (uiState.isSearching) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            contentAlignment = Alignment.Center
+                        ) { CircularProgressIndicator() }
+                    } else {
+                        LazyColumn {
+                            items(displayedNotes) { note ->
+                                NavigationDrawerItem(
+                                    label = { Text(note.name) },
+                                    selected = note.uri == uiState.activeNoteUri,
+                                    onClick = {
+                                        appViewModel.onNoteSelected(note)
+                                        scope.launch { drawerState.close() }
+                                        navController.navigate(AppDestination.Editor.route) {
+                                            launchSingleTop = true
+                                            restoreState = true
+                                        }
+                                    },
+                                    modifier = Modifier.padding(horizontal = 8.dp)
+                                )
+                            }
                         }
                     }
                 }
@@ -118,10 +164,11 @@ fun AppScaffold() {
             topBar = {
                 TopAppBar(
                     title = {
-                        Text(uiState.notes
-                            .find { it.uri == uiState.activeNoteUri }?.name
-                            ?: uiState.project?.name
-                            ?: "Markdown Editor"
+                        Text(
+                            uiState.notes
+                                .find { it.uri == uiState.activeNoteUri }?.name
+                                ?: uiState.project?.name
+                                ?: "Markdown Editor"
                         )
                     },
                     navigationIcon = {
@@ -143,6 +190,7 @@ fun AppScaffold() {
             }
         }
     }
+
     if (uiState.isCreateNoteDialogVisible) {
         CreateNoteDialog(
             onDismissRequest = { appViewModel.dismissCreateNoteDialog() },

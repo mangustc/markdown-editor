@@ -3,9 +3,13 @@ package com.example.markdown_editor.ui
 import android.app.Application
 import android.content.Context
 import android.net.Uri
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.markdown_editor.data.model.SearchQuery
 import com.example.markdown_editor.data.repository.ProjectRepositoryImpl
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -65,6 +69,29 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    private var searchJob: Job? = null
+    fun onSearchQueryChanged(raw: String) {
+        _uiState.update { it.copy(searchQuery = raw) }
+
+        val project = _uiState.value.project ?: run {
+            _uiState.update { it.copy(searchResults = null) }
+            return
+        }
+
+        val parsed = SearchQuery.parse(raw.trim())
+        if (parsed.isEmpty) {
+            searchJob?.cancel()
+            _uiState.update { it.copy(searchResults = null, isSearching = false) }
+            return
+        }
+
+        searchJob?.cancel()
+        searchJob = viewModelScope.launch {
+            _uiState.update { it.copy(isSearching = true) }
+            val results = repository.searchNotes(project, parsed)
+            _uiState.update { it.copy(searchResults = results, isSearching = false) }
+        }
+    }
     private fun loadSavedProject() {
         viewModelScope.launch {
             val project = repository.loadSavedProject()

@@ -1,4 +1,4 @@
-package com.example.markdown_editor.ui.editor
+package com.example.markdown_editor.ui.viewmodel
 
 sealed class EditorEvent {
     // cursorOffset: how many chars from the start of the inserted syntax

@@ -31,6 +31,7 @@ import androidx.navigation.compose.rememberNavController
 import com.example.markdown_editor.ui.editor.EditorScreen
 import com.example.markdown_editor.ui.messenger.MessengerScreen
 import com.example.markdown_editor.ui.navigation.AppDestination
+import com.example.markdown_editor.ui.viewmodel.AppViewModel
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -198,7 +199,7 @@ fun AppScaffold() {
                 modifier = Modifier.padding(innerPadding)
             ) {
                 composable(AppDestination.Editor.route) {
-                    EditorScreen(activeNoteUri = uiState.activeNoteUri)
+                    EditorScreen(viewModel = appViewModel)
                 }
                 composable(AppDestination.Messenger.route) {
                     // Pass necessary context/VM setup here (Requires AppViewModel to manage this state)

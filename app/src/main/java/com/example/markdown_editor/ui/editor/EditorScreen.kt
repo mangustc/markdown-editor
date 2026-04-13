@@ -19,21 +19,22 @@ import androidx.compose.ui.focus.onFocusEvent
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.markdown_editor.ui.viewmodel.AppViewModel
+import com.example.markdown_editor.ui.viewmodel.EditorEvent
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun EditorScreen(
-    activeNoteUri: Uri? = null,
-    viewModel: EditorViewModel = viewModel()
+    viewModel: AppViewModel
 ) {
-    // Load note content whenever the active URI changes
-    LaunchedEffect(activeNoteUri) {
-        activeNoteUri?.let { viewModel.onNoteOpened(it) }
-    }
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val visualTransformation = remember(uiState.annotatedString) {
-        MarkdownVisualTransformation(uiState.annotatedString)
+    // Load note content whenever the active URI changes
+    LaunchedEffect(uiState.activeNoteUri) {
+        uiState.activeNoteUri?.let { viewModel.editorOnNoteOpened(it) }
+    }
+    val visualTransformation = remember(uiState.editorAnnotatedString) {
+        MarkdownVisualTransformation(uiState.editorAnnotatedString)
     }
 
     val scrollState = rememberScrollState()
@@ -47,24 +48,24 @@ fun EditorScreen(
                 modifier = Modifier.imePadding(), // always sits above the keyboard
                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
             ) {
-                IconButton(onClick = { viewModel.onEvent(EditorEvent.InsertSyntax("****", cursorOffset = 2)) }) {
+                IconButton(onClick = { viewModel.editorOnEvent(EditorEvent.InsertSyntax("****", cursorOffset = 2)) }) {
                     Icon(Icons.Default.FormatBold, contentDescription = "Bold")
                 }
-                IconButton(onClick = { viewModel.onEvent(EditorEvent.InsertSyntax("**", cursorOffset = 1)) }) {
+                IconButton(onClick = { viewModel.editorOnEvent(EditorEvent.InsertSyntax("**", cursorOffset = 1)) }) {
                     Icon(Icons.Default.FormatItalic, contentDescription = "Italic")
                 }
-                IconButton(onClick = { viewModel.onEvent(EditorEvent.InsertSyntax("``", cursorOffset = 1)) }) {
+                IconButton(onClick = { viewModel.editorOnEvent(EditorEvent.InsertSyntax("``", cursorOffset = 1)) }) {
                     Icon(Icons.Default.Code, contentDescription = "Inline code")
                 }
-                IconButton(onClick = { viewModel.onSave() }) {
+                IconButton(onClick = { viewModel.editorOnSave() }) {
                     Icon(Icons.Default.Save, contentDescription = "Save file")
                 }
             }
         }
     ) { innerPadding ->
         BasicTextField(
-            value = uiState.textFieldValue,
-            onValueChange = { viewModel.onContentChanged(it) },
+            value = uiState.editorTextFieldValue,
+            onValueChange = { viewModel.editorOnContentChanged(it) },
             visualTransformation = visualTransformation,
             modifier = Modifier
                 .fillMaxSize()

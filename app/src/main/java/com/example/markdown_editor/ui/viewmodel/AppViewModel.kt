@@ -14,9 +14,11 @@ import com.example.markdown_editor.domain.parser.MarkdownParser
 import com.example.markdown_editor.ui.editor.MarkdownAnnotator
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -34,6 +36,15 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         loadSavedProject()
     }
 
+    sealed class NavigationEvent {
+        data class GoToEditor(val note: Note) : NavigationEvent()
+        object OpenDrawer : NavigationEvent()
+        object CloseDrawer : NavigationEvent()
+    }
+
+    private val _navigationEvents = Channel<NavigationEvent>(Channel.BUFFERED)
+    val navigationEvents = _navigationEvents.receiveAsFlow()
+
     // Called with the URI returned by the system folder picker
     fun onProjectSelected(uri: Uri) {
         viewModelScope.launch {
@@ -47,6 +58,10 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     fun onNoteSelected(note: Note) {
         _uiState.update { it.copy(activeNote = note) }
+        viewModelScope.launch {
+            _navigationEvents.send(NavigationEvent.CloseDrawer)
+            _navigationEvents.send(NavigationEvent.GoToEditor(note))
+        }
     }
 
     fun showCreateNoteDialog() {
@@ -159,7 +174,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     fun messengerOnMessengerOpened(project: Project) {
         viewModelScope.launch {
-            _uiState.update { it.copy(project = project) }
+            _uiState.update { it.copy(project = project, messengerIsLoading = true) }
 
             val notes = repository.searchNotes(project, SearchQuery(tagFilters = listOf("quick-note"))).map { note ->
                 try {
@@ -171,28 +186,43 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             }
 
             _uiState.update {
-                it.copy(messengerNotesList = notes)
+                it.copy(messengerNotesList = notes, messengerIsLoading = false)
             }
         }
     }
 
-    fun messengerOnNoteClicked(note: Note) {
-        // When user clicks note in messenger feed, switch to EditorScreen
-        // This requires AppViewModel/AppScaffold coordination, but for VM logic:
-        // Emit event or callback to trigger navigation to EditorScreen with this note's URI.
+    fun messengerOnNewNoteTextChanged(text: String) {
+        _uiState.update { it.copy(messengerNewNoteText = text) }
     }
 
-    fun messengerOnCreateNote() {
+    fun messengerOnSendNote() {
         val project = _uiState.value.project ?: return
-        val name = "quick-note-${java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")}"
+        val text = _uiState.value.messengerNewNoteText.trim()
+        if (text.isBlank()) return
+
+        // Generate a timestamped filename
+        val timestamp = java.time.format.DateTimeFormatter
+            .ofPattern("yyyyMMdd_HHmmss")
+            .withZone(java.time.ZoneId.systemDefault())
+            .format(java.time.Instant.now())
+        val name = "quick-note-$timestamp"
         val tags = listOf("quick-note")
 
         viewModelScope.launch(Dispatchers.IO) {
-            repository.createNote(project, name, tags)
-                ?.let { _ ->
-                    messengerOnMessengerOpened(project)
-                    loadNotes(project)
+            val uri = repository.createNote(project, name, tags)
+            if (uri != null) {
+                // Write the message body into the newly created note
+                val newNote = repository.getNoteByUri(uri)
+                // Append text after the front matter
+                val currentContent = repository.getNoteText(newNote, includeFrontMatter = true)
+                repository.saveNoteText(newNote, "$currentContent\n\n$text")
+
+                withContext(Dispatchers.Main) {
+                    _uiState.update { it.copy(messengerNewNoteText = "") }
                 }
+                messengerOnMessengerOpened(project)
+                loadNotes(project)
+            }
         }
     }
 

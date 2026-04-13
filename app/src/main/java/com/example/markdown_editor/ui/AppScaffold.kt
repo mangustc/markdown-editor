@@ -18,6 +18,7 @@ import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -52,6 +53,18 @@ fun AppScaffold() {
 
     val displayedNotes = uiState.searchResults ?: uiState.notes
     val isSearchActive = uiState.searchQuery.isNotEmpty()
+
+    LaunchedEffect(Unit) {
+        appViewModel.navigationEvents.collect { event ->
+            when (event) {
+                is AppViewModel.NavigationEvent.GoToEditor -> navController.navigate(AppDestination.Editor.route) {
+                    launchSingleTop = true
+                }
+                is AppViewModel.NavigationEvent.OpenDrawer -> scope.launch { drawerState.open() }
+                is AppViewModel.NavigationEvent.CloseDrawer -> scope.launch { drawerState.close() }
+            }
+        }
+    }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -147,7 +160,6 @@ fun AppScaffold() {
                                 scope.launch { drawerState.close() }
                                 navController.navigate(AppDestination.Messenger.route) {
                                     launchSingleTop = true
-                                    popUpTo(AppDestination.Editor.route) { inclusive = true }
                                 }
                             },
                             modifier = Modifier.padding(horizontal = 8.dp)
@@ -159,11 +171,6 @@ fun AppScaffold() {
                                     selected = note.uri == uiState.activeNote?.uri,
                                     onClick = {
                                         appViewModel.onNoteSelected(note)
-                                        scope.launch { drawerState.close() }
-                                        navController.navigate(AppDestination.Editor.route) {
-                                            launchSingleTop = true
-                                            restoreState = true
-                                        }
                                     },
                                     modifier = Modifier.padding(horizontal = 8.dp)
                                 )
@@ -193,20 +200,14 @@ fun AppScaffold() {
         ) { innerPadding ->
             NavHost(
                 navController = navController,
-                startDestination = AppDestination.Editor.route,
+                startDestination = AppDestination.Messenger.route,
                 modifier = Modifier.padding(innerPadding)
             ) {
                 composable(AppDestination.Editor.route) {
                     EditorScreen(viewModel = appViewModel)
                 }
                 composable(AppDestination.Messenger.route) {
-                    // Pass necessary context/VM setup here (Requires AppViewModel to manage this state)
-                    MessengerScreen(
-                        viewModel = appViewModel,
-                        onNavigateToEditor = { uri ->
-                            navController.navigate(AppDestination.Editor.route) { /* ... */ }
-                        }
-                    )
+                    MessengerScreen(viewModel = appViewModel)
                 }
             }
         }

@@ -13,4 +13,7 @@ interface ProjectRepository {
     suspend fun loadSavedProject(): Project?
     suspend fun createNote(project: Project, name: String): Uri?
     suspend fun searchNotes(project: Project, query: SearchQuery): List<Note>
+    suspend fun getNoteText(note: Note): String
+    suspend fun saveNoteText(note: Note, text: String): Note
+    suspend fun getNoteByUri(uri: Uri): Note
 }

@@ -1,6 +1,7 @@
 package com.example.markdown_editor.data.repository
 
 import android.content.Context
+import android.content.Intent
 import android.content.SharedPreferences
 import android.net.Uri
 import android.util.Log
@@ -42,8 +43,8 @@ class ProjectRepositoryImpl(
         // takePersistableUriPermission ensures we can access it after reboot
         context.contentResolver.takePersistableUriPermission(
             project.uri,
-            android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION or
-                    android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+            Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                    Intent.FLAG_GRANT_WRITE_URI_PERMISSION
         )
         prefs.edit()
             .putString(KEY_PROJECT_URI, project.uri.toString())
@@ -58,12 +59,28 @@ class ProjectRepositoryImpl(
         buildProject(uri, name)
     }
 
-    override suspend fun createNote(project: Project, name: String): Uri? =
-        withContext(Dispatchers.IO) {
-            val notesDir = DocumentFile.fromTreeUri(context, project.notesUri)
-            notesDir?.createFile("text/markdown", "$name.md")?.uri
+    override suspend fun createNote(project: Project, name: String): Uri? = withContext(Dispatchers.IO) {
+        val notesDir = DocumentFile.fromTreeUri(context, project.notesUri) ?: return@withContext null
+
+        // Generate ISODATE string (e.g., 2023-10-27T15:30:00Z)
+        val isoDate = java.time.Instant.now().toString() // Use modern time API if possible
+
+        val initialContent = """---
+createdAt: $isoDate
+---
+""".trimIndent()
+
+        // Create file and write content immediately
+        val newFile = notesDir.createFile("text/markdown", "$name.md") ?: return@withContext null
+
+        context.contentResolver.openOutputStream(newFile.uri, "wt")?.use { outputStream ->
+            outputStream.bufferedWriter().use { writer ->
+                writer.write(initialContent)
+            }
         }
 
+        newFile.uri
+    }
     // Derives notes/ and assets/ URIs from the root project URI
     override fun buildProject(rootUri: Uri, name: String): Project {
         val root = DocumentFile.fromTreeUri(context, rootUri)
@@ -133,12 +150,69 @@ class ProjectRepositoryImpl(
             }.sortedByDescending { it.lastModified }
         }
 
+    override suspend fun getNoteText(note: Note): String = withContext(Dispatchers.IO) {
+        context.contentResolver
+            .openInputStream(note.uri)
+            ?.bufferedReader()
+            ?.use { it.readText() } ?: ""
+    }
+
+    override suspend fun saveNoteText(note: Note, text: String): Note = withContext(Dispatchers.IO) {
+        context.contentResolver.openOutputStream(note.uri, "wt")?.bufferedWriter()?.use { writer ->
+            writer.write(text)
+        }
+        note
+    }
+
+    override suspend fun getNoteByUri(uri: Uri): Note = withContext(Dispatchers.IO) {
+        val content = try {
+            context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
+                ?: ""
+        } catch (e: Exception) {
+            // Handle read failure gracefully
+            return@withContext Note(
+                name = "Error",
+                uri = uri,
+                lastModified = System.currentTimeMillis(),
+                createdAt = null
+            )
+        }
+
+        val (frontMatterString, _) = splitFrontMatter(content)
+        val frontMatter = parseFrontMatter(frontMatterString)
+
+        // Extract creation time from front matter
+        val createdAtLong = frontMatter["createdAt"]?.let { value ->
+            try {
+                // Attempt to parse ISO date string back to Long timestamp
+                java.time.Instant.parse(value as String).toEpochMilli()
+            } catch (e: Exception) {
+                null // Parsing failed
+            }
+        }
+
+        // Get basic file info for name and lastModified
+        val documentFile = DocumentFile.fromSingleUri(context, uri) ?: return@withContext Note(
+            name = "Unknown",
+            uri = uri,
+            lastModified = 0L,
+            createdAt = null
+        )
+
+        Note(
+            name = documentFile.name?.removeSuffix(".md") ?: "Untitled",
+            uri = uri,
+            lastModified = documentFile.lastModified(),
+            createdAt = createdAtLong
+        )
+    }
+
     private fun splitFrontMatter(content: String): Pair<String, String> {
         if (!content.trimStart().startsWith("---")) return "" to content
         val lines = content.lines()
         val closeIdx = lines.drop(1).indexOfFirst { it.trim() == "---" }
         if (closeIdx < 0) return "" to content
-        val fmLines  = lines.drop(1).take(closeIdx)
+        val fmLines = lines.drop(1).take(closeIdx)
         val bodyLines = lines.drop(closeIdx + 2)
         return fmLines.joinToString("\n") to bodyLines.joinToString("\n")
     }

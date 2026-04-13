@@ -1,10 +1,12 @@
 package com.example.markdown_editor.ui.editor
 
 import android.app.Application
+import android.content.Context
 import android.net.Uri
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.markdown_editor.data.repository.ProjectRepositoryImpl
 import com.example.markdown_editor.domain.parser.MarkdownParser
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -15,7 +17,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class EditorViewModel(application: Application) : AndroidViewModel(application) {
-    private val context = application
+    private val repository = ProjectRepositoryImpl(
+        application,
+        prefs = application.getSharedPreferences("project_prefs", Context.MODE_PRIVATE)
+    )
     private val _uiState = MutableStateFlow(EditorUiState())
     val uiState: StateFlow<EditorUiState> = _uiState.asStateFlow()
 
@@ -60,26 +65,21 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
 
     fun onNoteOpened(uri: Uri) {
         viewModelScope.launch(Dispatchers.IO) {
-            val text = context.contentResolver
-                .openInputStream(uri)
-                ?.bufferedReader()
-                ?.readText()
-                ?: return@launch
+            val note = repository.getNoteByUri(uri)
+            val text = repository.getNoteText(note)
             withContext(Dispatchers.Main) {
                 onContentChanged(TextFieldValue(text))
             }
             // Track URI so save knows where to write
-            _uiState.update { it.copy(activeNoteUri = uri) }
+            _uiState.update { it.copy(note = note) }
         }
     }
 
     fun onSave() {
-        val uri = _uiState.value.activeNoteUri ?: return
+        val note = _uiState.value.note ?: return
         val text = _uiState.value.textFieldValue.text
         viewModelScope.launch(Dispatchers.IO) {
-            context.contentResolver.openOutputStream(uri, "wt")
-                ?.bufferedWriter()
-                ?.use { it.write(text) }
+            repository.saveNoteText(note, text)
         }
     }
 }

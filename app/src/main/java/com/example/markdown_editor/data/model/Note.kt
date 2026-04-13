@@ -6,5 +6,6 @@ data class Note(
     val name: String,       // filename without .md extension
     val uri: Uri,           // full URI to the file
     val lastModified: Long,
-    val createdAt: Long? = null
+    val createdAt: Long? = null,
+    val text: String? = null
 )

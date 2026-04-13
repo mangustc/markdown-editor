@@ -29,6 +29,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.markdown_editor.ui.editor.EditorScreen
+import com.example.markdown_editor.ui.messenger.MessengerScreen
 import com.example.markdown_editor.ui.navigation.AppDestination
 import kotlinx.coroutines.launch
 
@@ -155,6 +156,18 @@ fun AppScaffold() {
                                 )
                             }
                         }
+                        NavigationDrawerItem(
+                            label = { Text("Quick Notes Feed") },
+                            selected = false,
+                            onClick = {
+                                scope.launch { drawerState.close() }
+                                navController.navigate(AppDestination.Messenger.route) {
+                                    launchSingleTop = true
+                                    popUpTo(AppDestination.Editor.route) { inclusive = true }
+                                }
+                            },
+                            modifier = Modifier.padding(horizontal = 8.dp)
+                        )
                     }
                 }
             }
@@ -186,6 +199,15 @@ fun AppScaffold() {
             ) {
                 composable(AppDestination.Editor.route) {
                     EditorScreen(activeNoteUri = uiState.activeNoteUri)
+                }
+                composable(AppDestination.Messenger.route) {
+                    // Pass necessary context/VM setup here (Requires AppViewModel to manage this state)
+                    MessengerScreen(
+                        project = uiState.project,
+                        onNavigateToEditor = { uri ->
+                            navController.navigate(AppDestination.Editor.route) { /* ... */ }
+                        }
+                    )
                 }
             }
         }

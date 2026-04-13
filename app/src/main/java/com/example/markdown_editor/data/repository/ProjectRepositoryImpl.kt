@@ -4,7 +4,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.net.Uri
-import android.util.Log
 import androidx.documentfile.provider.DocumentFile
 import com.example.markdown_editor.data.model.Note
 import com.example.markdown_editor.data.model.Project
@@ -152,11 +151,12 @@ createdAt: $isoDate
             }.sortedByDescending { it.lastModified }
         }
 
-    override suspend fun getNoteText(note: Note): String = withContext(Dispatchers.IO) {
-        context.contentResolver
+    override suspend fun getNoteText(note: Note, includeFrontMatter: Boolean): String = withContext(Dispatchers.IO) {
+        val fullText = context.contentResolver
             .openInputStream(note.uri)
             ?.bufferedReader()
             ?.use { it.readText() } ?: ""
+        return@withContext if (includeFrontMatter) fullText else splitFrontMatter(fullText).second
     }
 
     override suspend fun saveNoteText(note: Note, text: String): Note = withContext(Dispatchers.IO) {

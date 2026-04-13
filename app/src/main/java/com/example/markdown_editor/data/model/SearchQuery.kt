@@ -1,10 +1,10 @@
 package com.example.markdown_editor.data.model
 
 data class SearchQuery(
-    val bodyTerms: List<String>,       // plain words
-    val tagFilters: List<String>,      // from  tag:foo
-    val propFilters: Map<String, String>, // from  [key:value]
-    val nameFilter: String?            // from  name:foo
+    val bodyTerms: List<String> = emptyList(),
+    val tagFilters: List<String> = emptyList(),
+    val propFilters: Map<String, String> = emptyMap(),
+    val nameFilter: String? = null
 ) {
     val isEmpty: Boolean get() =
         bodyTerms.isEmpty() && tagFilters.isEmpty() &&

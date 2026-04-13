@@ -140,6 +140,18 @@ fun AppScaffold() {
                             contentAlignment = Alignment.Center
                         ) { CircularProgressIndicator() }
                     } else {
+                        NavigationDrawerItem(
+                            label = { Text("Quick Notes Feed") },
+                            selected = false,
+                            onClick = {
+                                scope.launch { drawerState.close() }
+                                navController.navigate(AppDestination.Messenger.route) {
+                                    launchSingleTop = true
+                                    popUpTo(AppDestination.Editor.route) { inclusive = true }
+                                }
+                            },
+                            modifier = Modifier.padding(horizontal = 8.dp)
+                        )
                         LazyColumn {
                             items(displayedNotes) { note ->
                                 NavigationDrawerItem(
@@ -157,18 +169,6 @@ fun AppScaffold() {
                                 )
                             }
                         }
-                        NavigationDrawerItem(
-                            label = { Text("Quick Notes Feed") },
-                            selected = false,
-                            onClick = {
-                                scope.launch { drawerState.close() }
-                                navController.navigate(AppDestination.Messenger.route) {
-                                    launchSingleTop = true
-                                    popUpTo(AppDestination.Editor.route) { inclusive = true }
-                                }
-                            },
-                            modifier = Modifier.padding(horizontal = 8.dp)
-                        )
                     }
                 }
             }

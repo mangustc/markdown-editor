@@ -191,6 +191,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             repository.createNote(project, name, tags)
                 ?.let { _ ->
                     messengerOnMessengerOpened(project)
+                    loadNotes(project)
                 }
         }
     }

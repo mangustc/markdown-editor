@@ -11,8 +11,6 @@ import com.example.markdown_editor.data.model.Project
 import com.example.markdown_editor.data.model.SearchQuery
 import com.example.markdown_editor.data.repository.ProjectRepositoryImpl
 import com.example.markdown_editor.domain.parser.MarkdownParser
-import com.example.markdown_editor.ui.viewmodel.AppUiState
-import com.example.markdown_editor.ui.viewmodel.EditorEvent
 import com.example.markdown_editor.ui.editor.MarkdownAnnotator
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -161,7 +159,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     fun messengerOnMessengerOpened(project: Project) {
         viewModelScope.launch {
-            _uiState.update { it.copy(messengerProject = project) }
+            _uiState.update { it.copy(project = project) }
 
             val notes = repository.searchNotes(project, SearchQuery(tagFilters = listOf("quick-note"))).map { note ->
                 try {
@@ -185,7 +183,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun messengerOnCreateNote() {
-        val project = _uiState.value.messengerProject ?: return
+        val project = _uiState.value.project ?: return
         val name = "quick-note-${java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")}"
         val tags = listOf("quick-note")
 

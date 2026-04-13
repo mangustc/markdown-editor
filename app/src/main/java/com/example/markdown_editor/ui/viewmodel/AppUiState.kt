@@ -26,6 +26,5 @@ data class AppUiState(
 
     val messengerNotesList: List<Note> = emptyList(),
     val messengerIsLoading: Boolean = true,
-    val messengerProject: Project? = null,
     val messengerNewNoteText: String = "",
 )

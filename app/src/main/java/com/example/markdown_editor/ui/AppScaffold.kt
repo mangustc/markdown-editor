@@ -204,7 +204,7 @@ fun AppScaffold() {
                 composable(AppDestination.Messenger.route) {
                     // Pass necessary context/VM setup here (Requires AppViewModel to manage this state)
                     MessengerScreen(
-                        project = uiState.project,
+                        viewModel = appViewModel,
                         onNavigateToEditor = { uri ->
                             navController.navigate(AppDestination.Editor.route) { /* ... */ }
                         }

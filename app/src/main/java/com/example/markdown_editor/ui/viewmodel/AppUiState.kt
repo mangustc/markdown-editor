@@ -22,5 +22,10 @@ data class AppUiState(
 
     val editorTextFieldValue: TextFieldValue = TextFieldValue(),
     val editorAnnotatedString: AnnotatedString = androidx.compose.ui.text.AnnotatedString(""),
-    val editorNote: Note? = null
+    val editorNote: Note? = null,
+
+    val messengerNotesList: List<Note> = emptyList(),
+    val messengerIsLoading: Boolean = true,
+    val messengerProject: Project? = null,
+    val messengerNewNoteText: String = "",
 )

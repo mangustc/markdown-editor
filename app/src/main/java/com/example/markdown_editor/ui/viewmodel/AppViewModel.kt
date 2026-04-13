@@ -159,6 +159,44 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun messengerOnMessengerOpened(project: Project) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(messengerProject = project) }
+
+            val notes = repository.searchNotes(project, SearchQuery(tagFilters = listOf("quick-note"))).map { note ->
+                try {
+                    val textContent = repository.getNoteText(note, includeFrontMatter = false)
+                    note.copy(text = textContent)
+                } catch (e: Exception) {
+                    note
+                }
+            }
+
+            _uiState.update {
+                it.copy(messengerNotesList = notes)
+            }
+        }
+    }
+
+    fun messengerOnNoteClicked(note: Note) {
+        // When user clicks note in messenger feed, switch to EditorScreen
+        // This requires AppViewModel/AppScaffold coordination, but for VM logic:
+        // Emit event or callback to trigger navigation to EditorScreen with this note's URI.
+    }
+
+    fun messengerOnCreateNote() {
+        val project = _uiState.value.messengerProject ?: return
+        val name = "quick-note-${java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")}"
+        val tags = listOf("quick-note")
+
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.createNote(project, name, tags)
+                ?.let { _ ->
+                    messengerOnMessengerOpened(project)
+                }
+        }
+    }
+
     private fun loadSavedProject() {
         viewModelScope.launch {
             val project = repository.loadSavedProject()

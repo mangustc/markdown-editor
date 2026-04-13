@@ -14,32 +14,32 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.markdown_editor.data.model.Note
 import com.example.markdown_editor.data.model.Project
+import com.example.markdown_editor.ui.viewmodel.AppViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MessengerScreen(
-    viewModel: MessengerViewModel = viewModel(),
+    viewModel: AppViewModel,
     onNavigateToEditor: (Uri) -> Unit,
-    project: Project?
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    LaunchedEffect(project) {
-        project?.let { viewModel.onMessengerOpened(it) }
+    LaunchedEffect(uiState.project) {
+        uiState.project?.let { viewModel.messengerOnMessengerOpened(it) }
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
         TopAppBar(
             title = { Text("Quick Notes") },
             actions = {
-                IconButton(onClick = { viewModel.onCreateNote() }) {
+                IconButton(onClick = { viewModel.messengerOnCreateNote() }) {
                     Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "New Note")
                 }
             }
         )
 
         LazyColumn(modifier = Modifier.weight(1f)) {
-            items(uiState.notesList) { note ->
+            items(uiState.messengerNotesList) { note ->
                 MessengerMessageItem(note = note, onClick = { onNavigateToEditor(note.uri) })
                 Spacer(Modifier.height(8.dp))
             }

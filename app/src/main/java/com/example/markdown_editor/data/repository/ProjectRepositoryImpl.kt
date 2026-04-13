@@ -58,20 +58,22 @@ class ProjectRepositoryImpl(
         buildProject(uri, name)
     }
 
-    override suspend fun createNote(project: Project, name: String): Uri? = withContext(Dispatchers.IO) {
+    override suspend fun createNote(project: Project, name: String?, tags: List<String>?): Uri? = withContext(Dispatchers.IO) {
         val notesDir = DocumentFile.fromTreeUri(context, project.notesUri) ?: return@withContext null
 
-        // Generate ISODATE string (e.g., 2023-10-27T15:30:00Z)
-        val isoDate = java.time.Instant.now().toString() // Use modern time API if possible
-
-        val initialContent = """---
+        val isoDate = java.time.Instant.now().toString()
+        var frontMatterBuilder = """---
 createdAt: $isoDate
----
 """.trimIndent()
+        if (!tags.isNullOrEmpty()) {
+            frontMatterBuilder += "\ntags:"
+            tags.forEach { tag ->
+                frontMatterBuilder += "\n- $tag"
+            }
+        }
+        val initialContent = "$frontMatterBuilder\n---".trimIndent()
 
-        // Create file and write content immediately
         val newFile = notesDir.createFile("text/markdown", "$name.md") ?: return@withContext null
-
         context.contentResolver.openOutputStream(newFile.uri, "wt")?.use { outputStream ->
             outputStream.bufferedWriter().use { writer ->
                 writer.write(initialContent)
@@ -80,6 +82,7 @@ createdAt: $isoDate
 
         newFile.uri
     }
+
     // Derives notes/ and assets/ URIs from the root project URI
     override fun buildProject(rootUri: Uri, name: String): Project {
         val root = DocumentFile.fromTreeUri(context, rootUri)

@@ -9,7 +9,6 @@ import com.example.markdown_editor.data.model.Project
 data class AppUiState(
     val project: Project? = null,
     val notes: List<Note> = emptyList(),
-    val activeNoteUri: Uri? = null,
     val isLoadingNotes: Boolean = false,
     val error: String? = null,
 
@@ -22,7 +21,7 @@ data class AppUiState(
 
     val editorTextFieldValue: TextFieldValue = TextFieldValue(),
     val editorAnnotatedString: AnnotatedString = androidx.compose.ui.text.AnnotatedString(""),
-    val editorNote: Note? = null,
+    val activeNote: Note? = null,
 
     val messengerNotesList: List<Note> = emptyList(),
     val messengerIsLoading: Boolean = true,

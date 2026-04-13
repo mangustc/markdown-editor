@@ -144,7 +144,7 @@ fun AppScaffold() {
                             items(displayedNotes) { note ->
                                 NavigationDrawerItem(
                                     label = { Text(note.name) },
-                                    selected = note.uri == uiState.activeNoteUri,
+                                    selected = note.uri == uiState.activeNote?.uri,
                                     onClick = {
                                         appViewModel.onNoteSelected(note)
                                         scope.launch { drawerState.close() }
@@ -179,9 +179,7 @@ fun AppScaffold() {
                 TopAppBar(
                     title = {
                         Text(
-                            uiState.notes
-                                .find { it.uri == uiState.activeNoteUri }?.name
-                                ?: uiState.project?.name
+                            uiState.activeNote?.name
                                 ?: "Markdown Editor"
                         )
                     },

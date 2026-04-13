@@ -46,7 +46,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun onNoteSelected(note: Note) {
-        _uiState.update { it.copy(activeNoteUri = note.uri) }
+        _uiState.update { it.copy(activeNote = note) }
     }
 
     fun showCreateNoteDialog() {
@@ -137,20 +137,20 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun editorOnNoteOpened(uri: Uri) {
+    fun editorOnNoteOpened() {
         viewModelScope.launch(Dispatchers.IO) {
-            val note = repository.getNoteByUri(uri)
+            val note = _uiState.value.activeNote ?: return@launch
             val text = repository.getNoteText(note)
             withContext(Dispatchers.Main) {
                 editorOnContentChanged(TextFieldValue(text))
             }
             // Track URI so save knows where to write
-            _uiState.update { it.copy(editorNote = note) }
+            _uiState.update { it.copy(activeNote = note) }
         }
     }
 
     fun editorOnSave() {
-        val note = _uiState.value.editorNote ?: return
+        val note = _uiState.value.activeNote ?: return
         val text = _uiState.value.editorTextFieldValue.text
         viewModelScope.launch(Dispatchers.IO) {
             repository.saveNoteText(note, text)

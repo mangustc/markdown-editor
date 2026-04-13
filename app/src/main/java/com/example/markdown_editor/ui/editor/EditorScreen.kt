@@ -30,8 +30,8 @@ fun EditorScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     // Load note content whenever the active URI changes
-    LaunchedEffect(uiState.activeNoteUri) {
-        uiState.activeNoteUri?.let { viewModel.editorOnNoteOpened(it) }
+    LaunchedEffect(uiState.activeNote) {
+        viewModel.editorOnNoteOpened()
     }
     val visualTransformation = remember(uiState.editorAnnotatedString) {
         MarkdownVisualTransformation(uiState.editorAnnotatedString)

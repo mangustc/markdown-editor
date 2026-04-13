@@ -18,9 +18,8 @@ import androidx.core.net.toUri
 
 class ProjectRepositoryImpl(
     private val context: Context,
-    private val prefs: SharedPreferences
+    private val prefs: SharedPreferences = context.getSharedPreferences("project_prefs", Context.MODE_PRIVATE)
 ) : ProjectRepository {
-
     override fun getNotes(project: Project): Flow<List<Note>> = flow {
         val notesDir = DocumentFile.fromTreeUri(context, project.notesUri)
         val notes = notesDir

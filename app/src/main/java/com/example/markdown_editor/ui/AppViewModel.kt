@@ -20,7 +20,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository = ProjectRepositoryImpl(
         context = application,
-        prefs = application.getSharedPreferences("project_prefs", Context.MODE_PRIVATE)
     )
 
     private val _uiState = MutableStateFlow(AppUiState())

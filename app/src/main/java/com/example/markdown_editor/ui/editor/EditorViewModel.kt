@@ -19,7 +19,6 @@ import kotlinx.coroutines.withContext
 class EditorViewModel(application: Application) : AndroidViewModel(application) {
     private val repository = ProjectRepositoryImpl(
         application,
-        prefs = application.getSharedPreferences("project_prefs", Context.MODE_PRIVATE)
     )
     private val _uiState = MutableStateFlow(EditorUiState())
     val uiState: StateFlow<EditorUiState> = _uiState.asStateFlow()

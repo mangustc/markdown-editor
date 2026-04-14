@@ -1,24 +1,35 @@
 package com.example.markdown_editor.ui.editor
 
-import android.net.Uri
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.imeNestedScroll
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.FormatBold
 import androidx.compose.material.icons.filled.FormatItalic
 import androidx.compose.material.icons.filled.Save
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.BottomAppBar
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Scaffold
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusEvent
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.markdown_editor.ui.viewmodel.AppViewModel
 import com.example.markdown_editor.ui.viewmodel.EditorEvent
 import kotlinx.coroutines.launch
@@ -48,13 +59,34 @@ fun EditorScreen(
                 modifier = Modifier.imePadding(), // always sits above the keyboard
                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
             ) {
-                IconButton(onClick = { viewModel.editorOnEvent(EditorEvent.InsertSyntax("****", cursorOffset = 2)) }) {
+                IconButton(onClick = {
+                    viewModel.editorOnEvent(
+                        EditorEvent.InsertSyntax(
+                            "****",
+                            cursorOffset = 2
+                        )
+                    )
+                }) {
                     Icon(Icons.Default.FormatBold, contentDescription = "Bold")
                 }
-                IconButton(onClick = { viewModel.editorOnEvent(EditorEvent.InsertSyntax("**", cursorOffset = 1)) }) {
+                IconButton(onClick = {
+                    viewModel.editorOnEvent(
+                        EditorEvent.InsertSyntax(
+                            "**",
+                            cursorOffset = 1
+                        )
+                    )
+                }) {
                     Icon(Icons.Default.FormatItalic, contentDescription = "Italic")
                 }
-                IconButton(onClick = { viewModel.editorOnEvent(EditorEvent.InsertSyntax("``", cursorOffset = 1)) }) {
+                IconButton(onClick = {
+                    viewModel.editorOnEvent(
+                        EditorEvent.InsertSyntax(
+                            "``",
+                            cursorOffset = 1
+                        )
+                    )
+                }) {
                     Icon(Icons.Default.Code, contentDescription = "Inline code")
                 }
                 IconButton(onClick = { viewModel.editorOnSave() }) {

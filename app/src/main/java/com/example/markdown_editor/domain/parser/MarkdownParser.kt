@@ -5,14 +5,14 @@ import com.example.markdown_editor.domain.model.TokenType
 
 object MarkdownParser {
     private val rules = listOf(
-        TokenType.H1          to Regex("^# .+", RegexOption.MULTILINE),
-        TokenType.H2          to Regex("^## .+", RegexOption.MULTILINE),
-        TokenType.H3          to Regex("^### .+", RegexOption.MULTILINE),
-        TokenType.BOLD        to Regex("\\*\\*.+?\\*\\*"),
-        TokenType.ITALIC      to Regex("(?<!\\*)\\*(?!\\*).+?(?<!\\*)\\*(?!\\*)"),
+        TokenType.H1 to Regex("^# .+", RegexOption.MULTILINE),
+        TokenType.H2 to Regex("^## .+", RegexOption.MULTILINE),
+        TokenType.H3 to Regex("^### .+", RegexOption.MULTILINE),
+        TokenType.BOLD to Regex("\\*\\*.+?\\*\\*"),
+        TokenType.ITALIC to Regex("(?<!\\*)\\*(?!\\*).+?(?<!\\*)\\*(?!\\*)"),
         TokenType.CODE_INLINE to Regex("`[^`]+`"),
-        TokenType.CODE_BLOCK  to Regex("```[\\s\\S]+?```"),
-        TokenType.IMAGE       to Regex("!\\[.*?]\\((.+?)\\)"),
+        TokenType.CODE_BLOCK to Regex("```[\\s\\S]+?```"),
+        TokenType.IMAGE to Regex("!\\[.*?]\\((.+?)\\)"),
     )
 
     fun parse(text: String): List<SpanInfo> =

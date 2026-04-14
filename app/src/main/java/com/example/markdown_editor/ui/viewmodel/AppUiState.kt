@@ -1,6 +1,5 @@
 package com.example.markdown_editor.ui.viewmodel
 
-import android.net.Uri
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.TextFieldValue
 import com.example.markdown_editor.data.model.Note

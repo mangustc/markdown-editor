@@ -25,26 +25,31 @@ object MarkdownAnnotator {
                             fontWeight = FontWeight.Bold
                         ), info.start, info.end
                     )
+
                     TokenType.H2 -> addStyle(
                         SpanStyle(
                             fontSize = 1.5.em,
                             fontWeight = FontWeight.Bold
                         ), info.start, info.end
                     )
+
                     TokenType.H3 -> addStyle(
                         SpanStyle(
                             fontSize = 1.2.em,
                             fontWeight = FontWeight.Bold
                         ), info.start, info.end
                     )
+
                     TokenType.BOLD -> addStyle(
                         SpanStyle(fontWeight = FontWeight.Bold),
                         info.start, info.end
                     )
+
                     TokenType.ITALIC -> addStyle(
                         SpanStyle(fontStyle = FontStyle.Italic),
                         info.start, info.end
                     )
+
                     TokenType.CODE_INLINE -> addStyle(
                         SpanStyle(
                             fontFamily = FontFamily.Monospace,
@@ -52,12 +57,14 @@ object MarkdownAnnotator {
                             color = Color(0xFFC7254E)
                         ), info.start, info.end
                     )
+
                     TokenType.CODE_BLOCK -> addStyle(
                         SpanStyle(
                             fontFamily = FontFamily.Monospace,
                             background = Color(0xFFF8F8F8)
                         ), info.start, info.end
                     )
+
                     else -> Unit
                 }
             }

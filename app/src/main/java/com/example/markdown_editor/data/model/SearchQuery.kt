@@ -6,14 +6,15 @@ data class SearchQuery(
     val propFilters: Map<String, String> = emptyMap(),
     val nameFilter: String? = null
 ) {
-    val isEmpty: Boolean get() =
-        bodyTerms.isEmpty() && tagFilters.isEmpty() &&
-                propFilters.isEmpty() && nameFilter == null
+    val isEmpty: Boolean
+        get() =
+            bodyTerms.isEmpty() && tagFilters.isEmpty() &&
+                    propFilters.isEmpty() && nameFilter == null
 
     companion object {
-        private val TAG_REGEX    = Regex("""tag:(\S+)""")
-        private val PROP_REGEX   = Regex("""\[(\w+):([^\]]+)]""")
-        private val NAME_REGEX   = Regex("""name:(\S+)""")
+        private val TAG_REGEX = Regex("""tag:(\S+)""")
+        private val PROP_REGEX = Regex("""\[(\w+):([^\]]+)]""")
+        private val NAME_REGEX = Regex("""name:(\S+)""")
 
         fun parse(raw: String): SearchQuery {
             var remainder = raw

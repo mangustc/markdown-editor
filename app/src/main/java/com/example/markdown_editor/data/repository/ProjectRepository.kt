@@ -11,8 +11,19 @@ interface ProjectRepository {
     fun getNotes(project: Project): Flow<List<Note>>
     suspend fun saveProject(project: Project)
     suspend fun loadSavedProject(): Project?
-    suspend fun createNote(project: Project, name: String? = "New Note", tags: List<String>? = emptyList()): Uri?
-    suspend fun searchNotes(project: Project, query: SearchQuery): List<Note>
+    suspend fun createNote(
+        project: Project,
+        name: String? = "New Note",
+        tags: List<String>? = emptyList()
+    ): Uri?
+
+    suspend fun searchNotes(
+        project: Project,
+        query: SearchQuery,
+        includeText: Boolean = false,
+        includeFrontMatter: Boolean = true
+    ): List<Note>
+
     suspend fun getNoteText(note: Note, includeFrontMatter: Boolean = true): String
     suspend fun saveNoteText(note: Note, text: String): Note
     suspend fun getNoteByUri(uri: Uri): Note

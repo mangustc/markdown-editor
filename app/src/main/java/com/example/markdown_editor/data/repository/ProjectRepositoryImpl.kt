@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.net.Uri
+import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import com.example.markdown_editor.data.model.Note
 import com.example.markdown_editor.data.model.Project
@@ -13,11 +14,13 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.withContext
-import androidx.core.net.toUri
 
 class ProjectRepositoryImpl(
     private val context: Context,
-    private val prefs: SharedPreferences = context.getSharedPreferences("project_prefs", Context.MODE_PRIVATE)
+    private val prefs: SharedPreferences = context.getSharedPreferences(
+        "project_prefs",
+        Context.MODE_PRIVATE
+    )
 ) : ProjectRepository {
     override fun getNotes(project: Project): Flow<List<Note>> = flow {
         val notesDir = DocumentFile.fromTreeUri(context, project.notesUri)
@@ -57,30 +60,33 @@ class ProjectRepositoryImpl(
         buildProject(uri, name)
     }
 
-    override suspend fun createNote(project: Project, name: String?, tags: List<String>?): Uri? = withContext(Dispatchers.IO) {
-        val notesDir = DocumentFile.fromTreeUri(context, project.notesUri) ?: return@withContext null
+    override suspend fun createNote(project: Project, name: String?, tags: List<String>?): Uri? =
+        withContext(Dispatchers.IO) {
+            val notesDir =
+                DocumentFile.fromTreeUri(context, project.notesUri) ?: return@withContext null
 
-        val isoDate = java.time.Instant.now().toString()
-        var frontMatterBuilder = """---
+            val isoDate = java.time.Instant.now().toString()
+            var frontMatterBuilder = """---
 createdAt: $isoDate
 """.trimIndent()
-        if (!tags.isNullOrEmpty()) {
-            frontMatterBuilder += "\ntags:"
-            tags.forEach { tag ->
-                frontMatterBuilder += "\n- $tag"
+            if (!tags.isNullOrEmpty()) {
+                frontMatterBuilder += "\ntags:"
+                tags.forEach { tag ->
+                    frontMatterBuilder += "\n- $tag"
+                }
             }
-        }
-        val initialContent = "$frontMatterBuilder\n---".trimIndent()
+            val initialContent = "$frontMatterBuilder\n---".trimIndent()
 
-        val newFile = notesDir.createFile("text/markdown", "$name.md") ?: return@withContext null
-        context.contentResolver.openOutputStream(newFile.uri, "wt")?.use { outputStream ->
-            outputStream.bufferedWriter().use { writer ->
-                writer.write(initialContent)
+            val newFile =
+                notesDir.createFile("text/markdown", "$name.md") ?: return@withContext null
+            context.contentResolver.openOutputStream(newFile.uri, "wt")?.use { outputStream ->
+                outputStream.bufferedWriter().use { writer ->
+                    writer.write(initialContent)
+                }
             }
-        }
 
-        newFile.uri
-    }
+            newFile.uri
+        }
 
     // Derives notes/ and assets/ URIs from the root project URI
     override fun buildProject(rootUri: Uri, name: String): Project {
@@ -97,7 +103,12 @@ createdAt: $isoDate
         )
     }
 
-    override suspend fun searchNotes(project: Project, query: SearchQuery): List<Note> =
+    override suspend fun searchNotes(
+        project: Project,
+        query: SearchQuery,
+        includeText: Boolean,
+        includeFrontMatter: Boolean
+    ): List<Note> =
         withContext(Dispatchers.IO) {
             if (query.isEmpty) return@withContext emptyList()
 
@@ -107,25 +118,29 @@ createdAt: $isoDate
                 ?: return@withContext emptyList()
 
             files.mapNotNull { file ->
-                val note = Note(
-                    name = file.name?.removeSuffix(".md") ?: "Untitled",
-                    uri  = file.uri,
-                    lastModified = file.lastModified()
-                )
+                val name = file.name?.removeSuffix(".md") ?: "Untitled"
 
+                // name
                 query.nameFilter?.let { nameFilter ->
-                    if (!note.name.contains(nameFilter, ignoreCase = true)) return@mapNotNull null
+                    if (!name.contains(nameFilter, ignoreCase = true)) return@mapNotNull null
                 }
 
+                // searchQuery empty
                 if (query.bodyTerms.isEmpty() && query.tagFilters.isEmpty() && query.propFilters.isEmpty()) {
-                    return@mapNotNull note
+                    return@mapNotNull Note(
+                        name = name,
+                        uri = file.uri,
+                        lastModified = file.lastModified(),
+                    )
                 }
 
+                // searchQuery filters
                 val content = try {
                     context.contentResolver.openInputStream(file.uri)
                         ?.bufferedReader()?.readText() ?: ""
-                } catch (e: Exception) { "" }
-
+                } catch (e: Exception) {
+                    ""
+                }
                 val (frontMatterString, body) = splitFrontMatter(content)
                 val frontMatter = parseFrontMatter(frontMatterString)
 
@@ -134,7 +149,14 @@ createdAt: $isoDate
                         is List<*> -> tags.filterIsInstance<String>()
                         else -> emptyList()
                     }
-                    if (!query.tagFilters.all { t -> fileTags.any { it.contains(t, ignoreCase = true) } })
+                    if (!query.tagFilters.all { t ->
+                            fileTags.any {
+                                it.contains(
+                                    t,
+                                    ignoreCase = true
+                                )
+                            }
+                        })
                         return@mapNotNull null
                 }
 
@@ -143,28 +165,37 @@ createdAt: $isoDate
                     if (!fmValue.contains(value, ignoreCase = true)) return@mapNotNull null
                 }
 
-                val searchableText = (body + " " + note.name).lowercase()
+                val searchableText = ("$body $name").lowercase()
                 if (!query.bodyTerms.all { term -> searchableText.contains(term.lowercase()) })
                     return@mapNotNull null
 
-                note
+                Note(
+                    name = name,
+                    uri = file.uri,
+                    lastModified = file.lastModified(),
+                    createdAt = getCreatedAt(frontMatter),
+                    text = if (includeText) (if (includeFrontMatter) content else body) else null,
+                )
             }.sortedByDescending { it.lastModified }
         }
 
-    override suspend fun getNoteText(note: Note, includeFrontMatter: Boolean): String = withContext(Dispatchers.IO) {
-        val fullText = context.contentResolver
-            .openInputStream(note.uri)
-            ?.bufferedReader()
-            ?.use { it.readText() } ?: ""
-        return@withContext if (includeFrontMatter) fullText else splitFrontMatter(fullText).second
-    }
-
-    override suspend fun saveNoteText(note: Note, text: String): Note = withContext(Dispatchers.IO) {
-        context.contentResolver.openOutputStream(note.uri, "wt")?.bufferedWriter()?.use { writer ->
-            writer.write(text)
+    override suspend fun getNoteText(note: Note, includeFrontMatter: Boolean): String =
+        withContext(Dispatchers.IO) {
+            val fullText = context.contentResolver
+                .openInputStream(note.uri)
+                ?.bufferedReader()
+                ?.use { it.readText() } ?: ""
+            return@withContext if (includeFrontMatter) fullText else splitFrontMatter(fullText).second
         }
-        note
-    }
+
+    override suspend fun saveNoteText(note: Note, text: String): Note =
+        withContext(Dispatchers.IO) {
+            context.contentResolver.openOutputStream(note.uri, "wt")?.bufferedWriter()
+                ?.use { writer ->
+                    writer.write(text)
+                }
+            note
+        }
 
     override suspend fun getNoteByUri(uri: Uri): Note = withContext(Dispatchers.IO) {
         val content = try {
@@ -184,14 +215,7 @@ createdAt: $isoDate
         val frontMatter = parseFrontMatter(frontMatterString)
 
         // Extract creation time from front matter
-        val createdAtLong = frontMatter["createdAt"]?.let { value ->
-            try {
-                // Attempt to parse ISO date string back to Long timestamp
-                java.time.Instant.parse(value as String).toEpochMilli()
-            } catch (e: Exception) {
-                null // Parsing failed
-            }
-        }
+        val createdAtLong = getCreatedAt(frontMatter)
 
         // Get basic file info for name and lastModified
         val documentFile = DocumentFile.fromSingleUri(context, uri) ?: return@withContext Note(
@@ -256,6 +280,17 @@ createdAt: $isoDate
         }
 
         return result
+    }
+
+    private fun getCreatedAt(frontMatter: Map<String, Any>): Long? {
+        return frontMatter["createdAt"]?.let { value ->
+            try {
+                // Attempt to parse ISO date string back to Long timestamp
+                java.time.Instant.parse(value as String).toEpochMilli()
+            } catch (e: Exception) {
+                null // Parsing failed
+            }
+        }
     }
 
     companion object {

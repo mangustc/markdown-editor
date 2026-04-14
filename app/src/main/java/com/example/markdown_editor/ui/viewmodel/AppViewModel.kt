@@ -45,7 +45,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     private val _navigationEvents = Channel<NavigationEvent>(Channel.BUFFERED)
     val navigationEvents = _navigationEvents.receiveAsFlow()
 
-    // Called with the URI returned by the system folder picker
     fun onProjectSelected(uri: Uri) {
         viewModelScope.launch {
             val name = uri.lastPathSegment?.substringAfterLast(":") ?: "Project"
@@ -97,7 +96,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             return
         }
 
-        val parsed = SearchQuery.Companion.parse(raw.trim())
+        val parsed = SearchQuery.parse(raw.trim())
         if (parsed.isEmpty) {
             searchJob?.cancel()
             _uiState.update { it.copy(searchResults = null, isSearching = false) }
@@ -176,14 +175,12 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             _uiState.update { it.copy(project = project, messengerIsLoading = true) }
 
-            val notes = repository.searchNotes(project, SearchQuery(tagFilters = listOf("quick-note"))).map { note ->
-                try {
-                    val textContent = repository.getNoteText(note, includeFrontMatter = false)
-                    note.copy(text = textContent)
-                } catch (e: Exception) {
-                    note
-                }
-            }
+            val notes = repository.searchNotes(
+                project,
+                SearchQuery(tagFilters = listOf("quick-note")),
+                includeText = true,
+                includeFrontMatter = false
+            )
 
             _uiState.update {
                 it.copy(messengerNotesList = notes, messengerIsLoading = false)

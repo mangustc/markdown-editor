@@ -65,6 +65,23 @@ object MarkdownAnnotator {
                         ), info.start, info.end
                     )
 
+                    TokenType.IMAGE -> addStyle(
+                        SpanStyle(
+                            fontWeight = FontWeight.Bold,
+                            fontStyle = FontStyle.Italic,
+                            background = Color(0xFFF8F8F8),
+                        ),
+                        info.start, info.end
+                    )
+
+                    TokenType.FILE -> addStyle(
+                        SpanStyle(
+                            fontWeight = FontWeight.Bold,
+                            background = Color(0xFFF8F8F8),
+                        ),
+                        info.start, info.end
+                    )
+
                     else -> Unit
                 }
             }

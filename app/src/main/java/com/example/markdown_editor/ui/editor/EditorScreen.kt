@@ -1,7 +1,6 @@
 package com.example.markdown_editor.ui.editor
 
 import android.net.Uri
-import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -230,8 +229,9 @@ private fun extractImagePath(markdown: String): String {
     return markdown
         .substringAfter("](")
         .dropLast(1)
-        .substringBefore(" \"") // removes Markdown title if exists
+        .substringBefore(" \"")
         .trim()
+        .removeSurrounding("<", ">")
 }
 @Composable
 fun AsyncMarkdownImage(path: String, project: Project) {

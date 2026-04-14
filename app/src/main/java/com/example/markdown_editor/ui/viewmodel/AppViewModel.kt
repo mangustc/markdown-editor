@@ -141,7 +141,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 project = project,
                 assetUri = event.uri,
             )
-            val markdown = "![image]($relativePath)"
+            val markdown = "![image](<$relativePath>)"
             withContext(Dispatchers.Main) {
                 editorInsertMarkdown(markdown)
             }
@@ -156,7 +156,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 assetUri = event.uri,
             )
             val label = event.displayName ?: relativePath.substringAfterLast("/")
-            val markdown = "[$label]($relativePath)"
+            val markdown = "[$label](<$relativePath>)"
             withContext(Dispatchers.Main) {
                 editorInsertMarkdown(markdown)
             }

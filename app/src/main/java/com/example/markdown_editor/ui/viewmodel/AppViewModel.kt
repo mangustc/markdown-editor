@@ -116,6 +116,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
         searchJob?.cancel()
         searchJob = viewModelScope.launch {
+            repository.syncDatabase(project)
             _uiState.update { it.copy(isSearching = true) }
             val results = repository.getNotes(project, parsed)
             _uiState.update { it.copy(searchResults = results, isSearching = false) }

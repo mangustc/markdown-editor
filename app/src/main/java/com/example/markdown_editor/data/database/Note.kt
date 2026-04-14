@@ -16,7 +16,10 @@ data class NoteEntity(
     val body: String,
 )
 
-@Fts4(contentEntity = NoteEntity::class)
+@Fts4(
+    contentEntity = NoteEntity::class,
+    tokenizer = FtsOptions.TOKENIZER_UNICODE61,
+)
 @Entity(tableName = "notesFts")
 data class NoteEntityFts(
     val id: Long,

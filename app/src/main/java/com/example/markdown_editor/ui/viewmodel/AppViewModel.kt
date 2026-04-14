@@ -200,7 +200,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.update {
             it.copy(
                 editorTextFieldValue = newValue,
-                editorAnnotatedString = annotated
+                editorAnnotatedString = annotated,
+                editorSpans = spans,
             )
         }
     }

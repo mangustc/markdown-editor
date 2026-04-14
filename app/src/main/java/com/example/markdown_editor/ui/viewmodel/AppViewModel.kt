@@ -7,6 +7,8 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.room.Room
+import com.example.markdown_editor.data.database.NoteDb
 import com.example.markdown_editor.data.model.Note
 import com.example.markdown_editor.data.model.Project
 import com.example.markdown_editor.data.model.SearchQuery
@@ -25,9 +27,13 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class AppViewModel(application: Application) : AndroidViewModel(application) {
-
+    private val db = Room.databaseBuilder(
+        application,
+        NoteDb::class.java, "database-notes"
+    ).build()
     private val repository = ProjectRepositoryImpl(
         context = application,
+        noteDao = db.noteDao(),
     )
 
     private val _uiState = MutableStateFlow(AppUiState())

@@ -26,4 +26,5 @@ interface ProjectRepository {
     suspend fun getNoteText(note: Note, includeFrontMatter: Boolean = true): String
     suspend fun saveNoteText(note: Note, text: String): Note
     suspend fun getNoteByUri(uri: Uri): Note
+    suspend fun syncDatabase(project: Project): Unit
 }

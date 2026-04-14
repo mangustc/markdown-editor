@@ -6,6 +6,8 @@ import android.content.SharedPreferences
 import android.net.Uri
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
+import com.example.markdown_editor.data.database.NoteDao
+import com.example.markdown_editor.data.database.NoteEntity
 import com.example.markdown_editor.data.model.Note
 import com.example.markdown_editor.data.model.Project
 import com.example.markdown_editor.data.model.SearchQuery
@@ -17,11 +19,50 @@ import kotlinx.coroutines.withContext
 
 class ProjectRepositoryImpl(
     private val context: Context,
+    private val noteDao: NoteDao,
     private val prefs: SharedPreferences = context.getSharedPreferences(
         "project_prefs",
         Context.MODE_PRIVATE
     )
 ) : ProjectRepository {
+    override suspend fun syncDatabase(project: Project) = withContext(Dispatchers.IO) {
+        val notesDir = DocumentFile.fromTreeUri(context, project.notesUri)
+        val files = notesDir?.listFiles()?.filter { it.name?.endsWith(".md") == true } ?: return@withContext
+
+        val existingNotes = noteDao.searchMetadata("", "")
+        val existingUris = existingNotes.associateBy { it.uri }
+
+        files.forEach { file ->
+            val uriStr = file.uri.toString()
+            val cached = existingUris[uriStr]
+
+            if (cached == null || file.lastModified() > cached.lastModified) {
+                val fullText = readFullText(file.uri)
+                val (fmString, body) = splitFrontMatter(fullText)
+                val frontMatter = parseFrontMatter(fmString)
+                val tags = (frontMatter["tags"] as? List<*>)?.joinToString(",") ?: ""
+
+                val entity = NoteEntity(
+                    id = cached?.id ?: 0,
+                    uri = uriStr,
+                    name = file.name?.removeSuffix(".md") ?: "Untitled",
+                    lastModified = file.lastModified(),
+                    createdAt = getCreatedAt(frontMatter),
+                    tags = tags,
+                    body = body,
+                )
+                noteDao.insertNote(entity)
+            }
+        }
+
+        val currentFileUris = files.map { it.uri.toString() }.toSet()
+        existingNotes.forEach { cached ->
+            if (!currentFileUris.contains(cached.uri)) {
+                noteDao.deleteByUri(cached.uri)
+            }
+        }
+    }
+
     override suspend fun saveProject(project: Project) {
         // Persist the URI so it survives app restart
         // takePersistableUriPermission ensures we can access it after reboot
@@ -40,7 +81,10 @@ class ProjectRepositoryImpl(
         val uriString = prefs.getString(KEY_PROJECT_URI, null) ?: return@withContext null
         val name = prefs.getString(KEY_PROJECT_NAME, null) ?: return@withContext null
         val uri = uriString.toUri()
-        buildProject(uri, name)
+        val project = buildProject(uri, name)
+
+        syncDatabase(project)
+        return@withContext project
     }
 
     override suspend fun createNote(project: Project, name: String?, tags: List<String>?): Uri? =

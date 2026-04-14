@@ -1,5 +1,8 @@
 package com.example.markdown_editor.ui.editor
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -12,9 +15,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.FormatBold
 import androidx.compose.material.icons.filled.FormatItalic
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -31,7 +36,7 @@ import androidx.compose.ui.focus.onFocusEvent
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.markdown_editor.ui.viewmodel.AppViewModel
-import com.example.markdown_editor.ui.viewmodel.EditorEvent
+import com.example.markdown_editor.ui.editor.EditorEvent
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -51,6 +56,33 @@ fun EditorScreen(
     val scrollState = rememberScrollState()
     val bringIntoViewRequester = remember { BringIntoViewRequester() }
     val scope = rememberCoroutineScope()
+
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        if (uri != null) {
+            val mime = uri.let { u ->
+                // Determine MIME from the URI; fallback to "image/*"
+                "image/*"
+            }
+            viewModel.editorOnEvent(EditorEvent.AttachPhoto(uri = uri, mimeType = mime))
+        }
+    }
+
+    // ── File picker (any file via SAF) ──────────────────────────────────────
+    val filePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            viewModel.editorOnEvent(
+                EditorEvent.AttachFile(
+                    uri         = uri,
+                    mimeType    = null,   // ViewModel will resolve via ContentResolver
+                    displayName = null
+                )
+            )
+        }
+    }
 
     Scaffold(
         // No TopAppBar here — AppScaffold owns that
@@ -92,6 +124,20 @@ fun EditorScreen(
                 IconButton(onClick = { viewModel.editorOnSave() }) {
                     Icon(Icons.Default.Save, contentDescription = "Save file")
                 }
+                IconButton(onClick = {
+                    photoPickerLauncher.launch(
+                        PickVisualMediaRequest(
+                            ActivityResultContracts.PickVisualMedia.ImageOnly
+                        )
+                    )
+                }) {
+                    Icon(Icons.Default.Image, contentDescription = "Attach photo")
+                }
+                IconButton(onClick = {
+                    filePickerLauncher.launch(arrayOf("*/*"))
+                }) {
+                    Icon(Icons.Default.AttachFile, contentDescription = "Attach file")
+                }
             }
         }
     ) { innerPadding ->
@@ -102,7 +148,6 @@ fun EditorScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                // imeNestedScroll lets the scroll state react to keyboard appearance
                 .imeNestedScroll()
                 .verticalScroll(scrollState)
                 .bringIntoViewRequester(bringIntoViewRequester)
@@ -110,9 +155,6 @@ fun EditorScreen(
                 .onFocusEvent { focusState ->
                     if (focusState.isFocused) {
                         scope.launch {
-                            // Small delay lets the keyboard finish animating in
-                            // before we scroll — without this it scrolls to the
-                            // wrong position
                             kotlinx.coroutines.delay(300)
                             bringIntoViewRequester.bringIntoView()
                         }

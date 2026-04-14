@@ -13,6 +13,7 @@ object MarkdownParser {
         TokenType.CODE_INLINE to Regex("`[^`]+`"),
         TokenType.CODE_BLOCK to Regex("```[\\s\\S]+?```"),
         TokenType.IMAGE to Regex("!\\[.*?]\\((.+?)\\)"),
+        TokenType.FILE to Regex("\\[.*?]\\((.+?)\\)"),
     )
 
     fun parse(text: String): List<SpanInfo> =

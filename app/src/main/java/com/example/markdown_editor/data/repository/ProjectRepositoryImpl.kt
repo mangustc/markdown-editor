@@ -202,6 +202,31 @@ createdAt: $isoDate
         )
     }
 
+    override suspend fun copyToAssets(project: Project, assetUri: Uri): String = withContext(Dispatchers.IO) {
+        val resolver = context.contentResolver
+
+        val sourceFile = DocumentFile.fromSingleUri(context, assetUri)
+        val fileName = sourceFile?.name ?: "attachment_${System.currentTimeMillis()}"
+        val mimeType = resolver.getType(assetUri) ?: "application/octet-stream"
+
+        val assetsDir = DocumentFile.fromTreeUri(context, project.assetsUri)
+            ?: throw IllegalStateException("Could not access assets directory")
+        val targetFile = assetsDir.createFile(mimeType, fileName)
+            ?: throw IllegalStateException("Failed to create file in assets")
+
+        try {
+            resolver.openInputStream(assetUri)?.use { inputStream ->
+                resolver.openOutputStream(targetFile.uri)?.use { outputStream ->
+                    inputStream.copyTo(outputStream)
+                }
+            }
+        } catch (e: Exception) {
+            targetFile.delete()
+            throw e
+        }
+
+        "assets/${targetFile.name}"
+    }
     private fun splitFrontMatter(content: String): Pair<String, String> {
         if (!content.trimStart().startsWith("---")) return "" to content
         val lines = content.lines()
@@ -259,36 +284,6 @@ createdAt: $isoDate
                 null
             }
         }
-    }
-
-    private fun readFrontMatterOnly(uri: Uri): String {
-        context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { reader ->
-            val firstLine = reader.readLine() ?: return ""
-            if (firstLine.trim() != "---") return ""
-            val fmLines = mutableListOf<String>()
-            while (true) {
-                val line = reader.readLine() ?: break
-                if (line.trim() == "---") break
-                fmLines += line
-            }
-            return fmLines.joinToString("\n")
-        }
-        return ""
-    }
-
-    private fun readBodyOnly(uri: Uri): String {
-        context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { reader ->
-            val first = reader.readLine() ?: return ""
-            if (first.trim() != "---") {
-                return first + "\n" + reader.readText()
-            }
-            while (true) {
-                val line = reader.readLine() ?: return ""
-                if (line.trim() == "---") break
-            }
-            return reader.readText()
-        }
-        return ""
     }
 
     private fun readFullText(uri: Uri): String =

@@ -14,6 +14,7 @@ import com.example.markdown_editor.data.model.Project
 import com.example.markdown_editor.data.model.SearchQuery
 import com.example.markdown_editor.data.repository.ProjectRepositoryImpl
 import com.example.markdown_editor.domain.parser.MarkdownParser
+import com.example.markdown_editor.ui.editor.EditorEvent
 import com.example.markdown_editor.ui.editor.MarkdownAnnotator
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -127,7 +128,50 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     fun editorOnEvent(event: EditorEvent) {
         when (event) {
             is EditorEvent.InsertSyntax -> editorInsertSyntax(event.syntax, event.cursorOffset)
+
+            is EditorEvent.AttachPhoto -> editorHandleAttachPhoto(event)
+            is EditorEvent.AttachFile -> editorHandleAttachFile(event)
         }
+    }
+
+    private fun editorHandleAttachPhoto(event: EditorEvent.AttachPhoto) {
+        val project = _uiState.value.project ?: return
+        viewModelScope.launch(Dispatchers.IO) {
+            val relativePath = repository.copyToAssets(
+                project = project,
+                assetUri = event.uri,
+            )
+            val markdown = "![image]($relativePath)"
+            withContext(Dispatchers.Main) {
+                editorInsertMarkdown(markdown)
+            }
+        }
+    }
+
+    private fun editorHandleAttachFile(event: EditorEvent.AttachFile) {
+        val project = _uiState.value.project ?: return
+        viewModelScope.launch(Dispatchers.IO) {
+            val relativePath = repository.copyToAssets(
+                project = project,
+                assetUri = event.uri,
+            )
+            val label = event.displayName ?: relativePath.substringAfterLast("/")
+            val markdown = "[$label]($relativePath)"
+            withContext(Dispatchers.Main) {
+                editorInsertMarkdown(markdown)
+            }
+        }
+    }
+
+    private fun editorInsertMarkdown(markdown: String) {
+        val current = _uiState.value.editorTextFieldValue
+        val cursor = current.selection.start
+        val newText = current.text.substring(0, cursor) + markdown + current.text.substring(cursor)
+        val newValue = current.copy(
+            text = newText,
+            selection = TextRange(cursor + markdown.length)
+        )
+        editorOnContentChanged(newValue)
     }
 
     private fun editorInsertSyntax(syntax: String, cursorOffset: Int) {

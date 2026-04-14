@@ -100,62 +100,44 @@ createdAt: $isoDate
 
             files.mapNotNull { file ->
                 val name = file.name?.removeSuffix(".md") ?: "Untitled"
-
-                // name
                 query.nameFilter?.let { nameFilter ->
                     if (!name.contains(nameFilter, ignoreCase = true)) return@mapNotNull null
                 }
 
-                // searchQuery empty
                 if (query.bodyTerms.isEmpty() && query.tagFilters.isEmpty() && query.propFilters.isEmpty()) {
-                    return@mapNotNull Note(
-                        name = name,
-                        uri = file.uri,
-                        lastModified = file.lastModified(),
-                    )
+                    return@mapNotNull Note(name = name, uri = file.uri, lastModified = file.lastModified())
                 }
 
-                // searchQuery filters
-                val content = try {
-                    context.contentResolver.openInputStream(file.uri)
-                        ?.bufferedReader()?.readText() ?: ""
-                } catch (e: Exception) {
-                    ""
-                }
-                val (frontMatterString, body) = splitFrontMatter(content)
+                val frontMatterString = readFrontMatterOnly(file.uri)
                 val frontMatter = parseFrontMatter(frontMatterString)
-
                 if (query.tagFilters.isNotEmpty()) {
                     val fileTags = when (val tags = frontMatter["tags"]) {
                         is List<*> -> tags.filterIsInstance<String>()
                         else -> emptyList()
                     }
-                    if (!query.tagFilters.all { t ->
-                            fileTags.any {
-                                it.contains(
-                                    t,
-                                    ignoreCase = true
-                                )
-                            }
-                        })
+                    if (!query.tagFilters.all { t -> fileTags.any { it.contains(t, ignoreCase = true) } })
                         return@mapNotNull null
                 }
-
                 for ((key, value) in query.propFilters) {
                     val fmValue = frontMatter[key] as? String ?: return@mapNotNull null
                     if (!fmValue.contains(value, ignoreCase = true)) return@mapNotNull null
                 }
 
-                val searchableText = ("$body $name").lowercase()
-                if (!query.bodyTerms.all { term -> searchableText.contains(term.lowercase()) })
-                    return@mapNotNull null
+                if (query.bodyTerms.isNotEmpty()) {
+                    val body = readBodyOnly(file.uri)
+                    val searchableText = ("$body $name").lowercase()
+                    if (!query.bodyTerms.all { term -> searchableText.contains(term.lowercase()) })
+                        return@mapNotNull null
+                }
 
                 Note(
                     name = name,
                     uri = file.uri,
                     lastModified = file.lastModified(),
                     createdAt = getCreatedAt(frontMatter),
-                    text = if (includeText) (if (includeFrontMatter) content else body) else null,
+                    text = if (includeText) {
+                        if (includeFrontMatter) readFullText(file.uri) else readBodyOnly(file.uri)
+                    } else null,
                 )
             }.sortedByDescending { it.lastModified }
         }
@@ -194,11 +176,7 @@ createdAt: $isoDate
 
         val (frontMatterString, _) = splitFrontMatter(content)
         val frontMatter = parseFrontMatter(frontMatterString)
-
-        // Extract creation time from front matter
         val createdAtLong = getCreatedAt(frontMatter)
-
-        // Get basic file info for name and lastModified
         val documentFile = DocumentFile.fromSingleUri(context, uri) ?: return@withContext Note(
             name = "Unknown",
             uri = uri,
@@ -266,13 +244,45 @@ createdAt: $isoDate
     private fun getCreatedAt(frontMatter: Map<String, Any>): Long? {
         return frontMatter["createdAt"]?.let { value ->
             try {
-                // Attempt to parse ISO date string back to Long timestamp
                 java.time.Instant.parse(value as String).toEpochMilli()
             } catch (e: Exception) {
-                null // Parsing failed
+                null
             }
         }
     }
+
+    private fun readFrontMatterOnly(uri: Uri): String {
+        context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { reader ->
+            val firstLine = reader.readLine() ?: return ""
+            if (firstLine.trim() != "---") return ""
+            val fmLines = mutableListOf<String>()
+            while (true) {
+                val line = reader.readLine() ?: break
+                if (line.trim() == "---") break
+                fmLines += line
+            }
+            return fmLines.joinToString("\n")
+        }
+        return ""
+    }
+
+    private fun readBodyOnly(uri: Uri): String {
+        context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { reader ->
+            val first = reader.readLine() ?: return ""
+            if (first.trim() != "---") {
+                return first + "\n" + reader.readText()
+            }
+            while (true) {
+                val line = reader.readLine() ?: return ""
+                if (line.trim() == "---") break
+            }
+            return reader.readText()
+        }
+        return ""
+    }
+
+    private fun readFullText(uri: Uri): String =
+        context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() } ?: ""
 
     companion object {
         private const val KEY_PROJECT_URI = "project_uri"

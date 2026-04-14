@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -89,6 +90,7 @@ fun AppScaffold() {
 
     ModalNavigationDrawer(
         drawerState = drawerState,
+        modifier = Modifier.imePadding(),
         drawerContent = {
             ModalDrawerSheet {
                 Column(modifier = Modifier.padding(16.dp)) {
@@ -104,7 +106,6 @@ fun AppScaffold() {
 
                 HorizontalDivider()
 
-                // Search bar — only shown when a project is open
                 if (uiState.project != null) {
                     SearchBar(
                         inputField = {
@@ -169,36 +170,16 @@ fun AppScaffold() {
                         modifier = Modifier.padding(16.dp)
                     )
                 } else {
-                    if (uiState.isSearching) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            contentAlignment = Alignment.Center
-                        ) { CircularProgressIndicator() }
-                    } else {
-                        NavigationDrawerItem(
-                            label = { Text("Quick Notes Feed") },
-                            selected = false,
-                            onClick = {
-                                scope.launch { drawerState.close() }
-                                navController.navigate(AppDestination.Messenger.route) {
-                                    launchSingleTop = true
-                                }
-                            },
-                            modifier = Modifier.padding(horizontal = 8.dp)
-                        )
-                        LazyColumn {
-                            items(displayedNotes) { note ->
-                                NavigationDrawerItem(
-                                    label = { Text(note.name) },
-                                    selected = note.uri == uiState.activeNote?.uri,
-                                    onClick = {
-                                        appViewModel.onNoteSelected(note)
-                                    },
-                                    modifier = Modifier.padding(horizontal = 8.dp)
-                                )
-                            }
+                    LazyColumn {
+                        items(displayedNotes) { note ->
+                            NavigationDrawerItem(
+                                label = { Text(note.name) },
+                                selected = note.uri == uiState.activeNote?.uri,
+                                onClick = {
+                                    appViewModel.onNoteSelected(note)
+                                },
+                                modifier = Modifier.padding(horizontal = 8.dp)
+                            )
                         }
                     }
                 }

@@ -40,7 +40,7 @@ class ProjectRepositoryImpl(
                 val fullText = readFullText(file.uri)
                 val (fmString, body) = splitFrontMatter(fullText)
                 val frontMatter = parseFrontMatter(fmString)
-                val tags = (frontMatter["tags"] as? List<*>)?.joinToString(",") ?: ""
+                val tags = (frontMatter["tags"] as? List<*>)?.joinToString(" ") ?: ""
 
                 val entity = NoteEntity(
                     id = cached?.id ?: 0,
@@ -81,10 +81,7 @@ class ProjectRepositoryImpl(
         val uriString = prefs.getString(KEY_PROJECT_URI, null) ?: return@withContext null
         val name = prefs.getString(KEY_PROJECT_NAME, null) ?: return@withContext null
         val uri = uriString.toUri()
-        val project = buildProject(uri, name)
-
-        syncDatabase(project)
-        return@withContext project
+        buildProject(uri, name)
     }
 
     override suspend fun createNote(project: Project, name: String?, tags: List<String>?): Uri? =
@@ -137,53 +134,22 @@ createdAt: $isoDate
         includeFrontMatter: Boolean
     ): List<Note> =
         withContext(Dispatchers.IO) {
-            val notesDir = DocumentFile.fromTreeUri(context, project.notesUri)
-            val files = notesDir?.listFiles()
-                ?.filter { it.name?.endsWith(".md") == true }
-                ?: return@withContext emptyList()
-
-            files.mapNotNull { file ->
-                val name = file.name?.removeSuffix(".md") ?: "Untitled"
-                query.nameFilter?.let { nameFilter ->
-                    if (!name.contains(nameFilter, ignoreCase = true)) return@mapNotNull null
-                }
-
-                if (query.bodyTerms.isEmpty() && query.tagFilters.isEmpty() && query.propFilters.isEmpty()) {
-                    return@mapNotNull Note(name = name, uri = file.uri, lastModified = file.lastModified())
-                }
-
-                val frontMatterString = readFrontMatterOnly(file.uri)
-                val frontMatter = parseFrontMatter(frontMatterString)
-                if (query.tagFilters.isNotEmpty()) {
-                    val fileTags = when (val tags = frontMatter["tags"]) {
-                        is List<*> -> tags.filterIsInstance<String>()
-                        else -> emptyList()
-                    }
-                    if (!query.tagFilters.all { t -> fileTags.any { it.contains(t, ignoreCase = true) } })
-                        return@mapNotNull null
-                }
-                for ((key, value) in query.propFilters) {
-                    val fmValue = frontMatter[key] as? String ?: return@mapNotNull null
-                    if (!fmValue.contains(value, ignoreCase = true)) return@mapNotNull null
-                }
-
-                if (query.bodyTerms.isNotEmpty()) {
-                    val body = readBodyOnly(file.uri)
-                    val searchableText = ("$body $name").lowercase()
-                    if (!query.bodyTerms.all { term -> searchableText.contains(term.lowercase()) })
-                        return@mapNotNull null
-                }
-
-                Note(
-                    name = name,
-                    uri = file.uri,
-                    lastModified = file.lastModified(),
-                    createdAt = getCreatedAt(frontMatter),
-                    text = if (includeText) {
-                        if (includeFrontMatter) readFullText(file.uri) else readBodyOnly(file.uri)
-                    } else null,
+            val entities = if (query.bodyTerms.isNotEmpty()) {
+                val ftsQuery = query.bodyTerms.joinToString(" AND ") { "$it*" }
+                noteDao.searchFullText(ftsQuery)
+            } else {
+                noteDao.searchMetadata(
+                    tag = query.tagFilters.firstOrNull() ?: "",
+                    name = query.nameFilter ?: ""
                 )
-            }.sortedByDescending { it.lastModified }
+            }
+            return@withContext entities.map { Note(
+                name = it.name,
+                uri = it.uri.toUri(),
+                lastModified = it.lastModified,
+                createdAt = it.createdAt,
+                text = if (includeText) it.body else null,
+            ) }
         }
 
     override suspend fun getNoteText(note: Note, includeFrontMatter: Boolean): String =

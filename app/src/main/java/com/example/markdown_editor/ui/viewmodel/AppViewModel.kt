@@ -30,7 +30,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     private val db = Room.databaseBuilder(
         application,
         NoteDb::class.java, "database-notes"
-    ).build()
+    )
+        .fallbackToDestructiveMigration(true)
+        .build()
     private val repository = ProjectRepositoryImpl(
         context = application,
         noteDao = db.noteDao(),
@@ -58,6 +60,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             val project = repository.buildProject(uri, name)
             repository.saveProject(project)
             _uiState.update { it.copy(project = project, isLoadingNotes = true) }
+            repository.syncDatabase(project)
             loadNotes(project)
         }
     }
@@ -89,6 +92,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             val uri = repository.createNote(project, nameToUse)
             if (uri != null) {
+                repository.syncDatabase(project)
                 loadNotes(project)
             }
         }
@@ -131,7 +135,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         val newText = current.text.substring(0, cursor) + syntax + current.text.substring(cursor)
         val newCursor = cursor + cursorOffset
         val newValue = current.copy(
-            text = newText,  // TextFieldValue accepts plain text here
+            text = newText,
             selection = TextRange(newCursor)
         )
         editorOnContentChanged(newValue)
@@ -145,8 +149,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             return
         }
 
-        // Compute spans synchronously so textFieldValue and annotatedString
-        // are always updated in the same state emission — no gap, no flash.
         val spans = MarkdownParser.parse(newValue.text)
         val annotated = MarkdownAnnotator.annotate(newValue.text, spans)
 
@@ -165,23 +167,23 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             withContext(Dispatchers.Main) {
                 editorOnContentChanged(TextFieldValue(text))
             }
-            // Track URI so save knows where to write
             _uiState.update { it.copy(activeNote = note) }
         }
     }
 
     fun editorOnSave() {
+        val project = _uiState.value.project ?: return
         val note = _uiState.value.activeNote ?: return
         val text = _uiState.value.editorTextFieldValue.text
         viewModelScope.launch(Dispatchers.IO) {
             repository.saveNoteText(note, text)
+            repository.syncDatabase(project)
         }
     }
 
     fun messengerOnMessengerOpened(project: Project) {
         viewModelScope.launch {
-            _uiState.update { it.copy(project = project, messengerIsLoading = true) }
-
+            repository.syncDatabase(project)
             val notes = repository.getNotes(
                 project,
                 SearchQuery(tagFilters = listOf("quick-note")),
@@ -215,9 +217,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch(Dispatchers.IO) {
             val uri = repository.createNote(project, name, tags)
             if (uri != null) {
-                // Write the message body into the newly created note
                 val newNote = repository.getNoteByUri(uri)
-                // Append text after the front matter
                 val currentContent = repository.getNoteText(newNote, includeFrontMatter = true)
                 repository.saveNoteText(newNote, "$currentContent\n\n$text")
 
@@ -243,7 +243,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     private fun loadNotes(project: Project) {
         viewModelScope.launch {
             val notes = repository.getNotes(project)
-            Log.d("debug", notes.toString())
             _uiState.update { it.copy(notes = notes, isLoadingNotes = false) }
         }
     }

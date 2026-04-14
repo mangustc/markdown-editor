@@ -2,7 +2,10 @@ package com.example.markdown_editor.data.database
 
 import androidx.room.*
 
-@Entity(tableName = "notes")
+@Entity(
+    tableName = "notes",
+    indices = [Index(value = ["uri"], unique = true)],
+)
 data class NoteEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val uri: String,
@@ -17,5 +20,6 @@ data class NoteEntity(
 @Entity(tableName = "notesFts")
 data class NoteEntityFts(
     val id: Long,
+    val name: String,
     val body: String,
 )

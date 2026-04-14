@@ -8,7 +8,6 @@ import kotlinx.coroutines.flow.Flow
 
 interface ProjectRepository {
     fun buildProject(rootUri: Uri, name: String): Project
-    fun getNotes(project: Project): Flow<List<Note>>
     suspend fun saveProject(project: Project)
     suspend fun loadSavedProject(): Project?
     suspend fun createNote(
@@ -17,9 +16,9 @@ interface ProjectRepository {
         tags: List<String>? = emptyList()
     ): Uri?
 
-    suspend fun searchNotes(
+    suspend fun getNotes(
         project: Project,
-        query: SearchQuery,
+        query: SearchQuery = SearchQuery(),
         includeText: Boolean = false,
         includeFrontMatter: Boolean = true
     ): List<Note>

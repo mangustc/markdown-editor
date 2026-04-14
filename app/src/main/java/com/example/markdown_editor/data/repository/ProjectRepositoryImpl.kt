@@ -22,23 +22,6 @@ class ProjectRepositoryImpl(
         Context.MODE_PRIVATE
     )
 ) : ProjectRepository {
-    override fun getNotes(project: Project): Flow<List<Note>> = flow {
-        val notesDir = DocumentFile.fromTreeUri(context, project.notesUri)
-        val notes = notesDir
-            ?.listFiles()
-            ?.filter { it.name?.endsWith(".md") == true }
-            ?.map { file ->
-                Note(
-                    name = file.name?.removeSuffix(".md") ?: "Untitled",
-                    uri = file.uri,
-                    lastModified = file.lastModified()
-                )
-            }
-            ?.sortedByDescending { it.lastModified }
-            ?: emptyList()
-        emit(notes)
-    }.flowOn(Dispatchers.IO)
-
     override suspend fun saveProject(project: Project) {
         // Persist the URI so it survives app restart
         // takePersistableUriPermission ensures we can access it after reboot
@@ -103,15 +86,13 @@ createdAt: $isoDate
         )
     }
 
-    override suspend fun searchNotes(
+    override suspend fun getNotes(
         project: Project,
         query: SearchQuery,
         includeText: Boolean,
         includeFrontMatter: Boolean
     ): List<Note> =
         withContext(Dispatchers.IO) {
-            if (query.isEmpty) return@withContext emptyList()
-
             val notesDir = DocumentFile.fromTreeUri(context, project.notesUri)
             val files = notesDir?.listFiles()
                 ?.filter { it.name?.endsWith(".md") == true }

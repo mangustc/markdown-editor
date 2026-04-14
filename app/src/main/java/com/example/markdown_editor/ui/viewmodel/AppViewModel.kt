@@ -2,6 +2,7 @@ package com.example.markdown_editor.ui.viewmodel
 
 import android.app.Application
 import android.net.Uri
+import android.util.Log
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.AndroidViewModel
@@ -106,7 +107,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         searchJob?.cancel()
         searchJob = viewModelScope.launch {
             _uiState.update { it.copy(isSearching = true) }
-            val results = repository.searchNotes(project, parsed)
+            val results = repository.getNotes(project, parsed)
             _uiState.update { it.copy(searchResults = results, isSearching = false) }
         }
     }
@@ -175,7 +176,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             _uiState.update { it.copy(project = project, messengerIsLoading = true) }
 
-            val notes = repository.searchNotes(
+            val notes = repository.getNotes(
                 project,
                 SearchQuery(tagFilters = listOf("quick-note")),
                 includeText = true,
@@ -235,9 +236,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun loadNotes(project: Project) {
         viewModelScope.launch {
-            repository.getNotes(project).collect { notes ->
-                _uiState.update { it.copy(notes = notes, isLoadingNotes = false) }
-            }
+            val notes = repository.getNotes(project)
+            Log.d("debug", notes.toString())
+            _uiState.update { it.copy(notes = notes, isLoadingNotes = false) }
         }
     }
 }

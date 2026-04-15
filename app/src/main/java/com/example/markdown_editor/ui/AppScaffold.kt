@@ -72,7 +72,6 @@ fun AppScaffold() {
         uri?.let { appViewModel.onProjectSelected(it) }
     }
 
-    val displayedNotes = uiState.searchResults ?: uiState.notes
     val isSearchActive = uiState.searchQuery.isNotEmpty()
 
     LaunchedEffect(Unit) {
@@ -149,20 +148,11 @@ fun AppScaffold() {
                 }
 
                 // Notes list
-                if (uiState.isLoadingNotes) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator()
-                    }
-                } else if (displayedNotes.isEmpty()) {
+                if (uiState.searchResults.isEmpty()) {
                     Text(
                         text = when {
                             uiState.project == null -> "Open a project folder to see notes"
-                            uiState.searchResults != null -> "No notes match your search"
+                            uiState.searchQuery == "" -> "No notes match your search"
                             else -> "No notes yet"
                         },
                         style = MaterialTheme.typography.bodyMedium,
@@ -171,7 +161,7 @@ fun AppScaffold() {
                     )
                 } else {
                     LazyColumn {
-                        items(displayedNotes) { note ->
+                        items(uiState.searchResults) { note ->
                             NavigationDrawerItem(
                                 label = { Text(note.name) },
                                 selected = note.uri == uiState.activeNote?.uri,

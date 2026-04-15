@@ -4,6 +4,8 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.RawQuery
+import androidx.sqlite.db.SupportSQLiteQuery
 
 @Dao
 interface NoteDao {
@@ -16,24 +18,8 @@ interface NoteDao {
     @Query("SELECT * FROM notes WHERE uri = :uri LIMIT 1")
     suspend fun getNoteByUri(uri: String): NoteEntity?
 
-    @Query(
-        """
-        SELECT * FROM notes 
-        WHERE tags LIKE '%' || :tag || '%' 
-        AND name LIKE '%' || :name || '%'
-        ORDER BY lastModified DESC
-    """
-    )
-    suspend fun searchMetadata(tag: String, name: String): List<NoteEntity>
-
-    @Query(
-        """
-        SELECT m.* FROM notes m
-        JOIN notesFts f ON m.rowid = f.rowid
-        WHERE notesFts MATCH :query
-    """
-    )
-    suspend fun searchFullText(query: String): List<NoteEntity>
+    @RawQuery
+    suspend fun searchNotes(query: SupportSQLiteQuery): List<NoteEntity>
 
     @Query("SELECT * FROM notes ORDER BY lastModified DESC")
     fun getAllNotesPaged(): androidx.paging.PagingSource<Int, NoteEntity>

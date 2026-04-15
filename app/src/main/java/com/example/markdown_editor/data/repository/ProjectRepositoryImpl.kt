@@ -6,6 +6,8 @@ import android.content.SharedPreferences
 import android.net.Uri
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
+import androidx.sqlite.db.SimpleSQLiteQuery
+import androidx.sqlite.db.SupportSQLiteQuery
 import com.example.markdown_editor.data.database.NoteDao
 import com.example.markdown_editor.data.database.NoteEntity
 import com.example.markdown_editor.data.model.Note
@@ -22,12 +24,36 @@ class ProjectRepositoryImpl(
         Context.MODE_PRIVATE
     )
 ) : ProjectRepository {
+    override suspend fun getNotes(
+        project: Project,
+        query: SearchQuery,
+        includeText: Boolean,
+        includeFrontMatter: Boolean,
+    ): List<Note> = withContext(Dispatchers.IO) {
+        val sqlQuery = buildSQLiteQuery(query)
+        val entities = noteDao.searchNotes(sqlQuery)
+
+        entities.map { entity ->
+            Note(
+                name = entity.name,
+                uri = entity.uri.toUri(),
+                lastModified = entity.lastModified,
+                createdAt = entity.createdAt,
+                text = if (includeText) entity.body else null,
+            )
+        }
+    }
+
+    // ── Sync ──────────────────────────────────────────────────────────────────
+
     override suspend fun syncDatabase(project: Project) = withContext(Dispatchers.IO) {
         val notesDir = DocumentFile.fromTreeUri(context, project.notesUri)
         val files =
-            notesDir?.listFiles()?.filter { it.name?.endsWith(".md") == true } ?: return@withContext
+            notesDir?.listFiles()?.filter { it.name?.endsWith(".md") == true }
+                ?: return@withContext
 
-        val existingNotes = noteDao.searchMetadata("", "")
+        // Fetch all existing rows in one query for O(n) comparison
+        val existingNotes = noteDao.searchNotes(buildSQLiteQuery(SearchQuery()))
         val existingUris = existingNotes.associateBy { it.uri }
 
         files.forEach { file ->
@@ -53,21 +79,33 @@ class ProjectRepositoryImpl(
             }
         }
 
+        // Remove stale rows
         val currentFileUris = files.map { it.uri.toString() }.toSet()
         existingNotes.forEach { cached ->
-            if (!currentFileUris.contains(cached.uri)) {
+            if (cached.uri !in currentFileUris) {
                 noteDao.deleteByUri(cached.uri)
             }
         }
     }
 
+    // ── Project persistence ───────────────────────────────────────────────────
+
+    override fun buildProject(rootUri: Uri, name: String): Project {
+        val root = DocumentFile.fromTreeUri(context, rootUri)
+        val notesDir = root?.findFile("notes") ?: root?.createDirectory("notes")
+        val assetsDir = root?.findFile("assets") ?: root?.createDirectory("assets")
+        return Project(
+            name = name,
+            uri = rootUri,
+            notesUri = notesDir?.uri ?: rootUri,
+            assetsUri = assetsDir?.uri ?: rootUri,
+        )
+    }
+
     override suspend fun saveProject(project: Project) {
-        // Persist the URI so it survives app restart
-        // takePersistableUriPermission ensures we can access it after reboot
         context.contentResolver.takePersistableUriPermission(
             project.uri,
-            Intent.FLAG_GRANT_READ_URI_PERMISSION or
-                    Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+            Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
         )
         prefs.edit()
             .putString(KEY_PROJECT_URI, project.uri.toString())
@@ -78,9 +116,10 @@ class ProjectRepositoryImpl(
     override suspend fun loadSavedProject(): Project? = withContext(Dispatchers.IO) {
         val uriString = prefs.getString(KEY_PROJECT_URI, null) ?: return@withContext null
         val name = prefs.getString(KEY_PROJECT_NAME, null) ?: return@withContext null
-        val uri = uriString.toUri()
-        buildProject(uri, name)
+        buildProject(uriString.toUri(), name)
     }
+
+    // ── Note I/O ──────────────────────────────────────────────────────────────
 
     override suspend fun createNote(project: Project, name: String?, tags: List<String>?): Uri? =
         withContext(Dispatchers.IO) {
@@ -88,68 +127,19 @@ class ProjectRepositoryImpl(
                 DocumentFile.fromTreeUri(context, project.notesUri) ?: return@withContext null
 
             val isoDate = java.time.Instant.now().toString()
-            var frontMatterBuilder = """---
-createdAt: $isoDate
-""".trimIndent()
+            var frontMatterBuilder = "---\ncreatedAt: $isoDate"
             if (!tags.isNullOrEmpty()) {
                 frontMatterBuilder += "\ntags:"
-                tags.forEach { tag ->
-                    frontMatterBuilder += "\n- $tag"
-                }
+                tags.forEach { tag -> frontMatterBuilder += "\n- $tag" }
             }
-            val initialContent = "$frontMatterBuilder\n---".trimIndent()
+            val initialContent = "$frontMatterBuilder\n---"
 
             val newFile =
                 notesDir.createFile("text/markdown", "$name.md") ?: return@withContext null
-            context.contentResolver.openOutputStream(newFile.uri, "wt")?.use { outputStream ->
-                outputStream.bufferedWriter().use { writer ->
-                    writer.write(initialContent)
-                }
+            context.contentResolver.openOutputStream(newFile.uri, "wt")?.use { out ->
+                out.bufferedWriter().use { it.write(initialContent) }
             }
-
             newFile.uri
-        }
-
-    // Derives notes/ and assets/ URIs from the root project URI
-    override fun buildProject(rootUri: Uri, name: String): Project {
-        val root = DocumentFile.fromTreeUri(context, rootUri)
-        val notesDir = root?.findFile("notes")
-            ?: root?.createDirectory("notes")
-        val assetsDir = root?.findFile("assets")
-            ?: root?.createDirectory("assets")
-        return Project(
-            name = name,
-            uri = rootUri,
-            notesUri = notesDir?.uri ?: rootUri,
-            assetsUri = assetsDir?.uri ?: rootUri
-        )
-    }
-
-    override suspend fun getNotes(
-        project: Project,
-        query: SearchQuery,
-        includeText: Boolean,
-        includeFrontMatter: Boolean
-    ): List<Note> =
-        withContext(Dispatchers.IO) {
-            val entities = if (query.bodyTerms.isNotEmpty()) {
-                val ftsQuery = query.bodyTerms.joinToString(" AND ") { "$it*" }
-                noteDao.searchFullText(ftsQuery)
-            } else {
-                noteDao.searchMetadata(
-                    tag = query.tagFilters.firstOrNull() ?: "",
-                    name = query.nameFilter ?: ""
-                )
-            }
-            return@withContext entities.map {
-                Note(
-                    name = it.name,
-                    uri = it.uri.toUri(),
-                    lastModified = it.lastModified,
-                    createdAt = it.createdAt,
-                    text = if (includeText) it.body else null,
-                )
-            }
         }
 
     override suspend fun getNoteText(note: Note, includeFrontMatter: Boolean): String =
@@ -158,54 +148,47 @@ createdAt: $isoDate
                 .openInputStream(note.uri)
                 ?.bufferedReader()
                 ?.use { it.readText() } ?: ""
-            return@withContext if (includeFrontMatter) fullText else splitFrontMatter(fullText).second
+            if (includeFrontMatter) fullText else splitFrontMatter(fullText).second
         }
 
     override suspend fun saveNoteText(note: Note, text: String): Note =
         withContext(Dispatchers.IO) {
-            context.contentResolver.openOutputStream(note.uri, "wt")?.bufferedWriter()
-                ?.use { writer ->
-                    writer.write(text)
-                }
+            context.contentResolver.openOutputStream(note.uri, "wt")
+                ?.bufferedWriter()
+                ?.use { it.write(text) }
             note
         }
 
     override suspend fun getNoteByUri(uri: Uri): Note = withContext(Dispatchers.IO) {
         val content = try {
-            context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
-                ?: ""
+            context.contentResolver.openInputStream(uri)
+                ?.bufferedReader()?.use { it.readText() } ?: ""
         } catch (e: Exception) {
-            // Handle read failure gracefully
             return@withContext Note(
                 name = "Error",
                 uri = uri,
                 lastModified = System.currentTimeMillis(),
-                createdAt = null
+                createdAt = null,
             )
         }
 
         val (frontMatterString, _) = splitFrontMatter(content)
         val frontMatter = parseFrontMatter(frontMatterString)
         val createdAtLong = getCreatedAt(frontMatter)
-        val documentFile = DocumentFile.fromSingleUri(context, uri) ?: return@withContext Note(
-            name = "Unknown",
-            uri = uri,
-            lastModified = 0L,
-            createdAt = null
-        )
+        val documentFile = DocumentFile.fromSingleUri(context, uri)
+            ?: return@withContext Note(name = "Unknown", uri = uri, lastModified = 0L)
 
         Note(
             name = documentFile.name?.removeSuffix(".md") ?: "Untitled",
             uri = uri,
             lastModified = documentFile.lastModified(),
-            createdAt = createdAtLong
+            createdAt = createdAtLong,
         )
     }
 
     override suspend fun copyToAssets(project: Project, assetUri: Uri): String =
         withContext(Dispatchers.IO) {
             val resolver = context.contentResolver
-
             val sourceFile = DocumentFile.fromSingleUri(context, assetUri)
             val fileName = sourceFile?.name ?: "attachment_${System.currentTimeMillis()}"
             val mimeType = resolver.getType(assetUri) ?: "application/octet-stream"
@@ -216,9 +199,9 @@ createdAt: $isoDate
                 ?: throw IllegalStateException("Failed to create file in assets")
 
             try {
-                resolver.openInputStream(assetUri)?.use { inputStream ->
-                    resolver.openOutputStream(targetFile.uri)?.use { outputStream ->
-                        inputStream.copyTo(outputStream)
+                resolver.openInputStream(assetUri)?.use { input ->
+                    resolver.openOutputStream(targetFile.uri)?.use { output ->
+                        input.copyTo(output)
                     }
                 }
             } catch (e: Exception) {
@@ -228,6 +211,8 @@ createdAt: $isoDate
 
             "assets/${targetFile.name}"
         }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
 
     private fun splitFrontMatter(content: String): Pair<String, String> {
         if (!content.trimStart().startsWith("---")) return "" to content
@@ -246,50 +231,86 @@ createdAt: $isoDate
 
         while (i < lines.size) {
             val line = lines[i].trim()
-
             if (line.isEmpty() || line.startsWith("#")) {
-                i += 1
-                continue
+                i++; continue
             }
 
             val kv = line.split(":", limit = 2).map { it.trim() }
-            if (kv.size != 2) {
-                throw IllegalArgumentException("Invalid line format: $line")
-            }
+            if (kv.size != 2) throw IllegalArgumentException("Invalid line format: $line")
 
             val key = kv[0]
             val valuePart = kv[1]
 
             if (valuePart.isEmpty()) {
                 val list = mutableListOf<String>()
-                i += 1
+                i++
                 while (i < lines.size && lines[i].trimStart().startsWith("-")) {
-                    val item = lines[i].trim().removePrefix("-").trim()
-                    list.add(item)
-                    i += 1
+                    list.add(lines[i].trim().removePrefix("-").trim())
+                    i++
                 }
                 result[key] = list.toList()
             } else {
                 result[key] = valuePart
-                i += 1
+                i++
             }
         }
-
         return result
     }
 
-    private fun getCreatedAt(frontMatter: Map<String, Any>): Long? {
-        return frontMatter["createdAt"]?.let { value ->
+    private fun getCreatedAt(frontMatter: Map<String, Any>): Long? =
+        frontMatter["createdAt"]?.let { value ->
             try {
                 java.time.Instant.parse(value as String).toEpochMilli()
             } catch (e: Exception) {
                 null
             }
         }
-    }
 
     private fun readFullText(uri: Uri): String =
         context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() } ?: ""
+
+    private fun buildSQLiteQuery(query: SearchQuery): SupportSQLiteQuery {
+        val args = mutableListOf<Any>()
+        val sb = StringBuilder()
+        val hasFts = query.bodyTerms.isNotEmpty()
+        val ftsMatchExpr = query.buildFtsMatchQuery()
+
+        sb.append("SELECT notes.* FROM notes")
+        if (hasFts && ftsMatchExpr != null) {
+            sb.append("\nJOIN notesFts ON notes.rowid = notesFts.rowid")
+            sb.append("\n  AND notesFts MATCH ?")
+            args.add(ftsMatchExpr)
+        }
+
+        val conditions = mutableListOf<String>()
+        for (term in query.negatedBodyTerms) {
+            conditions.add("notes.body NOT LIKE ?")
+            args.add("%$term%")
+        }
+        for (tag in query.positiveTagLikes()) {
+            conditions.add("notes.tags LIKE ?")
+            args.add("%$tag%")
+        }
+        for (tag in query.negatedTagLikes()) {
+            conditions.add("notes.tags NOT LIKE ?")
+            args.add("%$tag%")
+        }
+        query.nameFilter?.let {
+            conditions.add("notes.name LIKE ?")
+            args.add("%$it%")
+        }
+        query.negatedNameFilter?.let {
+            conditions.add("notes.name NOT LIKE ?")
+            args.add("%$it%")
+        }
+        if (conditions.isNotEmpty()) {
+            sb.append("\nWHERE ")
+            sb.append(conditions.joinToString("\n  AND "))
+        }
+        sb.append("\nORDER BY notes.lastModified DESC")
+
+        return SimpleSQLiteQuery(sb.toString(), args.toTypedArray())
+    }
 
     companion object {
         private const val KEY_PROJECT_URI = "project_uri"

@@ -65,9 +65,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             val name = uri.lastPathSegment?.substringAfterLast(":") ?: "Project"
             val project = repository.buildProject(uri, name)
             repository.saveProject(project)
-            _uiState.update { it.copy(project = project, isLoadingNotes = true) }
+            _uiState.update { it.copy(project = project) }
             repository.syncDatabase(project)
-            loadNotes(project)
+            onSearchQueryChanged()
         }
     }
 
@@ -99,33 +99,30 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             val uri = repository.createNote(project, nameToUse)
             if (uri != null) {
                 repository.syncDatabase(project)
-                loadNotes(project)
+                onSearchQueryChanged()
             }
         }
     }
 
     private var searchJob: Job? = null
-    fun onSearchQueryChanged(raw: String) {
-        _uiState.update { it.copy(searchQuery = raw) }
-
-        val project = _uiState.value.project ?: run {
-            _uiState.update { it.copy(searchResults = null) }
-            return
+    fun onSearchQueryChanged(raw: String? = null) {
+        if (raw != null) {
+            _uiState.update { it.copy(searchQuery = raw) }
         }
+        val searchQuery = _uiState.value.searchQuery
 
-        val parsed = SearchQuery.parse(raw.trim())
-        if (parsed.isEmpty) {
-            searchJob?.cancel()
-            _uiState.update { it.copy(searchResults = null, isSearching = false) }
-            return
-        }
+        val project = _uiState.value.project ?: return
+
+        val parsedInit = SearchQuery.parse(searchQuery.trim())
+        val parsed = parsedInit.copy(
+            negatedTagFilters = parsedInit.negatedTagFilters + "quick-note"
+        )
 
         searchJob?.cancel()
         searchJob = viewModelScope.launch {
             repository.syncDatabase(project)
-            _uiState.update { it.copy(isSearching = true) }
             val results = repository.getNotes(project, parsed)
-            _uiState.update { it.copy(searchResults = results, isSearching = false) }
+            _uiState.update { it.copy(searchResults = results) }
         }
     }
 
@@ -276,7 +273,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                     _uiState.update { it.copy(messengerNewNoteText = "") }
                 }
                 messengerOnMessengerOpened(project)
-                loadNotes(project)
+                onSearchQueryChanged()
             }
         }
     }
@@ -285,16 +282,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             val project = repository.loadSavedProject()
             if (project != null) {
-                _uiState.update { it.copy(project = project, isLoadingNotes = true) }
-                loadNotes(project)
+                _uiState.update { it.copy(project = project) }
+                onSearchQueryChanged()
             }
-        }
-    }
-
-    private fun loadNotes(project: Project) {
-        viewModelScope.launch {
-            val notes = repository.getNotes(project)
-            _uiState.update { it.copy(notes = notes, isLoadingNotes = false) }
         }
     }
 }

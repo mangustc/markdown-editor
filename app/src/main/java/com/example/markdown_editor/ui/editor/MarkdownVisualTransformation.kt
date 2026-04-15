@@ -1,56 +1,61 @@
 package com.example.markdown_editor.ui.editor
 
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.ParagraphStyle
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.OffsetMapping
 import androidx.compose.ui.text.input.TransformedText
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.LineHeightStyle
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.sp
 import com.example.markdown_editor.domain.model.SpanInfo
 import com.example.markdown_editor.domain.model.TokenType
 
 class MarkdownVisualTransformation(
     private val annotated: AnnotatedString,
     private val spans: List<SpanInfo>,
+    private val selection: TextRange,
+    private val imageAspectRatios: Map<String, Float>,
+    private val editorWidth: Int,
+    private val density: Density
 ) : VisualTransformation {
-    companion object {
-        const val SPACER = "\n\n\n\n\n\n\n\n\n\n\n"
-    }
 
     override fun filter(text: AnnotatedString): TransformedText {
-        val builder = AnnotatedString.Builder()
-        val imageSpans = spans.filter { it.type == TokenType.IMAGE }.sortedBy { it.start }
+        val builder = AnnotatedString.Builder(annotated)
+        val imageSpans = spans.filter { it.type == TokenType.IMAGE }
 
-        var lastEnd = 0
         for (span in imageSpans) {
-            builder.append(annotated.subSequence(lastEnd, span.end))
-            builder.append(SPACER)
-            lastEnd = span.end
-        }
-        builder.append(annotated.subSequence(lastEnd, annotated.length))
+            val isSelected = selection.start <= span.end && selection.end >= span.start
+            if (isSelected) continue
 
-        val offsetMapping = object : OffsetMapping {
-            override fun originalToTransformed(offset: Int): Int {
-                var shift = 0
-                for (span in imageSpans) {
-                    if (offset >= span.end) shift += SPACER.length
-                    else break
-                }
-                return offset + shift
-            }
+            val rawText = annotated.substring(span.start, span.end)
+            val path = extractImagePath(rawText)
+            val ratio = imageAspectRatios[path] ?: 1.777f
+            val heightPx = if (editorWidth > 0) editorWidth / ratio else 400f
+            val heightSp = with(density) { heightPx.toSp() }
 
-            override fun transformedToOriginal(offset: Int): Int {
-                var shift = 0
-                for (span in imageSpans) {
-                    val spacerStart = span.end + shift
-                    val spacerEnd = spacerStart + SPACER.length
-                    if (offset >= spacerEnd) {
-                        shift += SPACER.length
-                    } else if (offset > spacerStart) {
-                        return span.end
-                    } else break
-                }
-                return offset - shift
-            }
+            builder.addStyle(
+                style = ParagraphStyle(
+                    lineHeight = heightSp,
+                    lineHeightStyle = LineHeightStyle(
+                        alignment = LineHeightStyle.Alignment.Center,
+                        trim = LineHeightStyle.Trim.None,
+                    )
+                ),
+                start = span.start,
+                end = span.end
+            )
+
+            builder.addStyle(
+                style = SpanStyle(fontSize = 1.sp, color = Color.Transparent),
+                start = span.start,
+                end = span.end
+            )
         }
-        return TransformedText(builder.toAnnotatedString(), offsetMapping)
+
+        return TransformedText(builder.toAnnotatedString(), OffsetMapping.Identity)
     }
 }

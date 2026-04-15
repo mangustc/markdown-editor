@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.imeNestedScroll
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
@@ -35,6 +36,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -44,6 +47,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusEvent
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -65,12 +69,31 @@ fun EditorScreen(
     viewModel: AppViewModel
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    // Load note content whenever the active URI changes
+
     LaunchedEffect(uiState.activeNote) {
         viewModel.editorOnNoteOpened()
     }
-    val visualTransformation = remember(uiState.editorAnnotatedString, uiState.editorSpans) {
-        MarkdownVisualTransformation(uiState.editorAnnotatedString, uiState.editorSpans)
+
+    var imageAspectRatios by remember { mutableStateOf(mapOf<String, Float>()) }
+    var editorWidth by remember { mutableIntStateOf(0) }
+    val density = LocalDensity.current
+
+    val visualTransformation = remember(
+        uiState.editorAnnotatedString,
+        uiState.editorSpans,
+        uiState.editorTextFieldValue.selection,
+        imageAspectRatios,
+        editorWidth,
+        density
+    ) {
+        MarkdownVisualTransformation(
+            annotated = uiState.editorAnnotatedString,
+            spans = uiState.editorSpans,
+            selection = uiState.editorTextFieldValue.selection,
+            imageAspectRatios = imageAspectRatios,
+            editorWidth = editorWidth,
+            density = density
+        )
     }
 
     val scrollState = rememberScrollState()
@@ -104,7 +127,7 @@ fun EditorScreen(
                     viewModel.editorOnEvent(
                         EditorEvent.InsertSyntax(
                             "****",
-                            cursorOffset = 2
+                            2
                         )
                     )
                 }) {
@@ -114,7 +137,7 @@ fun EditorScreen(
                     viewModel.editorOnEvent(
                         EditorEvent.InsertSyntax(
                             "**",
-                            cursorOffset = 1
+                            1
                         )
                     )
                 }) {
@@ -124,7 +147,7 @@ fun EditorScreen(
                     viewModel.editorOnEvent(
                         EditorEvent.InsertSyntax(
                             "``",
-                            cursorOffset = 1
+                            1
                         )
                     )
                 }) {
@@ -142,9 +165,7 @@ fun EditorScreen(
                 }) {
                     Icon(Icons.Default.Image, contentDescription = "Attach photo")
                 }
-                IconButton(onClick = {
-                    filePickerLauncher.launch(arrayOf("*/*"))
-                }) {
+                IconButton(onClick = { filePickerLauncher.launch(arrayOf("*/*")) }) {
                     Icon(Icons.Default.AttachFile, contentDescription = "Attach file")
                 }
             }
@@ -161,7 +182,12 @@ fun EditorScreen(
                 value = uiState.editorTextFieldValue,
                 onValueChange = { viewModel.editorOnContentChanged(it) },
                 visualTransformation = visualTransformation,
-                onTextLayout = { textLayoutResult = it },
+                onTextLayout = {
+                    textLayoutResult = it
+                    if (editorWidth != it.size.width) {
+                        editorWidth = it.size.width
+                    }
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .bringIntoViewRequester(bringIntoViewRequester)
@@ -178,29 +204,53 @@ fun EditorScreen(
 
             textLayoutResult?.let { layoutResult ->
                 val imageSpans = uiState.editorSpans.filter { it.type == TokenType.IMAGE }
-                if (imageSpans.isNotEmpty()) {
-                    val transformedText = visualTransformation.filter(uiState.editorAnnotatedString)
-                    val offsetMapping = transformedText.offsetMapping
-                    imageSpans.forEach { span ->
-                        val rawText =
-                            uiState.editorTextFieldValue.text.substring(span.start, span.end)
-                        val path = extractImagePath(rawText)
-                        val spacerStartOffset =
-                            offsetMapping.originalToTransformed(span.end) - MarkdownVisualTransformation.SPACER.length
-                        val yCoordinate = layoutResult.getLineBottom(
-                            layoutResult.getLineForOffset(spacerStartOffset)
-                        )
 
-                        if (path.isNotEmpty() && uiState.project != null) {
-                            Box(
-                                modifier = Modifier
-                                    .padding(start = 16.dp, end = 16.dp, top = 16.dp)
-                                    .offset { IntOffset(0, yCoordinate.toInt()) }
-                                    .fillMaxWidth()
-                                    .height(160.dp)
-                                    .padding(vertical = 8.dp)
-                            ) {
-                                AsyncMarkdownImage(path = path, project = uiState.project!!)
+                if (imageSpans.isNotEmpty() && uiState.project != null) {
+                    imageSpans.forEachIndexed { index, span ->
+                        val selection = uiState.editorTextFieldValue.selection
+                        val isSelected = selection.start <= span.end && selection.end >= span.start
+
+                        if (!isSelected) {
+                            val rawText =
+                                uiState.editorTextFieldValue.text.substring(span.start, span.end)
+                            val path = extractImagePath(rawText)
+
+                            val ratio = imageAspectRatios[path] ?: 1.777f
+                            val exactHeightPx = if (editorWidth > 0) editorWidth / ratio else 400f
+
+                            val layoutTextLength = layoutResult.layoutInput.text.length
+                            val offsetToUse =
+                                span.start.coerceIn(0, (layoutTextLength - 1).coerceAtLeast(0))
+
+                            var topPx = 0f
+                            if (layoutTextLength > 0) {
+                                val lineIndex = layoutResult.getLineForOffset(offsetToUse)
+                                topPx = layoutResult.getLineTop(lineIndex)
+                            }
+
+                            if (path.isNotEmpty()) {
+                                val topOffset = topPx + with(density) { 16.dp.toPx() }
+                                val leftOffset = with(density) { 16.dp.roundToPx() }
+
+                                key(path, index) {
+                                    Box(
+                                        modifier = Modifier
+                                            .offset { IntOffset(leftOffset, topOffset.toInt()) }
+                                            .width(with(density) { editorWidth.toDp() })
+                                            .height(with(density) { exactHeightPx.toDp() })
+                                    ) {
+                                        AsyncMarkdownImage(
+                                            path = path,
+                                            project = uiState.project!!,
+                                            onRatioMeasured = { newRatio ->
+                                                if (imageAspectRatios[path] != newRatio) {
+                                                    imageAspectRatios =
+                                                        imageAspectRatios + (path to newRatio)
+                                                }
+                                            }
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
@@ -210,8 +260,7 @@ fun EditorScreen(
     }
 }
 
-
-private fun extractImagePath(markdown: String): String {
+fun extractImagePath(markdown: String): String {
     return markdown
         .substringAfter("](")
         .dropLast(1)
@@ -221,7 +270,7 @@ private fun extractImagePath(markdown: String): String {
 }
 
 @Composable
-fun AsyncMarkdownImage(path: String, project: Project) {
+fun AsyncMarkdownImage(path: String, project: Project, onRatioMeasured: (Float) -> Unit) {
     val context = LocalContext.current
     var imageUri by remember(path, project) { mutableStateOf<Uri?>(null) }
 
@@ -246,7 +295,14 @@ fun AsyncMarkdownImage(path: String, project: Project) {
             model = imageUri,
             contentDescription = null,
             modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.Fit
+            contentScale = ContentScale.Fit,
+            onSuccess = { state ->
+                val w = state.painter.intrinsicSize.width
+                val h = state.painter.intrinsicSize.height
+                if (w > 0 && h > 0) {
+                    onRatioMeasured(w / h)
+                }
+            }
         )
     } else {
         Box(

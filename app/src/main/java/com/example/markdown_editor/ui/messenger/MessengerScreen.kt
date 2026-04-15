@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -52,10 +51,9 @@ fun MessengerScreen(
     viewModel: AppViewModel,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val project = uiState.project
 
-    LaunchedEffect(project) {
-        project?.let { viewModel.messengerOnMessengerOpened(it) }
+    LaunchedEffect(uiState.project) {
+        uiState.project?.let { viewModel.messengerOnMessengerOpened(it) }
     }
 
     val sortedNotes = remember(uiState.messengerNotesList) {
@@ -70,57 +68,71 @@ fun MessengerScreen(
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .imePadding()
-    ) {
+    if (uiState.project == null) {
+        viewModel.openDrawer()
         Box(
             modifier = Modifier
-                .weight(1f)
                 .fillMaxSize(),
-            contentAlignment = Alignment.BottomCenter,
+            contentAlignment = Alignment.Center,
         ) {
-            if (uiState.messengerIsLoading) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .fillMaxHeight(),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    CircularProgressIndicator()
-                }
-            } else if (sortedNotes.isEmpty()) {
-                Text(
-                    text = "No quick notes yet.\nType something below to get started.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                    modifier = Modifier.align(Alignment.Center)
-                )
-            } else {
-                LazyColumn(
-                    state = listState,
-                    modifier = Modifier.fillMaxWidth(),
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp),
-                    reverseLayout = true,
-                ) {
-                    items(sortedNotes, key = { it.uri.toString() }) { note ->
-                        MessageBubble(note = note, onClick = {
-                            viewModel.onNoteSelected(note)
-                        })
+            Text(
+                text = "Open a project folder to see notes",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(16.dp)
+            )
+
+        }
+    } else {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .imePadding()
+        ) {
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxSize(),
+                contentAlignment = Alignment.BottomCenter,
+            ) {
+                if (uiState.messengerIsLoading) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize(),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        CircularProgressIndicator()
+                    }
+                } else if (sortedNotes.isEmpty()) {
+                    Text(
+                        text = "No quick notes yet.\nType something below to get started.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        modifier = Modifier.align(Alignment.Center)
+                    )
+                } else {
+                    LazyColumn(
+                        state = listState,
+                        modifier = Modifier.fillMaxWidth(),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                        reverseLayout = true,
+                    ) {
+                        items(sortedNotes, key = { it.uri.toString() }) { note ->
+                            MessageBubble(note = note, onClick = {
+                                viewModel.onNoteSelected(note)
+                            })
+                        }
                     }
                 }
             }
+            MessengerInputBar(
+                value = uiState.messengerNewNoteText,
+                onValueChange = { viewModel.messengerOnNewNoteTextChanged(it) },
+                onSend = { viewModel.messengerOnSendNote() }
+            )
         }
-
-        // Input bar sits directly above the keyboard, no gap
-        MessengerInputBar(
-            value = uiState.messengerNewNoteText,
-            onValueChange = { viewModel.messengerOnNewNoteTextChanged(it) },
-            onSend = { viewModel.messengerOnSendNote() }
-        )
     }
 }
 
@@ -134,7 +146,6 @@ private fun MessageBubble(
         SimpleDateFormat("MMM d, HH:mm", Locale.getDefault()).format(Date(millis))
     }
 
-    // Align bubbles to the end (right), mirroring a "saved messages" / self-chat style
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.End
@@ -157,7 +168,6 @@ private fun MessageBubble(
             Column(
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
             ) {
-                // Note body text — plain, no markdown rendering
                 val displayText = note.text?.trim()?.ifBlank { note.name } ?: note.name
                 Text(
                     text = displayText,
@@ -169,7 +179,6 @@ private fun MessageBubble(
 
                 Spacer(modifier = Modifier.height(4.dp))
 
-                // Timestamp + note name
                 Row(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     modifier = Modifier.fillMaxWidth()

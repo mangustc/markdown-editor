@@ -54,6 +54,12 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     private val _navigationEvents = Channel<NavigationEvent>(Channel.BUFFERED)
     val navigationEvents = _navigationEvents.receiveAsFlow()
 
+    fun openDrawer() {
+        viewModelScope.launch {
+            _navigationEvents.send(NavigationEvent.OpenDrawer)
+        }
+    }
+
     fun onProjectSelected(uri: Uri) {
         viewModelScope.launch {
             val name = uri.lastPathSegment?.substringAfterLast(":") ?: "Project"

@@ -1,6 +1,10 @@
 package com.example.markdown_editor.data.database
 
-import androidx.room.*
+import androidx.room.Entity
+import androidx.room.Fts4
+import androidx.room.FtsOptions
+import androidx.room.Index
+import androidx.room.PrimaryKey
 
 @Entity(
     tableName = "notes",

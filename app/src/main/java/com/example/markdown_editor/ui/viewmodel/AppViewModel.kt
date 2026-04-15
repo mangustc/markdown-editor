@@ -2,7 +2,6 @@ package com.example.markdown_editor.ui.viewmodel
 
 import android.app.Application
 import android.net.Uri
-import android.util.Log
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.AndroidViewModel

@@ -1,6 +1,7 @@
 package com.example.markdown_editor.data.database
 
-import androidx.room.*
+import androidx.room.Database
+import androidx.room.RoomDatabase
 
 @Database(
     entities = [NoteEntity::class, NoteEntityFts::class],

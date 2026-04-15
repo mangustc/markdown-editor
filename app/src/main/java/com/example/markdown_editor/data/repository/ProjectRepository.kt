@@ -4,7 +4,6 @@ import android.net.Uri
 import com.example.markdown_editor.data.model.Note
 import com.example.markdown_editor.data.model.Project
 import com.example.markdown_editor.data.model.SearchQuery
-import kotlinx.coroutines.flow.Flow
 
 interface ProjectRepository {
     fun buildProject(rootUri: Uri, name: String): Project

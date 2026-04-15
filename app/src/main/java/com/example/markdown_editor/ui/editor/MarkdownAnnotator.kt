@@ -81,8 +81,6 @@ object MarkdownAnnotator {
                         ),
                         info.start, info.end
                     )
-
-                    else -> Unit
                 }
             }
         }

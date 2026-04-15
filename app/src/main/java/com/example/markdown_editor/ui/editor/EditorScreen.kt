@@ -47,18 +47,17 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.example.markdown_editor.data.model.Project
+import com.example.markdown_editor.domain.model.TokenType
 import com.example.markdown_editor.ui.viewmodel.AppViewModel
-import com.example.markdown_editor.ui.editor.EditorEvent
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import androidx.core.net.toUri
-import com.example.markdown_editor.domain.model.TokenType
-import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -83,34 +82,22 @@ fun EditorScreen(
         contract = ActivityResultContracts.PickVisualMedia()
     ) { uri ->
         if (uri != null) {
-            val mime = uri.let { u ->
-                // Determine MIME from the URI; fallback to "image/*"
-                "image/*"
-            }
-            viewModel.editorOnEvent(EditorEvent.AttachPhoto(uri = uri, mimeType = mime))
+            viewModel.editorOnEvent(EditorEvent.AttachPhoto(uri = uri))
         }
     }
 
-    // ── File picker (any file via SAF) ──────────────────────────────────────
     val filePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri ->
         if (uri != null) {
-            viewModel.editorOnEvent(
-                EditorEvent.AttachFile(
-                    uri         = uri,
-                    mimeType    = null,   // ViewModel will resolve via ContentResolver
-                    displayName = null
-                )
-            )
+            viewModel.editorOnEvent(EditorEvent.AttachFile(uri = uri))
         }
     }
 
     Scaffold(
-        // No TopAppBar here — AppScaffold owns that
         bottomBar = {
             BottomAppBar(
-                modifier = Modifier.imePadding(), // always sits above the keyboard
+                modifier = Modifier.imePadding(),
                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
             ) {
                 IconButton(onClick = {
@@ -195,32 +182,31 @@ fun EditorScreen(
                     val transformedText = visualTransformation.filter(uiState.editorAnnotatedString)
                     val offsetMapping = transformedText.offsetMapping
                     imageSpans.forEach { span ->
-                        val rawText = uiState.editorTextFieldValue.text.substring(span.start, span.end)
+                        val rawText =
+                            uiState.editorTextFieldValue.text.substring(span.start, span.end)
                         val path = extractImagePath(rawText)
+                        val spacerStartOffset =
+                            offsetMapping.originalToTransformed(span.end) - MarkdownVisualTransformation.SPACER.length
+                        val yCoordinate = layoutResult.getLineBottom(
+                            layoutResult.getLineForOffset(spacerStartOffset)
+                        )
 
-                        val transformedOffset = offsetMapping.originalToTransformed(span.end)
-                        val spacerStartOffset = transformedOffset - MarkdownVisualTransformation.SPACER.length
-
-                        if (spacerStartOffset >= 0 && spacerStartOffset <= layoutResult.layoutInput.text.length) {
-                            val line = layoutResult.getLineForOffset(spacerStartOffset)
-                            val yCoordinate = layoutResult.getLineBottom(line)
-
-                            if (path.isNotEmpty() && uiState.project != null) {
-                                Box(
-                                    modifier = Modifier
-                                        .padding(start = 16.dp, end = 16.dp, top = 16.dp)
-                                        .offset { IntOffset(0, yCoordinate.toInt()) }
-                                        .fillMaxWidth()
-                                        .height(160.dp)
-                                        .padding(vertical = 8.dp)
-                                ) {
-                                    AsyncMarkdownImage(path = path, project = uiState.project!!)
-                                }
+                        if (path.isNotEmpty() && uiState.project != null) {
+                            Box(
+                                modifier = Modifier
+                                    .padding(start = 16.dp, end = 16.dp, top = 16.dp)
+                                    .offset { IntOffset(0, yCoordinate.toInt()) }
+                                    .fillMaxWidth()
+                                    .height(160.dp)
+                                    .padding(vertical = 8.dp)
+                            ) {
+                                AsyncMarkdownImage(path = path, project = uiState.project!!)
                             }
                         }
                     }
                 }
-            }        }
+            }
+        }
     }
 }
 
@@ -233,6 +219,7 @@ private fun extractImagePath(markdown: String): String {
         .trim()
         .removeSurrounding("<", ">")
 }
+
 @Composable
 fun AsyncMarkdownImage(path: String, project: Project) {
     val context = LocalContext.current

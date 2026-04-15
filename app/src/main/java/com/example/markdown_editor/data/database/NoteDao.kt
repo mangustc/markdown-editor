@@ -1,6 +1,9 @@
 package com.example.markdown_editor.data.database
 
-import androidx.room.*
+import androidx.room.Dao
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
+import androidx.room.Query
 
 @Dao
 interface NoteDao {
@@ -13,19 +16,23 @@ interface NoteDao {
     @Query("SELECT * FROM notes WHERE uri = :uri LIMIT 1")
     suspend fun getNoteByUri(uri: String): NoteEntity?
 
-    @Query("""
+    @Query(
+        """
         SELECT * FROM notes 
         WHERE tags LIKE '%' || :tag || '%' 
         AND name LIKE '%' || :name || '%'
         ORDER BY lastModified DESC
-    """)
+    """
+    )
     suspend fun searchMetadata(tag: String, name: String): List<NoteEntity>
 
-    @Query("""
+    @Query(
+        """
         SELECT m.* FROM notes m
         JOIN notesFts f ON m.rowid = f.rowid
         WHERE notesFts MATCH :query
-    """)
+    """
+    )
     suspend fun searchFullText(query: String): List<NoteEntity>
 
     @Query("SELECT * FROM notes ORDER BY lastModified DESC")

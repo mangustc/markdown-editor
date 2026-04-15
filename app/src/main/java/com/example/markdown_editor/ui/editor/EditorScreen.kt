@@ -232,7 +232,7 @@ fun EditorScreen(
                                 val topOffset = topPx + with(density) { 16.dp.toPx() }
                                 val leftOffset = with(density) { 16.dp.roundToPx() }
 
-                                key(path, index) {
+                                key(path, ratio) {
                                     Box(
                                         modifier = Modifier
                                             .offset { IntOffset(leftOffset, topOffset.toInt()) }

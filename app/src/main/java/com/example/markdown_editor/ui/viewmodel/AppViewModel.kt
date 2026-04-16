@@ -4,6 +4,7 @@ import android.app.Application
 import android.net.Uri
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.core.net.toUri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.room.Room
@@ -47,6 +48,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     sealed class NavigationEvent {
         data class GoToEditor(val note: Note) : NavigationEvent()
+        object GoBack : NavigationEvent()
         object OpenDrawer : NavigationEvent()
         object CloseDrawer : NavigationEvent()
     }
@@ -57,6 +59,12 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     fun openDrawer() {
         viewModelScope.launch {
             _navigationEvents.send(NavigationEvent.OpenDrawer)
+        }
+    }
+
+    fun goBack() {
+        viewModelScope.launch {
+            _navigationEvents.send(NavigationEvent.GoBack)
         }
     }
 
@@ -72,7 +80,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun onNoteSelected(note: Note) {
-        _uiState.update { it.copy(activeNote = note) }
         viewModelScope.launch {
             _navigationEvents.send(NavigationEvent.CloseDrawer)
             _navigationEvents.send(NavigationEvent.GoToEditor(note))
@@ -208,14 +215,15 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun editorOnNoteOpened() {
+    fun editorOnNoteOpened(noteUriString: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            val note = _uiState.value.activeNote ?: return@launch
+            val note = repository.getNoteByUri(noteUriString.toUri())
             val text = repository.getNoteText(note)
+
             withContext(Dispatchers.Main) {
+                _uiState.update { it.copy(activeNote = note) }
                 editorOnContentChanged(TextFieldValue(text))
             }
-            _uiState.update { it.copy(activeNote = note) }
         }
     }
 

@@ -67,12 +67,13 @@ import kotlinx.coroutines.withContext
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun EditorScreen(
-    viewModel: AppViewModel
+    viewModel: AppViewModel,
+    noteUriString: String,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    LaunchedEffect(uiState.activeNote) {
-        viewModel.editorOnNoteOpened()
+    LaunchedEffect(noteUriString) {
+        viewModel.editorOnNoteOpened(noteUriString)
     }
 
     var imageAspectRatios by remember { mutableStateOf(mapOf<String, Float>()) }

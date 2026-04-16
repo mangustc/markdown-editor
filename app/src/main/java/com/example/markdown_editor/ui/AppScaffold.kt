@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.automirrored.outlined.OpenInNew
 import androidx.compose.material.icons.filled.Close
@@ -78,10 +79,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.toRoute
 import com.example.markdown_editor.ui.editor.EditorScreen
 import com.example.markdown_editor.ui.messenger.MessengerScreen
-import com.example.markdown_editor.ui.navigation.AppDestination
+import com.example.markdown_editor.ui.navigation.EditorDestination
+import com.example.markdown_editor.ui.navigation.MessengerDestination
 import com.example.markdown_editor.ui.viewmodel.AppViewModel
 import kotlinx.coroutines.launch
 
@@ -89,6 +93,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun AppScaffold() {
     val navController = rememberNavController()
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
 
@@ -107,8 +112,9 @@ fun AppScaffold() {
         appViewModel.navigationEvents.collect { event ->
             when (event) {
                 is AppViewModel.NavigationEvent.GoToEditor ->
-                    navController.navigate(AppDestination.Editor.route) { launchSingleTop = true }
+                    navController.navigate(EditorDestination(event.note.uri.toString()))
 
+                is AppViewModel.NavigationEvent.GoBack -> navController.popBackStack()
                 is AppViewModel.NavigationEvent.OpenDrawer -> scope.launch { drawerState.open() }
                 is AppViewModel.NavigationEvent.CloseDrawer -> scope.launch { drawerState.close() }
             }
@@ -209,28 +215,50 @@ fun AppScaffold() {
                 TopAppBar(
                     title = {
                         Text(
-                            uiState.activeNote?.name ?: "Markdown Editor",
+                            if (navBackStackEntry?.destination?.route == MessengerDestination::class.qualifiedName) "Quick Notes" else uiState.activeNote?.name
+                                ?: "Markdown Editor",
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
                     },
                     navigationIcon = {
-                        TooltipBox(
-                            positionProvider =
-                                TooltipDefaults.rememberTooltipPositionProvider(
-                                    TooltipAnchorPosition.Above
-                                ),
-                            tooltip = { PlainTooltip { Text("Open menu") } },
-                            state = rememberTooltipState(),
-                        ) {
-                            IconButton(
-                                onClick = { scope.launch { appViewModel.openDrawer() } },
-                                shapes = IconButtonDefaults.shapes()
+                        if (navBackStackEntry?.destination?.route != MessengerDestination::class.qualifiedName) {
+                            TooltipBox(
+                                positionProvider =
+                                    TooltipDefaults.rememberTooltipPositionProvider(
+                                        TooltipAnchorPosition.Above
+                                    ),
+                                tooltip = { PlainTooltip { Text("Go back") } },
+                                state = rememberTooltipState(),
                             ) {
-                                Icon(
-                                    Icons.Default.Menu,
-                                    contentDescription = "Open menu",
-                                )
+                                IconButton(
+                                    onClick = { scope.launch { appViewModel.goBack() } },
+                                    shapes = IconButtonDefaults.shapes()
+                                ) {
+                                    Icon(
+                                        Icons.AutoMirrored.Filled.ArrowBack,
+                                        contentDescription = "Go back",
+                                    )
+                                }
+                            }
+                        } else {
+                            TooltipBox(
+                                positionProvider =
+                                    TooltipDefaults.rememberTooltipPositionProvider(
+                                        TooltipAnchorPosition.Above
+                                    ),
+                                tooltip = { PlainTooltip { Text("Open menu") } },
+                                state = rememberTooltipState(),
+                            ) {
+                                IconButton(
+                                    onClick = { scope.launch { appViewModel.openDrawer() } },
+                                    shapes = IconButtonDefaults.shapes()
+                                ) {
+                                    Icon(
+                                        Icons.Default.Menu,
+                                        contentDescription = "Open menu",
+                                    )
+                                }
                             }
                         }
                     }
@@ -239,13 +267,14 @@ fun AppScaffold() {
         ) { innerPadding ->
             NavHost(
                 navController = navController,
-                startDestination = AppDestination.Messenger.route,
+                startDestination = MessengerDestination,
                 modifier = Modifier.padding(innerPadding)
             ) {
-                composable(AppDestination.Editor.route) {
-                    EditorScreen(viewModel = appViewModel)
+                composable<EditorDestination> { backStackEntry ->
+                    val data: EditorDestination = backStackEntry.toRoute()
+                    EditorScreen(viewModel = appViewModel, noteUriString = data.noteUriString)
                 }
-                composable(AppDestination.Messenger.route) {
+                composable<MessengerDestination> {
                     MessengerScreen(viewModel = appViewModel)
                 }
             }

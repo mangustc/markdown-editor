@@ -1,6 +1,9 @@
 package com.example.markdown_editor.ui.navigation
 
-sealed class AppDestination(val route: String) {
-    data object Editor : AppDestination("editor")
-    data object Messenger : AppDestination("messenger")
-}
+import kotlinx.serialization.Serializable
+
+@Serializable
+data class EditorDestination(val noteUriString: String)
+
+@Serializable
+object MessengerDestination

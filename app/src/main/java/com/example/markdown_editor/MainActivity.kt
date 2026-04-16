@@ -6,7 +6,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import com.example.markdown_editor.ui.AppScaffold
-import com.example.markdown_editor.ui.theme.MarkdowneditorTheme
+import com.example.markdown_editor.ui.MarkdowneditorTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {

@@ -5,6 +5,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -12,8 +13,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imeNestedScroll
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
@@ -32,7 +35,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.Scaffold
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -117,64 +120,15 @@ fun EditorScreen(
         }
     }
 
-    Scaffold(
-        bottomBar = {
-            BottomAppBar(
-                modifier = Modifier.imePadding(),
-                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
-            ) {
-                IconButton(onClick = {
-                    viewModel.editorOnEvent(
-                        EditorEvent.InsertSyntax(
-                            "****",
-                            2
-                        )
-                    )
-                }) {
-                    Icon(Icons.Default.FormatBold, contentDescription = "Bold")
-                }
-                IconButton(onClick = {
-                    viewModel.editorOnEvent(
-                        EditorEvent.InsertSyntax(
-                            "**",
-                            1
-                        )
-                    )
-                }) {
-                    Icon(Icons.Default.FormatItalic, contentDescription = "Italic")
-                }
-                IconButton(onClick = {
-                    viewModel.editorOnEvent(
-                        EditorEvent.InsertSyntax(
-                            "``",
-                            1
-                        )
-                    )
-                }) {
-                    Icon(Icons.Default.Code, contentDescription = "Inline code")
-                }
-                IconButton(onClick = { viewModel.editorOnSave() }) {
-                    Icon(Icons.Default.Save, contentDescription = "Save file")
-                }
-                IconButton(onClick = {
-                    photoPickerLauncher.launch(
-                        PickVisualMediaRequest(
-                            ActivityResultContracts.PickVisualMedia.ImageOnly
-                        )
-                    )
-                }) {
-                    Icon(Icons.Default.Image, contentDescription = "Attach photo")
-                }
-                IconButton(onClick = { filePickerLauncher.launch(arrayOf("*/*")) }) {
-                    Icon(Icons.Default.AttachFile, contentDescription = "Attach file")
-                }
-            }
-        }
-    ) { innerPadding ->
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .statusBarsPadding() // Keep content below status bar
+    ) {
         Box(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
+                .weight(1f)
+                .fillMaxWidth()
                 .imeNestedScroll()
                 .verticalScroll(scrollState)
         ) {
@@ -182,6 +136,10 @@ fun EditorScreen(
                 value = uiState.editorTextFieldValue,
                 onValueChange = { viewModel.editorOnContentChanged(it) },
                 visualTransformation = visualTransformation,
+                textStyle = MaterialTheme.typography.bodyLarge.copy(
+                    color = MaterialTheme.colorScheme.onSurface,
+                    lineHeight = androidx.compose.ui.unit.TextUnit.Unspecified,
+                ),
                 onTextLayout = {
                     textLayoutResult = it
                     if (editorWidth != it.size.width) {
@@ -255,6 +213,34 @@ fun EditorScreen(
                         }
                     }
                 }
+            }
+        }
+        BottomAppBar(
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .imePadding(),
+            contentPadding = PaddingValues(horizontal = 8.dp)
+        ) {
+            IconButton(onClick = { viewModel.editorOnEvent(EditorEvent.InsertSyntax("****", 2)) }) {
+                Icon(Icons.Default.FormatBold, contentDescription = "Bold")
+            }
+            IconButton(onClick = { viewModel.editorOnEvent(EditorEvent.InsertSyntax("**", 1)) }) {
+                Icon(Icons.Default.FormatItalic, contentDescription = "Italic")
+            }
+            IconButton(onClick = { viewModel.editorOnEvent(EditorEvent.InsertSyntax("``", 1)) }) {
+                Icon(Icons.Default.Code, contentDescription = "Inline code")
+            }
+            IconButton(onClick = { viewModel.editorOnSave() }) {
+                Icon(Icons.Default.Save, contentDescription = "Save file")
+            }
+            IconButton(onClick = {
+                photoPickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+            }) {
+                Icon(Icons.Default.Image, contentDescription = "Attach photo")
+            }
+            IconButton(onClick = { filePickerLauncher.launch(arrayOf("*/*")) }) {
+                Icon(Icons.Default.AttachFile, contentDescription = "Attach file")
             }
         }
     }

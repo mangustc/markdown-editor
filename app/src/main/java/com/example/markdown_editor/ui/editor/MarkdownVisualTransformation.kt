@@ -10,7 +10,6 @@ import androidx.compose.ui.text.input.TransformedText
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.unit.Density
-import androidx.compose.ui.unit.sp
 import com.example.markdown_editor.domain.model.SpanInfo
 import com.example.markdown_editor.domain.model.TokenType
 
@@ -41,7 +40,7 @@ class MarkdownVisualTransformation(
                 style = ParagraphStyle(
                     lineHeight = heightSp,
                     lineHeightStyle = LineHeightStyle(
-                        alignment = LineHeightStyle.Alignment.Center,
+                        alignment = LineHeightStyle.Alignment.Proportional,
                         trim = LineHeightStyle.Trim.None,
                     )
                 ),
@@ -50,7 +49,7 @@ class MarkdownVisualTransformation(
             )
 
             builder.addStyle(
-                style = SpanStyle(fontSize = 1.sp, color = Color.Transparent),
+                style = SpanStyle(color = Color.Transparent),
                 start = span.start,
                 end = span.end
             )

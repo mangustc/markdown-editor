@@ -20,7 +20,6 @@ object MarkdownAnnotator {
                 when (info.type) {
                     TokenType.H1 -> addStyle(
                         SpanStyle(
-                            color = Color(0xFF1A73E8),
                             fontSize = 2.em,
                             fontWeight = FontWeight.Bold
                         ), info.start, info.end
@@ -53,15 +52,12 @@ object MarkdownAnnotator {
                     TokenType.CODE_INLINE -> addStyle(
                         SpanStyle(
                             fontFamily = FontFamily.Monospace,
-                            background = Color(0xFFF5F5F5),
-                            color = Color(0xFFC7254E)
                         ), info.start, info.end
                     )
 
                     TokenType.CODE_BLOCK -> addStyle(
                         SpanStyle(
                             fontFamily = FontFamily.Monospace,
-                            background = Color(0xFFF8F8F8)
                         ), info.start, info.end
                     )
 
@@ -69,7 +65,6 @@ object MarkdownAnnotator {
                         SpanStyle(
                             fontWeight = FontWeight.Bold,
                             fontStyle = FontStyle.Italic,
-                            background = Color(0xFFF8F8F8),
                         ),
                         info.start, info.end
                     )
@@ -77,7 +72,6 @@ object MarkdownAnnotator {
                     TokenType.FILE -> addStyle(
                         SpanStyle(
                             fontWeight = FontWeight.Bold,
-                            background = Color(0xFFF8F8F8),
                         ),
                         info.start, info.end
                     )

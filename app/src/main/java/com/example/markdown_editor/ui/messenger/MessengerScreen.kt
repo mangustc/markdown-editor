@@ -69,7 +69,6 @@ fun MessengerScreen(
     }
 
     if (uiState.project == null) {
-        viewModel.openDrawer()
         Box(
             modifier = Modifier
                 .fillMaxSize(),

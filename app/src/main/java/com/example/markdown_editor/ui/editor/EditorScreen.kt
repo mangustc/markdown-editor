@@ -13,10 +13,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imeNestedScroll
 import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
@@ -123,7 +121,6 @@ fun EditorScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .statusBarsPadding() // Keep content below status bar
     ) {
         Box(
             modifier = Modifier
@@ -218,7 +215,6 @@ fun EditorScreen(
         BottomAppBar(
             modifier = Modifier
                 .fillMaxWidth()
-                .navigationBarsPadding()
                 .imePadding(),
             contentPadding = PaddingValues(horizontal = 8.dp)
         ) {

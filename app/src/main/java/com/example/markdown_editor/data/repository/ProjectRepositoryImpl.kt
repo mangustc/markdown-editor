@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.net.Uri
+import android.provider.DocumentsContract
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import androidx.sqlite.db.SimpleSQLiteQuery
@@ -39,12 +40,11 @@ class ProjectRepositoryImpl(
                 uri = entity.uri.toUri(),
                 lastModified = entity.lastModified,
                 createdAt = entity.createdAt,
-                text = if (includeText) entity.body else null,
+                body = if (includeText) entity.body else null,
+                tags = if (entity.tags.isNotEmpty()) entity.tags.split(" ") else emptyList()
             )
         }
     }
-
-    // ── Sync ──────────────────────────────────────────────────────────────────
 
     override suspend fun syncDatabase(project: Project) = withContext(Dispatchers.IO) {
         val notesDir = DocumentFile.fromTreeUri(context, project.notesUri)
@@ -52,7 +52,6 @@ class ProjectRepositoryImpl(
             notesDir?.listFiles()?.filter { it.name?.endsWith(".md") == true }
                 ?: return@withContext
 
-        // Fetch all existing rows in one query for O(n) comparison
         val existingNotes = noteDao.searchNotes(buildSQLiteQuery(SearchQuery()))
         val existingUris = existingNotes.associateBy { it.uri }
 
@@ -88,8 +87,6 @@ class ProjectRepositoryImpl(
         }
     }
 
-    // ── Project persistence ───────────────────────────────────────────────────
-
     override fun buildProject(rootUri: Uri, name: String): Project {
         val root = DocumentFile.fromTreeUri(context, rootUri)
         val notesDir = root?.findFile("notes") ?: root?.createDirectory("notes")
@@ -118,8 +115,6 @@ class ProjectRepositoryImpl(
         val name = prefs.getString(KEY_PROJECT_NAME, null) ?: return@withContext null
         buildProject(uriString.toUri(), name)
     }
-
-    // ── Note I/O ──────────────────────────────────────────────────────────────
 
     override suspend fun createNote(project: Project, name: String?, tags: List<String>?): Uri? =
         withContext(Dispatchers.IO) {
@@ -168,7 +163,6 @@ class ProjectRepositoryImpl(
                 name = "Error",
                 uri = uri,
                 lastModified = System.currentTimeMillis(),
-                createdAt = null,
             )
         }
 
@@ -212,7 +206,21 @@ class ProjectRepositoryImpl(
             "assets/${targetFile.name}"
         }
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
+    override suspend fun deleteNote(note: Note) = withContext(Dispatchers.IO) {
+        val file = DocumentFile.fromSingleUri(context, note.uri)
+        if (file?.exists() == true) {
+            file.delete()
+        }
+    }
+
+    override suspend fun renameNote(note: Note, newName: String) = withContext(Dispatchers.IO) {
+        DocumentsContract.renameDocument(
+            context.contentResolver,
+            note.uri,
+            "$newName.md"
+        ) ?: throw IllegalStateException("Failed to rename file in storage")
+        Unit
+    }
 
     private fun splitFrontMatter(content: String): Pair<String, String> {
         if (!content.trimStart().startsWith("---")) return "" to content

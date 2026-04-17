@@ -7,5 +7,6 @@ data class Note(
     val uri: Uri,           // full URI to the file
     val lastModified: Long,
     val createdAt: Long? = null,
-    val text: String? = null
+    val tags: List<String>? = null,
+    val body: String? = null,
 )

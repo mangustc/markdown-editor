@@ -217,12 +217,15 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     fun editorOnNoteOpened(noteUriString: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            val note = repository.getNoteByUri(noteUriString.toUri())
-            val text = repository.getNoteText(note)
-
-            withContext(Dispatchers.Main) {
-                _uiState.update { it.copy(activeNote = note) }
-                editorOnContentChanged(TextFieldValue(text))
+            try {
+                val note = repository.getNoteByUri(noteUriString.toUri())
+                val text = repository.getNoteText(note)
+                withContext(Dispatchers.Main) {
+                    _uiState.update { it.copy(activeNote = note) }
+                    editorOnContentChanged(TextFieldValue(text))
+                }
+            } catch (e: Exception) {
+                goBack()
             }
         }
     }
@@ -293,6 +296,66 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 _uiState.update { it.copy(project = project) }
                 onSearchQueryChanged()
             }
+        }
+    }
+
+    fun showNoteDeleteDialog(note: Note) {
+        _uiState.update { it.copy(isNoteDeleteDialogVisible = true, dialogNote = note) }
+    }
+
+    fun dismissNoteDeleteDialog() {
+        _uiState.update { it.copy(isNoteDeleteDialogVisible = false, dialogNote = null) }
+    }
+
+    fun onDeleteNote(note: Note) {
+        viewModelScope.launch {
+            val project = _uiState.value.project ?: return@launch
+            val activeNote = _uiState.value.activeNote
+            repository.deleteNote(note)
+            repository.syncDatabase(project)
+            onSearchQueryChanged()
+            if (note.uri == activeNote?.uri) goBack()
+        }
+    }
+
+    fun showNoteShowInfoDialog(note: Note) {
+        _uiState.update { it.copy(isNoteShowInfoDialogVisible = true, dialogNote = note) }
+    }
+
+    fun dismissNoteShowInfoDialog() {
+        _uiState.update { it.copy(isNoteShowInfoDialogVisible = false, dialogNote = null) }
+    }
+
+    fun showNoteRenameDialog(note: Note) {
+        _uiState.update {
+            it.copy(
+                isNoteRenameDialogVisible = true,
+                noteRenameInput = note.name,
+                dialogNote = note
+            )
+        }
+    }
+
+    fun dismissNoteRenameDialog() {
+        _uiState.update {
+            it.copy(
+                isNoteRenameDialogVisible = false,
+                noteRenameInput = "",
+                dialogNote = null
+            )
+        }
+    }
+
+    fun onRenameNameInputChanged(newName: String) {
+        _uiState.update { it.copy(noteRenameInput = newName) }
+    }
+
+    fun onRenameNote(note: Note, newName: String) {
+        viewModelScope.launch {
+            val project = _uiState.value.project ?: return@launch
+            repository.renameNote(note, newName)
+            repository.syncDatabase(project)
+            onSearchQueryChanged()
         }
     }
 }

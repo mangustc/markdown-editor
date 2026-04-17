@@ -1,9 +1,9 @@
 package com.example.markdown_editor.ui
 
+import android.text.format.DateUtils
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -20,19 +20,23 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.automirrored.outlined.OpenInNew
+import androidx.compose.material.icons.filled.Abc
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.DriveFileRenameOutline
 import androidx.compose.material.icons.filled.FolderOpen
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Tag
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.DriveFileRenameOutline
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DockedSearchBar
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.DropdownMenuGroup
@@ -46,6 +50,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.ModalDrawerSheet
@@ -56,7 +61,6 @@ import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SearchBarDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TooltipAnchorPosition
 import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
@@ -73,6 +77,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -82,6 +88,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
+import com.example.markdown_editor.data.model.Note
 import com.example.markdown_editor.ui.editor.EditorScreen
 import com.example.markdown_editor.ui.messenger.MessengerScreen
 import com.example.markdown_editor.ui.navigation.EditorDestination
@@ -186,15 +193,19 @@ fun AppScaffold() {
                                     style = MaterialTheme.typography.bodyMedium
                                 )
                             } else {
-                                LazyColumn {
+                                LazyColumn(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                                     items(uiState.searchResults) { note ->
                                         NoteDrawerItem(
                                             name = note.name,
+                                            supportingText = if (!note.tags.isNullOrEmpty()) note.tags.joinToString(
+                                                ", "
+                                            ) else null,
                                             selected = note.uri == uiState.activeNote?.uri,
                                             onClick = { appViewModel.onNoteSelected(note) },
-                                            onDelete = {},
                                             onOpen = { appViewModel.onNoteSelected(note) },
-                                            onRename = {},
+                                            onDelete = { appViewModel.showNoteDeleteDialog(note) },
+                                            onRename = { appViewModel.showNoteRenameDialog(note) },
+                                            onShowInfo = { appViewModel.showNoteShowInfoDialog(note) },
                                         )
                                     }
                                 }
@@ -292,6 +303,33 @@ fun AppScaffold() {
             onNameChange = { newName -> appViewModel.updateNewNoteName(newName) }
         )
     }
+    if (uiState.isNoteDeleteDialogVisible && uiState.dialogNote != null) {
+        DeleteNoteDialog(
+            onDismissRequest = { appViewModel.dismissNoteDeleteDialog() },
+            onConfirmDelete = {
+                appViewModel.onDeleteNote(uiState.dialogNote!!)
+                appViewModel.dismissNoteDeleteDialog()
+            },
+            noteName = uiState.dialogNote!!.name,
+        )
+    }
+    if (uiState.isNoteRenameDialogVisible && uiState.dialogNote != null) {
+        RenameNoteDialog(
+            onDismissRequest = { appViewModel.dismissNoteRenameDialog() },
+            onConfirmRename = {
+                appViewModel.onRenameNote(uiState.dialogNote!!, uiState.noteRenameInput)
+                appViewModel.dismissNoteRenameDialog()
+            },
+            name = uiState.noteRenameInput,
+            onNameChange = { newName -> appViewModel.onRenameNameInputChanged(newName) },
+        )
+    }
+    if (uiState.isNoteShowInfoDialogVisible && uiState.dialogNote != null) {
+        ShowInfoDialog(
+            onDismissRequest = { appViewModel.dismissNoteShowInfoDialog() },
+            note = uiState.dialogNote!!,
+        )
+    }
 }
 
 @OptIn(
@@ -302,10 +340,12 @@ fun AppScaffold() {
 @Composable
 fun NoteDrawerItem(
     name: String,
+    supportingText: String? = null,
     selected: Boolean,
     onClick: () -> Unit,
-    onDelete: () -> Unit,
     onOpen: () -> Unit,
+    onDelete: () -> Unit,
+    onShowInfo: () -> Unit,
     onRename: () -> Unit,
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
@@ -313,21 +353,21 @@ fun NoteDrawerItem(
 
     Box(modifier = Modifier.wrapContentSize(Alignment.TopEnd)) {
         ListItem(
-            headlineContent = {
+            onClick = onClick,
+            onLongClick = { menuExpanded = true },
+            content = {
                 Text(
                     name,
                     color = if (selected) MaterialTheme.colorScheme.primary
                     else MaterialTheme.colorScheme.onSurface
                 )
             },
-            colors = ListItemDefaults.colors(
-                containerColor = Color.Transparent
-            ),
-            modifier = Modifier
-                .combinedClickable(
-                    onClick = onClick,
-                    onLongClick = { menuExpanded = true },
-                ),
+            supportingContent = {
+                if (supportingText != null) {
+                    Text(supportingText)
+                }
+            },
+            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
             trailingContent = {
                 TooltipBox(
                     positionProvider =
@@ -358,46 +398,27 @@ fun NoteDrawerItem(
                             modifier = Modifier.padding(MenuDefaults.HorizontalDividerPadding)
                         )
 
-                        DropdownMenuItem(
-                            text = { Text("Open note") },
-                            shapes = MenuDefaults.itemShape(index = 0, count = 2),
-                            leadingIcon = {
-                                Icon(
-                                    Icons.AutoMirrored.Outlined.OpenInNew,
-                                    modifier = Modifier.size(MenuDefaults.LeadingIconSize),
-                                    contentDescription = null,
-                                )
-                            },
-                            selectedLeadingIcon = {
-                                Icon(
-                                    Icons.AutoMirrored.Filled.OpenInNew,
-                                    modifier = Modifier.size(MenuDefaults.LeadingIconSize),
-                                    contentDescription = null,
-                                )
-                            },
-                            selected = false,
-                            onClick = { menuExpanded = false; onOpen() },
+                        NoteMenuItem(
+                            text = "Open note",
+                            index = 0, count = 4,
+                            icon = Icons.AutoMirrored.Outlined.OpenInNew,
+                            onClick = { menuExpanded = false; onOpen() }
                         )
 
-                        DropdownMenuItem(
-                            text = { Text("Rename note") },
-                            shapes = MenuDefaults.itemShape(index = 1, count = 2),
-                            leadingIcon = {
-                                Icon(
-                                    Icons.Outlined.DriveFileRenameOutline,
-                                    modifier = Modifier.size(MenuDefaults.LeadingIconSize),
-                                    contentDescription = null,
-                                )
-                            },
-                            selectedLeadingIcon = {
-                                Icon(
-                                    Icons.Filled.DriveFileRenameOutline,
-                                    modifier = Modifier.size(MenuDefaults.LeadingIconSize),
-                                    contentDescription = null,
-                                )
-                            },
-                            selected = false,
-                            onClick = { menuExpanded = false; onRename() },
+                        NoteMenuItem(
+                            text = "Rename note",
+                            index = 1, count = 4,
+                            icon = Icons.Outlined.DriveFileRenameOutline,
+                            onClick = { menuExpanded = false; onRename() }
+                        )
+
+                        NoteMenuItem(
+                            text = "Delete note",
+                            index = 2, count = 4,
+                            supportingText = "Cannot be undone",
+                            icon = Icons.Outlined.Delete,
+                            tint = MaterialTheme.colorScheme.error,
+                            onClick = { menuExpanded = false; onDelete() }
                         )
                     }
 
@@ -412,38 +433,57 @@ fun NoteDrawerItem(
                             modifier = Modifier.padding(MenuDefaults.HorizontalDividerPadding)
                         )
 
-                        DropdownMenuItem(
-                            text = { Text("Delete note") },
-                            supportingText = { Text("Cannot be undone") },
-                            shapes = MenuDefaults.itemShape(index = 1, count = 2),
-                            leadingIcon = {
-                                Icon(
-                                    Icons.Outlined.Delete,
-                                    modifier = Modifier.size(MenuDefaults.LeadingIconSize),
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.error,
-                                )
-                            },
-                            selectedLeadingIcon = {
-                                Icon(
-                                    Icons.Filled.Delete,
-                                    modifier = Modifier.size(MenuDefaults.LeadingIconSize),
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.error,
-                                )
-                            },
-                            selected = false,
-                            colors = MenuDefaults.itemColors(
-                                textColor = MaterialTheme.colorScheme.error,
-                            ),
-                            onClick = { menuExpanded = false; onDelete() },
+                        NoteMenuItem(
+                            text = "Show details",
+                            index = 3, count = 4,
+                            icon = Icons.Outlined.Info,
+                            onClick = { menuExpanded = false; onShowInfo() }
                         )
                     }
                 }
-            }
+            },
         )
 
     }
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+fun NoteMenuItem(
+    text: String,
+    supportingText: String? = null,
+    index: Int,
+    count: Int,
+    tint: Color? = null,
+    icon: ImageVector,
+    onClick: () -> Unit,
+) {
+    DropdownMenuItem(
+        text = { Text(text) },
+        supportingText = { if (supportingText != null) Text(supportingText) },
+        shapes = MenuDefaults.itemShape(index = index, count = count),
+        leadingIcon = {
+            Icon(
+                imageVector = icon,
+                modifier = Modifier.size(MenuDefaults.LeadingIconSize),
+                contentDescription = null,
+                tint = tint ?: LocalContentColor.current,
+            )
+        },
+        selectedLeadingIcon = {
+            Icon(
+                Icons.Filled.Delete,
+                modifier = Modifier.size(MenuDefaults.LeadingIconSize),
+                contentDescription = null,
+                tint = tint ?: LocalContentColor.current,
+            )
+        },
+        selected = false,
+        colors = MenuDefaults.itemColors(
+            textColor = tint ?: Color.Unspecified,
+        ),
+        onClick = onClick,
+    )
 }
 
 @Composable
@@ -458,7 +498,7 @@ fun CreateNoteDialog(
         title = { Text("New Note") },
         text = {
             Column {
-                Text("Enter a name for your new markdown file:")
+                Text("Enter a name for your new note:")
                 Spacer(Modifier.height(8.dp))
                 OutlinedTextField(
                     value = initialName,
@@ -469,12 +509,146 @@ fun CreateNoteDialog(
             }
         },
         confirmButton = {
-            TextButton(
+            Button(
                 onClick = { if (initialName.isNotBlank()) onConfirmCreate(initialName) }
             ) { Text("Create") }
         },
         dismissButton = {
             OutlinedButton(onClick = onDismissRequest) { Text("Cancel") }
+        },
+    )
+}
+
+@Composable
+fun RenameNoteDialog(
+    onDismissRequest: () -> Unit,
+    onConfirmRename: () -> Unit,
+    name: String,
+    onNameChange: (String) -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismissRequest,
+        title = { Text("Rename note") },
+        text = {
+            Column {
+                Text("Enter a new name for your note:")
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { onNameChange(it) },
+                    label = { Text("Note Name") },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        },
+        confirmButton = {
+            Button(onClick = onConfirmRename) { Text("Rename") }
+        },
+        dismissButton = {
+            OutlinedButton(onClick = onDismissRequest) { Text("Cancel") }
+        },
+    )
+}
+
+@Composable
+fun DeleteNoteDialog(
+    onDismissRequest: () -> Unit,
+    onConfirmDelete: () -> Unit,
+    noteName: String,
+) {
+    AlertDialog(
+        onDismissRequest = onDismissRequest,
+        title = { Text("Delete note") },
+        text = {
+            Column {
+                Text("Are you sure you want to delete this note?")
+                Text(
+                    text = noteName,
+                    fontWeight = FontWeight.Bold,
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = "This action cannot be undone",
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onConfirmDelete,
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+            ) { Text("Delete") }
+        },
+        dismissButton = {
+            OutlinedButton(onClick = onDismissRequest) { Text("Cancel") }
+        },
+    )
+}
+
+@Composable
+fun ShowInfoDialog(
+    onDismissRequest: () -> Unit,
+    note: Note,
+) {
+    AlertDialog(
+        onDismissRequest = onDismissRequest,
+        title = { Text("Note Details") },
+        text = {
+            Column {
+                ListItem(
+                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                    headlineContent = { Text("Name") },
+                    supportingContent = { Text(note.name) },
+                    leadingContent = { Icon(Icons.Default.Abc, contentDescription = null) }
+                )
+                ListItem(
+                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                    headlineContent = { Text("Last Modified") },
+                    supportingContent = {
+                        val timeString = DateUtils.getRelativeTimeSpanString(
+                            note.lastModified,
+                            System.currentTimeMillis(),
+                            DateUtils.SECOND_IN_MILLIS,
+                            DateUtils.FORMAT_ABBREV_RELATIVE
+                        )
+                        val result = if (!timeString.isNullOrBlank()) timeString else "N/A"
+                        Text(result.toString())
+                    },
+                    leadingContent = { Icon(Icons.Default.History, contentDescription = null) }
+                )
+                ListItem(
+                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                    headlineContent = { Text("Created At") },
+                    supportingContent = {
+                        val timeString =
+                            if (note.createdAt != null) DateUtils.getRelativeTimeSpanString(
+                                note.createdAt,
+                                System.currentTimeMillis(),
+                                DateUtils.SECOND_IN_MILLIS,
+                                DateUtils.FORMAT_ABBREV_RELATIVE
+                            ) else null
+                        val result = if (!timeString.isNullOrBlank()) timeString else "N/A"
+                        Text(result.toString())
+                    },
+                    leadingContent = {
+                        Icon(
+                            Icons.Default.CalendarMonth,
+                            contentDescription = null
+                        )
+                    }
+                )
+                ListItem(
+                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                    headlineContent = { Text("Tags") },
+                    supportingContent = {
+                        Text(if (!note.tags.isNullOrEmpty()) note.tags.joinToString(", ") else "None")
+                    },
+                    leadingContent = { Icon(Icons.Default.Tag, contentDescription = null) }
+                )
+            }
+        },
+        confirmButton = {
+            OutlinedButton(onClick = onDismissRequest) { Text("Close") }
         },
     )
 }

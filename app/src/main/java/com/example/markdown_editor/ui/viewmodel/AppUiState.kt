@@ -14,6 +14,12 @@ data class AppUiState(
     val isCreateNoteDialogVisible: Boolean = false,
     val newNoteNameInput: String = "",
 
+    val isNoteShowInfoDialogVisible: Boolean = false,
+    val isNoteDeleteDialogVisible: Boolean = false,
+    val isNoteRenameDialogVisible: Boolean = false,
+    val noteRenameInput: String = "",
+    val dialogNote: Note? = null,
+
     val searchQuery: String = "",
     val searchResults: List<Note> = emptyList(),
 

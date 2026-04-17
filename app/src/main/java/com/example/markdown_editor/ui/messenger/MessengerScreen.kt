@@ -167,7 +167,7 @@ private fun MessageBubble(
             Column(
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
             ) {
-                val displayText = note.text?.trim()?.ifBlank { note.name } ?: note.name
+                val displayText = note.body?.trim()?.ifBlank { note.name } ?: note.name
                 Text(
                     text = displayText,
                     style = MaterialTheme.typography.bodyMedium,

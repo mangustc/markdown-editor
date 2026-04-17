@@ -27,4 +27,6 @@ interface ProjectRepository {
     suspend fun getNoteByUri(uri: Uri): Note
     suspend fun syncDatabase(project: Project)
     suspend fun copyToAssets(project: Project, assetUri: Uri): String
+    suspend fun deleteNote(note: Note)
+    suspend fun renameNote(note: Note, newName: String)
 }

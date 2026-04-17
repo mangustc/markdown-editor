@@ -113,8 +113,6 @@ fun AppScaffold() {
         uri?.let { appViewModel.onProjectSelected(it) }
     }
 
-    var searchExpanded by remember { mutableStateOf(false) }
-
     LaunchedEffect(Unit) {
         appViewModel.navigationEvents.collect { event ->
             when (event) {
@@ -152,8 +150,7 @@ fun AppScaffold() {
 
                     Button(
                         onClick = { appViewModel.showCreateNoteDialog() },
-                        modifier = Modifier
-                            .fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth()
                     ) {
                         Text("Create New Note")
                     }
@@ -164,17 +161,15 @@ fun AppScaffold() {
                                 SearchBarDefaults.InputField(
                                     query = uiState.searchQuery,
                                     onQueryChange = { appViewModel.onSearchQueryChanged(it) },
-                                    onSearch = { searchExpanded = false },
-                                    expanded = searchExpanded,
-                                    onExpandedChange = { searchExpanded = it },
+                                    onSearch = {},
+                                    expanded = true,
+                                    onExpandedChange = {},
                                     placeholder = { Text("Search notes…") },
                                     leadingIcon = { Icon(Icons.Default.Search, null) },
                                     trailingIcon = {
                                         if (uiState.searchQuery.isNotEmpty()) {
                                             IconButton(onClick = {
-                                                appViewModel.onSearchQueryChanged(
-                                                    ""
-                                                )
+                                                appViewModel.onSearchQueryChanged("")
                                             }) {
                                                 Icon(Icons.Default.Close, null)
                                             }
@@ -182,8 +177,8 @@ fun AppScaffold() {
                                     }
                                 )
                             },
-                            expanded = searchExpanded,
-                            onExpandedChange = { searchExpanded = it },
+                            expanded = true,
+                            onExpandedChange = {},
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             if (uiState.searchResults.isEmpty()) {
@@ -193,7 +188,9 @@ fun AppScaffold() {
                                     style = MaterialTheme.typography.bodyMedium
                                 )
                             } else {
-                                LazyColumn(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                LazyColumn(
+                                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                                ) {
                                     items(uiState.searchResults) { note ->
                                         NoteDrawerItem(
                                             name = note.name,

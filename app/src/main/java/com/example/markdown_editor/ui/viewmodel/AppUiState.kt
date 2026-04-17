@@ -2,6 +2,7 @@ package com.example.markdown_editor.ui.viewmodel
 
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.TextFieldValue
+import com.example.markdown_editor.data.model.LinkPreview
 import com.example.markdown_editor.data.model.Note
 import com.example.markdown_editor.data.model.Project
 import com.example.markdown_editor.domain.model.SpanInfo
@@ -30,4 +31,5 @@ data class AppUiState(
     val messengerNotesList: List<Note> = emptyList(),
     val messengerIsLoading: Boolean = true,
     val messengerNewNoteText: String = "",
+    val messengerLinkPreviews: Map<String, LinkPreview?> = emptyMap(),
 )

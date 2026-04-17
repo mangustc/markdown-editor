@@ -1,6 +1,7 @@
 package com.example.markdown_editor.data.repository
 
 import android.net.Uri
+import com.example.markdown_editor.data.model.LinkPreview
 import com.example.markdown_editor.data.model.Note
 import com.example.markdown_editor.data.model.Project
 import com.example.markdown_editor.data.model.SearchQuery
@@ -29,4 +30,7 @@ interface ProjectRepository {
     suspend fun copyToAssets(project: Project, assetUri: Uri): String
     suspend fun deleteNote(note: Note)
     suspend fun renameNote(note: Note, newName: String)
+
+    suspend fun getCachedLinkPreview(url: String): LinkPreview?
+    suspend fun saveLinkPreview(preview: LinkPreview)
 }

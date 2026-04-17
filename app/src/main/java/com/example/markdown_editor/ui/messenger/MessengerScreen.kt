@@ -19,6 +19,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material3.CircularProgressIndicator
@@ -36,20 +37,30 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil3.compose.AsyncImage
+import com.example.markdown_editor.data.model.LinkPreview
 import com.example.markdown_editor.data.model.Note
+import com.example.markdown_editor.data.util.LinkPreviewFetcher
 import com.example.markdown_editor.ui.viewmodel.AppViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+private val URL_PATTERN = Regex("""https?://[^\s<>"'\)]+""")
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MessengerScreen(
-    viewModel: AppViewModel,
-) {
+fun MessengerScreen(viewModel: AppViewModel) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     LaunchedEffect(uiState.project) {
@@ -63,15 +74,12 @@ fun MessengerScreen(
     val listState = rememberLazyListState()
 
     LaunchedEffect(sortedNotes.size) {
-        if (sortedNotes.isNotEmpty()) {
-            listState.animateScrollToItem(0)
-        }
+        if (sortedNotes.isNotEmpty()) listState.animateScrollToItem(0)
     }
 
     if (uiState.project == null) {
         Box(
-            modifier = Modifier
-                .fillMaxSize(),
+            modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center,
         ) {
             Text(
@@ -80,7 +88,6 @@ fun MessengerScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(16.dp)
             )
-
         }
     } else {
         Column(
@@ -94,34 +101,50 @@ fun MessengerScreen(
                     .fillMaxSize(),
                 contentAlignment = Alignment.BottomCenter,
             ) {
-                if (uiState.messengerIsLoading) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize(),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        CircularProgressIndicator()
+                when {
+                    uiState.messengerIsLoading -> {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator()
+                        }
                     }
-                } else if (sortedNotes.isEmpty()) {
-                    Text(
-                        text = "No quick notes yet.\nType something below to get started.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                        modifier = Modifier.align(Alignment.Center)
-                    )
-                } else {
-                    LazyColumn(
-                        state = listState,
-                        modifier = Modifier.fillMaxWidth(),
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp),
-                        reverseLayout = true,
-                    ) {
-                        items(sortedNotes, key = { it.uri.toString() }) { note ->
-                            MessageBubble(note = note, onClick = {
-                                viewModel.onNoteSelected(note)
-                            })
+
+                    sortedNotes.isEmpty() -> {
+                        Text(
+                            text = "No quick notes yet.\nType something below to get started.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                            modifier = Modifier.align(Alignment.Center)
+                        )
+                    }
+
+                    else -> {
+                        LazyColumn(
+                            state = listState,
+                            modifier = Modifier.fillMaxWidth(),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp),
+                            reverseLayout = true,
+                        ) {
+                            items(sortedNotes, key = { it.uri.toString() }) { note ->
+                                val firstUrl = remember(note.body) {
+                                    note.body?.let { LinkPreviewFetcher.extractFirstUrl(it) }
+                                }
+                                // Trigger fetch if not yet attempted
+                                LaunchedEffect(firstUrl) {
+                                    firstUrl?.let { viewModel.messengerEnsureLinkPreview(it) }
+                                }
+                                val preview = firstUrl?.let { uiState.messengerLinkPreviews[it] }
+
+                                MessageBubble(
+                                    note = note,
+                                    linkPreview = preview,
+                                    onClick = { viewModel.onNoteSelected(note) }
+                                )
+                            }
                         }
                     }
                 }
@@ -138,11 +161,40 @@ fun MessengerScreen(
 @Composable
 private fun MessageBubble(
     note: Note,
-    onClick: () -> Unit
+    linkPreview: LinkPreview?,
+    onClick: () -> Unit,
 ) {
     val timeString = remember(note.createdAt, note.lastModified) {
         val millis = note.createdAt ?: note.lastModified
         SimpleDateFormat("MMM d, HH:mm", Locale.getDefault()).format(Date(millis))
+    }
+
+    val uriHandler = LocalUriHandler.current
+    val bodyText = note.body?.trim()?.ifBlank { note.name } ?: note.name
+
+    // Build AnnotatedString with clickable URL spans
+    val annotatedBody = remember(bodyText) {
+        buildAnnotatedString {
+            var lastIndex = 0
+            URL_PATTERN.findAll(bodyText).forEach { match ->
+                // text before URL
+                append(bodyText.substring(lastIndex, match.range.first))
+                // URL span
+                pushStringAnnotation(tag = "URL", annotation = match.value)
+                withStyle(
+                    SpanStyle(
+                        color = androidx.compose.ui.graphics.Color(0xFF1A73E8),
+                        textDecoration = TextDecoration.Underline,
+                    )
+                ) {
+                    append(match.value)
+                }
+                pop()
+                lastIndex = match.range.last + 1
+            }
+            // remaining text
+            if (lastIndex < bodyText.length) append(bodyText.substring(lastIndex))
+        }
     }
 
     Row(
@@ -164,17 +216,28 @@ private fun MessageBubble(
             color = MaterialTheme.colorScheme.primaryContainer,
             tonalElevation = 2.dp
         ) {
-            Column(
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
-            ) {
-                val displayText = note.body?.trim()?.ifBlank { note.name } ?: note.name
-                Text(
-                    text = displayText,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                    maxLines = 10,
-                    overflow = TextOverflow.Ellipsis
+            Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
+                // Body text with clickable URLs
+                ClickableText(
+                    text = annotatedBody,
+                    style = TextStyle(
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        fontSize = MaterialTheme.typography.bodyMedium.fontSize,
+                        lineHeight = MaterialTheme.typography.bodyMedium.lineHeight,
+                    ),
+                    overflow = TextOverflow.Ellipsis,
+                    onClick = { offset ->
+                        annotatedBody.getStringAnnotations("URL", offset, offset)
+                            .firstOrNull()
+                            ?.let { uriHandler.openUri(it.item) }
+                    }
                 )
+
+                // Link preview card
+                if (linkPreview != null) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    LinkPreviewCard(preview = linkPreview)
+                }
 
                 Spacer(modifier = Modifier.height(4.dp))
 
@@ -203,10 +266,71 @@ private fun MessageBubble(
 }
 
 @Composable
+private fun LinkPreviewCard(preview: LinkPreview) {
+    val uriHandler = LocalUriHandler.current
+
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .clickable { uriHandler.openUri(preview.url) },
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 4.dp,
+    ) {
+        Column {
+            // OG image
+            if (!preview.imageUrl.isNullOrBlank()) {
+                AsyncImage(
+                    model = preview.imageUrl,
+                    contentDescription = preview.title,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(140.dp)
+                        .clip(RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp)),
+                    contentScale = ContentScale.Crop,
+                )
+            }
+
+            Column(modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) {
+                Text(
+                    text = preview.url,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+
+                if (!preview.title.isNullOrBlank()) {
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        text = preview.title,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+
+                if (!preview.description.isNullOrBlank()) {
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        text = preview.description,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun MessengerInputBar(
     value: String,
     onValueChange: (String) -> Unit,
-    onSend: () -> Unit
+    onSend: () -> Unit,
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),

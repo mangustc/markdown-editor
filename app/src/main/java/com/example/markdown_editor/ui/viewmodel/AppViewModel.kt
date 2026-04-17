@@ -13,6 +13,7 @@ import com.example.markdown_editor.data.model.Note
 import com.example.markdown_editor.data.model.Project
 import com.example.markdown_editor.data.model.SearchQuery
 import com.example.markdown_editor.data.repository.ProjectRepositoryImpl
+import com.example.markdown_editor.data.util.LinkPreviewFetcher
 import com.example.markdown_editor.domain.parser.MarkdownParser
 import com.example.markdown_editor.ui.editor.EditorEvent
 import com.example.markdown_editor.ui.editor.MarkdownAnnotator
@@ -34,9 +35,11 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     )
         .fallbackToDestructiveMigration(true)
         .build()
+
     private val repository = ProjectRepositoryImpl(
         context = application,
         noteDao = db.noteDao(),
+        linkPreviewDao = db.linkPreviewDao(),
     )
 
     private val _uiState = MutableStateFlow(AppUiState())
@@ -57,15 +60,11 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     val navigationEvents = _navigationEvents.receiveAsFlow()
 
     fun openDrawer() {
-        viewModelScope.launch {
-            _navigationEvents.send(NavigationEvent.OpenDrawer)
-        }
+        viewModelScope.launch { _navigationEvents.send(NavigationEvent.OpenDrawer) }
     }
 
     fun goBack() {
-        viewModelScope.launch {
-            _navigationEvents.send(NavigationEvent.GoBack)
-        }
+        viewModelScope.launch { _navigationEvents.send(NavigationEvent.GoBack) }
     }
 
     fun onProjectSelected(uri: Uri) {
@@ -101,7 +100,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     fun onCreateNote() {
         val project = _uiState.value.project ?: return
         val nameToUse = _uiState.value.newNoteNameInput
-
         viewModelScope.launch {
             val uri = repository.createNote(project, nameToUse)
             if (uri != null) {
@@ -113,17 +111,13 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     private var searchJob: Job? = null
     fun onSearchQueryChanged(raw: String? = null) {
-        if (raw != null) {
-            _uiState.update { it.copy(searchQuery = raw) }
-        }
+        if (raw != null) _uiState.update { it.copy(searchQuery = raw) }
         val searchQuery = _uiState.value.searchQuery
-
         val project = _uiState.value.project ?: return
 
         val parsedInit = SearchQuery.parse(searchQuery.trim())
-        val parsed = parsedInit.copy(
-            negatedTagFilters = parsedInit.negatedTagFilters + "quick-note"
-        )
+        val parsed =
+            parsedInit.copy(negatedTagFilters = parsedInit.negatedTagFilters + "quick-note")
 
         searchJob?.cancel()
         searchJob = viewModelScope.launch {
@@ -133,11 +127,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-
     fun editorOnEvent(event: EditorEvent) {
         when (event) {
             is EditorEvent.InsertSyntax -> editorInsertSyntax(event.syntax, event.cursorOffset)
-
             is EditorEvent.AttachPhoto -> editorHandleAttachPhoto(event)
             is EditorEvent.AttachFile -> editorHandleAttachFile(event)
         }
@@ -146,29 +138,19 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     private fun editorHandleAttachPhoto(event: EditorEvent.AttachPhoto) {
         val project = _uiState.value.project ?: return
         viewModelScope.launch(Dispatchers.IO) {
-            val relativePath = repository.copyToAssets(
-                project = project,
-                assetUri = event.uri,
-            )
+            val relativePath = repository.copyToAssets(project = project, assetUri = event.uri)
             val markdown = "![image](<$relativePath>)"
-            withContext(Dispatchers.Main) {
-                editorInsertMarkdown(markdown)
-            }
+            withContext(Dispatchers.Main) { editorInsertMarkdown(markdown) }
         }
     }
 
     private fun editorHandleAttachFile(event: EditorEvent.AttachFile) {
         val project = _uiState.value.project ?: return
         viewModelScope.launch(Dispatchers.IO) {
-            val relativePath = repository.copyToAssets(
-                project = project,
-                assetUri = event.uri,
-            )
+            val relativePath = repository.copyToAssets(project = project, assetUri = event.uri)
             val label = event.displayName ?: relativePath.substringAfterLast("/")
             val markdown = "[$label](<$relativePath>)"
-            withContext(Dispatchers.Main) {
-                editorInsertMarkdown(markdown)
-            }
+            withContext(Dispatchers.Main) { editorInsertMarkdown(markdown) }
         }
     }
 
@@ -176,10 +158,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         val current = _uiState.value.editorTextFieldValue
         val cursor = current.selection.start
         val newText = current.text.substring(0, cursor) + markdown + current.text.substring(cursor)
-        val newValue = current.copy(
-            text = newText,
-            selection = TextRange(cursor + markdown.length)
-        )
+        val newValue = current.copy(text = newText, selection = TextRange(cursor + markdown.length))
         editorOnContentChanged(newValue)
     }
 
@@ -187,25 +166,18 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         val current = _uiState.value.editorTextFieldValue
         val cursor = current.selection.start
         val newText = current.text.substring(0, cursor) + syntax + current.text.substring(cursor)
-        val newCursor = cursor + cursorOffset
-        val newValue = current.copy(
-            text = newText,
-            selection = TextRange(newCursor)
-        )
+        val newValue = current.copy(text = newText, selection = TextRange(cursor + cursorOffset))
         editorOnContentChanged(newValue)
     }
 
     fun editorOnContentChanged(newValue: TextFieldValue) {
         val textChanged = newValue.text != _uiState.value.editorTextFieldValue.text
-
         if (!textChanged) {
             _uiState.update { it.copy(editorTextFieldValue = newValue) }
             return
         }
-
         val spans = MarkdownParser.parse(newValue.text)
         val annotated = MarkdownAnnotator.annotate(newValue.text, spans)
-
         _uiState.update {
             it.copy(
                 editorTextFieldValue = newValue,
@@ -249,9 +221,12 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 includeText = true,
                 includeFrontMatter = false
             )
+            _uiState.update { it.copy(messengerNotesList = notes, messengerIsLoading = false) }
 
-            _uiState.update {
-                it.copy(messengerNotesList = notes, messengerIsLoading = false)
+            // Pre-warm in-memory cache from DB for all notes that have a URL
+            notes.forEach { note ->
+                val url = note.body?.let { LinkPreviewFetcher.extractFirstUrl(it) }
+                if (url != null) messengerEnsureLinkPreview(url)
             }
         }
     }
@@ -265,7 +240,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         val text = _uiState.value.messengerNewNoteText.trim()
         if (text.isBlank()) return
 
-        // Generate a timestamped filename
         val timestamp = java.time.format.DateTimeFormatter
             .ofPattern("yyyyMMdd_HHmmss")
             .withZone(java.time.ZoneId.systemDefault())
@@ -279,12 +253,49 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 val newNote = repository.getNoteByUri(uri)
                 val currentContent = repository.getNoteText(newNote, includeFrontMatter = true)
                 repository.saveNoteText(newNote, "$currentContent\n\n$text")
-
                 withContext(Dispatchers.Main) {
                     _uiState.update { it.copy(messengerNewNoteText = "") }
                 }
                 messengerOnMessengerOpened(project)
                 onSearchQueryChanged()
+            }
+        }
+    }
+
+    /**
+     * Ensures a link preview for [url] is in the in-memory state map.
+     *
+     * Priority:
+     *  1. State map already has key → skip (covers both hits and known-failures)
+     *  2. Room DB has a row → load into state, no network
+     *  3. Neither → fetch network, persist to DB, load into state
+     *
+     * Failed network fetches write nothing to DB so a fresh app launch will retry.
+     * Within a session they stay null in the state map to avoid hammering the network.
+     */
+    fun messengerEnsureLinkPreview(url: String) {
+        if (_uiState.value.messengerLinkPreviews.containsKey(url)) return
+
+        // Reserve slot immediately; blocks concurrent duplicate launches
+        _uiState.update { it.copy(messengerLinkPreviews = it.messengerLinkPreviews + (url to null)) }
+
+        viewModelScope.launch {
+            // Step 2: DB
+            val cached = repository.getCachedLinkPreview(url)
+            if (cached != null) {
+                _uiState.update {
+                    it.copy(messengerLinkPreviews = it.messengerLinkPreviews + (url to cached))
+                }
+                return@launch
+            }
+
+            // Step 3: network
+            val fetched = LinkPreviewFetcher.fetch(url)
+            if (fetched != null) {
+                repository.saveLinkPreview(fetched)
+                _uiState.update {
+                    it.copy(messengerLinkPreviews = it.messengerLinkPreviews + (url to fetched))
+                }
             }
         }
     }
@@ -338,11 +349,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     fun dismissNoteRenameDialog() {
         _uiState.update {
-            it.copy(
-                isNoteRenameDialogVisible = false,
-                noteRenameInput = "",
-                dialogNote = null
-            )
+            it.copy(isNoteRenameDialogVisible = false, noteRenameInput = "", dialogNote = null)
         }
     }
 

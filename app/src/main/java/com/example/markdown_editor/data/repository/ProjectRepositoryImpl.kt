@@ -9,8 +9,11 @@ import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import androidx.sqlite.db.SimpleSQLiteQuery
 import androidx.sqlite.db.SupportSQLiteQuery
+import com.example.markdown_editor.data.database.LinkPreviewDao
+import com.example.markdown_editor.data.database.LinkPreviewEntity
 import com.example.markdown_editor.data.database.NoteDao
 import com.example.markdown_editor.data.database.NoteEntity
+import com.example.markdown_editor.data.model.LinkPreview
 import com.example.markdown_editor.data.model.Note
 import com.example.markdown_editor.data.model.Project
 import com.example.markdown_editor.data.model.SearchQuery
@@ -20,11 +23,13 @@ import kotlinx.coroutines.withContext
 class ProjectRepositoryImpl(
     private val context: Context,
     private val noteDao: NoteDao,
+    private val linkPreviewDao: LinkPreviewDao,
     private val prefs: SharedPreferences = context.getSharedPreferences(
         "project_prefs",
         Context.MODE_PRIVATE
     )
 ) : ProjectRepository {
+
     override suspend fun getNotes(
         project: Project,
         query: SearchQuery,
@@ -78,12 +83,9 @@ class ProjectRepositoryImpl(
             }
         }
 
-        // Remove stale rows
         val currentFileUris = files.map { it.uri.toString() }.toSet()
         existingNotes.forEach { cached ->
-            if (cached.uri !in currentFileUris) {
-                noteDao.deleteByUri(cached.uri)
-            }
+            if (cached.uri !in currentFileUris) noteDao.deleteByUri(cached.uri)
         }
     }
 
@@ -208,9 +210,7 @@ class ProjectRepositoryImpl(
 
     override suspend fun deleteNote(note: Note) = withContext(Dispatchers.IO) {
         val file = DocumentFile.fromSingleUri(context, note.uri)
-        if (file?.exists() == true) {
-            file.delete()
-        }
+        if (file?.exists() == true) file.delete()
     }
 
     override suspend fun renameNote(note: Note, newName: String) = withContext(Dispatchers.IO) {
@@ -221,6 +221,36 @@ class ProjectRepositoryImpl(
         ) ?: throw IllegalStateException("Failed to rename file in storage")
         Unit
     }
+
+    override suspend fun getCachedLinkPreview(url: String): LinkPreview? =
+        withContext(Dispatchers.IO) {
+            linkPreviewDao.getByUrl(url)?.let { entity ->
+                // All-null fields = previously attempted fetch that failed → return null
+                // so the caller can decide whether to retry
+                if (entity.title == null && entity.description == null && entity.imageUrl == null)
+                    null
+                else
+                    LinkPreview(
+                        url = entity.url,
+                        title = entity.title,
+                        description = entity.description,
+                        imageUrl = entity.imageUrl,
+                    )
+            }
+        }
+
+    override suspend fun saveLinkPreview(preview: LinkPreview) = withContext(Dispatchers.IO) {
+        linkPreviewDao.insert(
+            LinkPreviewEntity(
+                url = preview.url,
+                title = preview.title,
+                description = preview.description,
+                imageUrl = preview.imageUrl,
+            )
+        )
+    }
+
+    // ── helpers ──────────────────────────────────────────────────────────────
 
     private fun splitFrontMatter(content: String): Pair<String, String> {
         if (!content.trimStart().startsWith("---")) return "" to content

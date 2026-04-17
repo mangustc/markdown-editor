@@ -1,6 +1,9 @@
 package com.example.markdown_editor.ui.messenger
 
+import android.content.ClipData
+import android.widget.Toast
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,7 +24,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.ClickableText
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material3.CircularProgressIndicator
@@ -38,14 +41,22 @@ import androidx.compose.material3.carousel.rememberCarouselState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.ClipEntry
+import androidx.compose.ui.platform.LocalClipboard
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextAlign
@@ -60,6 +71,7 @@ import com.example.markdown_editor.data.model.LinkPreview
 import com.example.markdown_editor.data.model.Note
 import com.example.markdown_editor.data.util.LinkPreviewFetcher
 import com.example.markdown_editor.ui.viewmodel.AppViewModel
+import kotlinx.coroutines.launch
 import java.net.URL
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -178,7 +190,11 @@ private fun MessageBubble(
         SimpleDateFormat("MMM d, HH:mm", Locale.getDefault()).format(Date(millis))
     }
 
+    val scope = rememberCoroutineScope()
     val uriHandler = LocalUriHandler.current
+    val clipboard = LocalClipboard.current
+    val focusManager = LocalFocusManager.current
+    val context = LocalContext.current
     val bodyText = note.body?.trim()?.ifBlank { note.name } ?: note.name
 
     val annotatedBody = remember(bodyText) {
@@ -202,6 +218,8 @@ private fun MessageBubble(
         }
     }
 
+    val layoutResult = remember { mutableStateOf<TextLayoutResult?>(null) }
+
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
         Surface(
             modifier = Modifier
@@ -219,19 +237,56 @@ private fun MessageBubble(
             tonalElevation = 2.dp
         ) {
             Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
-                ClickableText(
-                    text = annotatedBody,
-                    style = TextStyle(
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                        fontSize = MaterialTheme.typography.bodyMedium.fontSize,
-                        lineHeight = MaterialTheme.typography.bodyMedium.lineHeight,
-                    ),
-                    overflow = TextOverflow.Ellipsis,
-                    onClick = { offset ->
-                        annotatedBody.getStringAnnotations("URL", offset, offset)
-                            .firstOrNull()?.let { uriHandler.openUri(it.item) }
-                    }
-                )
+                SelectionContainer {
+                    Text(
+                        text = annotatedBody,
+                        style = TextStyle(
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            fontSize = MaterialTheme.typography.bodyMedium.fontSize,
+                            lineHeight = MaterialTheme.typography.bodyMedium.lineHeight,
+                        ),
+                        onTextLayout = { layoutResult.value = it },
+                        modifier = Modifier.pointerInput(Unit) {
+                            detectTapGestures(
+                                onTap = { offset ->
+                                    layoutResult.value?.let { result ->
+                                        val position = result.getOffsetForPosition(offset)
+                                        annotatedBody.getStringAnnotations(
+                                            "URL",
+                                            position,
+                                            position
+                                        )
+                                            .firstOrNull()?.let { uriHandler.openUri(it.item) }
+                                    }
+                                },
+                                onLongPress = { offset ->
+                                    layoutResult.value?.let { result ->
+                                        val position = result.getOffsetForPosition(offset)
+                                        val link = annotatedBody.getStringAnnotations(
+                                            "URL",
+                                            position,
+                                            position
+                                        )
+                                            .firstOrNull()
+
+                                        if (link != null) {
+                                            val clipData = ClipData.newPlainText("URL", link.item)
+                                            scope.launch {
+                                                clipboard.setClipEntry(ClipEntry(clipData))
+                                                Toast.makeText(
+                                                    context,
+                                                    "Link copied",
+                                                    Toast.LENGTH_SHORT
+                                                ).show()
+                                                focusManager.clearFocus()
+                                            }
+                                        }
+                                    }
+                                }
+                            )
+                        }
+                    )
+                }
 
                 if (previews.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(8.dp))

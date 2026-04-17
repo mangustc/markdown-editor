@@ -1,7 +1,5 @@
 package com.example.markdown_editor.ui.messenger
 
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -17,11 +15,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.ClickableText
@@ -35,6 +32,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.carousel.CarouselDefaults
+import androidx.compose.material3.carousel.HorizontalUncontainedCarousel
+import androidx.compose.material3.carousel.rememberCarouselState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -52,6 +52,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
@@ -59,6 +60,7 @@ import com.example.markdown_editor.data.model.LinkPreview
 import com.example.markdown_editor.data.model.Note
 import com.example.markdown_editor.data.util.LinkPreviewFetcher
 import com.example.markdown_editor.ui.viewmodel.AppViewModel
+import java.net.URL
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -94,9 +96,11 @@ fun MessengerScreen(viewModel: AppViewModel) {
             )
         }
     } else {
-        Column(modifier = Modifier
-            .fillMaxSize()
-            .imePadding()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .imePadding()
+        ) {
             Box(
                 modifier = Modifier
                     .weight(1f)
@@ -231,11 +235,7 @@ private fun MessageBubble(
 
                 if (previews.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(8.dp))
-                    if (previews.size == 1) {
-                        LinkPreviewCard(preview = previews.first())
-                    } else {
-                        LinkPreviewCarousel(previews = previews)
-                    }
+                    LinkPreviewCarousel(previews = previews)
                 }
 
                 Spacer(modifier = Modifier.height(4.dp))
@@ -266,102 +266,90 @@ private fun MessageBubble(
 
 @Composable
 private fun LinkPreviewCarousel(previews: List<LinkPreview>) {
-    val pagerState = rememberPagerState { previews.size }
-
-    Column {
-        HorizontalPager(
-            state = pagerState,
-            contentPadding = PaddingValues(end = 16.dp), // peek next card
-            pageSpacing = 8.dp,
+    val state = rememberCarouselState { previews.size }
+    Box(modifier = Modifier.fillMaxWidth()) {
+        HorizontalUncontainedCarousel(
+            state = state,
+            itemWidth = Dp.Infinity,
+            itemSpacing = 8.dp,
+            flingBehavior = CarouselDefaults.singleAdvanceFlingBehavior(state),
+            modifier = Modifier
+                .fillMaxWidth()
+                .wrapContentHeight()
         ) { page ->
-            LinkPreviewCard(preview = previews[page])
-        }
+            val preview = previews[page]
+            val uriHandler = LocalUriHandler.current
 
-        Spacer(Modifier.height(6.dp))
-
-        // Dot indicators
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            previews.indices.forEach { i ->
-                val isSelected = pagerState.currentPage == i
-                val dotSize by animateDpAsState(
-                    targetValue = if (isSelected) 8.dp else 5.dp,
-                    label = "dot_$i"
-                )
-                Box(
-                    modifier = Modifier
-                        .size(dotSize)
-                        .clip(CircleShape)
-                        .background(
-                            if (isSelected) MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.25f)
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(8.dp))
+                    .clickable { uriHandler.openUri(preview.url) },
+                color = MaterialTheme.colorScheme.surface,
+                tonalElevation = 4.dp,
+            ) {
+                Column {
+                    if (!preview.imageUrl.isNullOrBlank()) {
+                        AsyncImage(
+                            model = preview.imageUrl,
+                            contentDescription = preview.title,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(140.dp)
+                                .clip(RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp)),
+                            contentScale = ContentScale.Crop,
                         )
-                )
-                if (i < previews.lastIndex) Spacer(Modifier.width(5.dp))
+                    }
+
+                    Column(modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) {
+                        Text(
+                            text = remember(preview.url) {
+                                runCatching { URL(preview.url).host.removePrefix("www.") }
+                                    .getOrDefault(preview.url)
+                            },
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        if (!preview.title.isNullOrBlank()) {
+                            Spacer(Modifier.height(2.dp))
+                            Text(
+                                text = preview.title,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                        if (!preview.description.isNullOrBlank()) {
+                            Spacer(Modifier.height(2.dp))
+                            Text(
+                                text = preview.description,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                    }
+                }
             }
         }
-    }
-}
-
-@Composable
-private fun LinkPreviewCard(preview: LinkPreview) {
-    val uriHandler = LocalUriHandler.current
-
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
-            .clickable { uriHandler.openUri(preview.url) },
-        color = MaterialTheme.colorScheme.surface,
-        tonalElevation = 4.dp,
-    ) {
-        Column {
-            if (!preview.imageUrl.isNullOrBlank()) {
-                AsyncImage(
-                    model = preview.imageUrl,
-                    contentDescription = preview.title,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(140.dp)
-                        .clip(RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp)),
-                    contentScale = ContentScale.Crop,
-                )
-            }
-
-            Column(modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) {
+        if (previews.size > 1) {
+            Surface(
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.inverseSurface,
+                contentColor = MaterialTheme.colorScheme.inverseOnSurface,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(12.dp)
+            ) {
                 Text(
-                    text = remember(preview.url) {
-                        runCatching { java.net.URL(preview.url).host.removePrefix("www.") }
-                            .getOrDefault(preview.url)
-                    },
+                    text = "${state.currentItem + 1}/${previews.size}",
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.primary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
                 )
-                if (!preview.title.isNullOrBlank()) {
-                    Spacer(Modifier.height(2.dp))
-                    Text(
-                        text = preview.title,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-                if (!preview.description.isNullOrBlank()) {
-                    Spacer(Modifier.height(2.dp))
-                    Text(
-                        text = preview.description,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
             }
         }
     }

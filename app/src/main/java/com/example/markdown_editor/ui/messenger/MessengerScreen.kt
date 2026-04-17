@@ -1,5 +1,7 @@
 package com.example.markdown_editor.ui.messenger
 
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,6 +20,9 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material.icons.Icons
@@ -37,11 +42,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
@@ -78,10 +85,7 @@ fun MessengerScreen(viewModel: AppViewModel) {
     }
 
     if (uiState.project == null) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center,
-        ) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text(
                 text = "Open a project folder to see notes",
                 style = MaterialTheme.typography.bodyMedium,
@@ -90,11 +94,9 @@ fun MessengerScreen(viewModel: AppViewModel) {
             )
         }
     } else {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .imePadding()
-        ) {
+        Column(modifier = Modifier
+            .fillMaxSize()
+            .imePadding()) {
             Box(
                 modifier = Modifier
                     .weight(1f)
@@ -116,7 +118,7 @@ fun MessengerScreen(viewModel: AppViewModel) {
                             text = "No quick notes yet.\nType something below to get started.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                            textAlign = TextAlign.Center,
                             modifier = Modifier.align(Alignment.Center)
                         )
                     }
@@ -130,18 +132,21 @@ fun MessengerScreen(viewModel: AppViewModel) {
                             reverseLayout = true,
                         ) {
                             items(sortedNotes, key = { it.uri.toString() }) { note ->
-                                val firstUrl = remember(note.body) {
-                                    note.body?.let { LinkPreviewFetcher.extractFirstUrl(it) }
+                                val urls = remember(note.body) {
+                                    LinkPreviewFetcher.extractAllUrls(note.body ?: "")
                                 }
-                                // Trigger fetch if not yet attempted
-                                LaunchedEffect(firstUrl) {
-                                    firstUrl?.let { viewModel.messengerEnsureLinkPreview(it) }
+                                // Trigger fetch for every URL in this note
+                                LaunchedEffect(urls) {
+                                    urls.forEach { viewModel.messengerEnsureLinkPreview(it) }
                                 }
-                                val preview = firstUrl?.let { uiState.messengerLinkPreviews[it] }
+                                // Collect only the previews that have already loaded
+                                val previews = remember(urls, uiState.messengerLinkPreviews) {
+                                    urls.mapNotNull { uiState.messengerLinkPreviews[it] }
+                                }
 
                                 MessageBubble(
                                     note = note,
-                                    linkPreview = preview,
+                                    previews = previews,
                                     onClick = { viewModel.onNoteSelected(note) }
                                 )
                             }
@@ -161,7 +166,7 @@ fun MessengerScreen(viewModel: AppViewModel) {
 @Composable
 private fun MessageBubble(
     note: Note,
-    linkPreview: LinkPreview?,
+    previews: List<LinkPreview>,
     onClick: () -> Unit,
 ) {
     val timeString = remember(note.createdAt, note.lastModified) {
@@ -172,19 +177,16 @@ private fun MessageBubble(
     val uriHandler = LocalUriHandler.current
     val bodyText = note.body?.trim()?.ifBlank { note.name } ?: note.name
 
-    // Build AnnotatedString with clickable URL spans
     val annotatedBody = remember(bodyText) {
         buildAnnotatedString {
             var lastIndex = 0
             URL_PATTERN.findAll(bodyText).forEach { match ->
-                // text before URL
                 append(bodyText.substring(lastIndex, match.range.first))
-                // URL span
                 pushStringAnnotation(tag = "URL", annotation = match.value)
                 withStyle(
                     SpanStyle(
-                        color = androidx.compose.ui.graphics.Color(0xFF1A73E8),
-                        textDecoration = TextDecoration.Underline,
+                        color = Color(0xFF1A73E8),
+                        textDecoration = TextDecoration.Underline
                     )
                 ) {
                     append(match.value)
@@ -192,15 +194,11 @@ private fun MessageBubble(
                 pop()
                 lastIndex = match.range.last + 1
             }
-            // remaining text
             if (lastIndex < bodyText.length) append(bodyText.substring(lastIndex))
         }
     }
 
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.End
-    ) {
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
         Surface(
             modifier = Modifier
                 .widthIn(min = 80.dp, max = 300.dp)
@@ -217,7 +215,6 @@ private fun MessageBubble(
             tonalElevation = 2.dp
         ) {
             Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
-                // Body text with clickable URLs
                 ClickableText(
                     text = annotatedBody,
                     style = TextStyle(
@@ -228,15 +225,17 @@ private fun MessageBubble(
                     overflow = TextOverflow.Ellipsis,
                     onClick = { offset ->
                         annotatedBody.getStringAnnotations("URL", offset, offset)
-                            .firstOrNull()
-                            ?.let { uriHandler.openUri(it.item) }
+                            .firstOrNull()?.let { uriHandler.openUri(it.item) }
                     }
                 )
 
-                // Link preview card
-                if (linkPreview != null) {
+                if (previews.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(8.dp))
-                    LinkPreviewCard(preview = linkPreview)
+                    if (previews.size == 1) {
+                        LinkPreviewCard(preview = previews.first())
+                    } else {
+                        LinkPreviewCarousel(previews = previews)
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(4.dp))
@@ -266,6 +265,48 @@ private fun MessageBubble(
 }
 
 @Composable
+private fun LinkPreviewCarousel(previews: List<LinkPreview>) {
+    val pagerState = rememberPagerState { previews.size }
+
+    Column {
+        HorizontalPager(
+            state = pagerState,
+            contentPadding = PaddingValues(end = 16.dp), // peek next card
+            pageSpacing = 8.dp,
+        ) { page ->
+            LinkPreviewCard(preview = previews[page])
+        }
+
+        Spacer(Modifier.height(6.dp))
+
+        // Dot indicators
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            previews.indices.forEach { i ->
+                val isSelected = pagerState.currentPage == i
+                val dotSize by animateDpAsState(
+                    targetValue = if (isSelected) 8.dp else 5.dp,
+                    label = "dot_$i"
+                )
+                Box(
+                    modifier = Modifier
+                        .size(dotSize)
+                        .clip(CircleShape)
+                        .background(
+                            if (isSelected) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.25f)
+                        )
+                )
+                if (i < previews.lastIndex) Spacer(Modifier.width(5.dp))
+            }
+        }
+    }
+}
+
+@Composable
 private fun LinkPreviewCard(preview: LinkPreview) {
     val uriHandler = LocalUriHandler.current
 
@@ -278,7 +319,6 @@ private fun LinkPreviewCard(preview: LinkPreview) {
         tonalElevation = 4.dp,
     ) {
         Column {
-            // OG image
             if (!preview.imageUrl.isNullOrBlank()) {
                 AsyncImage(
                     model = preview.imageUrl,
@@ -293,13 +333,15 @@ private fun LinkPreviewCard(preview: LinkPreview) {
 
             Column(modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) {
                 Text(
-                    text = preview.url,
+                    text = remember(preview.url) {
+                        runCatching { java.net.URL(preview.url).host.removePrefix("www.") }
+                            .getOrDefault(preview.url)
+                    },
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.primary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-
                 if (!preview.title.isNullOrBlank()) {
                     Spacer(Modifier.height(2.dp))
                     Text(
@@ -310,7 +352,6 @@ private fun LinkPreviewCard(preview: LinkPreview) {
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
-
                 if (!preview.description.isNullOrBlank()) {
                     Spacer(Modifier.height(2.dp))
                     Text(
@@ -332,10 +373,7 @@ private fun MessengerInputBar(
     onValueChange: (String) -> Unit,
     onSend: () -> Unit,
 ) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        tonalElevation = 8.dp
-    ) {
+    Surface(modifier = Modifier.fillMaxWidth(), tonalElevation = 8.dp) {
         Row(
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp),
             verticalAlignment = Alignment.Bottom

@@ -223,10 +223,10 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             )
             _uiState.update { it.copy(messengerNotesList = notes, messengerIsLoading = false) }
 
-            // Pre-warm in-memory cache from DB for all notes that have a URL
+            // Pre-warm in-memory cache from DB for all URLs in all notes
             notes.forEach { note ->
-                val url = note.body?.let { LinkPreviewFetcher.extractFirstUrl(it) }
-                if (url != null) messengerEnsureLinkPreview(url)
+                LinkPreviewFetcher.extractAllUrls(note.body ?: "")
+                    .forEach { messengerEnsureLinkPreview(it) }
             }
         }
     }

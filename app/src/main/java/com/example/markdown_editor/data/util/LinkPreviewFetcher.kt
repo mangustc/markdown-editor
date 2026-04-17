@@ -7,9 +7,13 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 object LinkPreviewFetcher {
+
     private val URL_REGEX = Regex("""https?://[^\s<>"'\)]+""")
 
     fun extractFirstUrl(text: String): String? = URL_REGEX.find(text)?.value
+
+    fun extractAllUrls(text: String): List<String> =
+        URL_REGEX.findAll(text).map { it.value }.distinct().toList()
 
     suspend fun fetch(url: String): LinkPreview? = withContext(Dispatchers.IO) {
         try {
@@ -25,6 +29,7 @@ object LinkPreviewFetcher {
             connection.disconnect()
 
             fun og(property: String): String? {
+                // handles both attribute orderings
                 val a = Regex(
                     """<meta[^>]+property=["']og:$property["'][^>]+content=["']([^"']+)["']""",
                     RegexOption.IGNORE_CASE
@@ -36,6 +41,7 @@ object LinkPreviewFetcher {
                 ).find(html)?.groupValues?.get(1)
             }
 
+            // Fallback: <title> tag if og:title absent
             val title = og("title") ?: Regex(
                 """<title[^>]*>([^<]+)</title>""", RegexOption.IGNORE_CASE
             ).find(html)?.groupValues?.get(1)?.trim()

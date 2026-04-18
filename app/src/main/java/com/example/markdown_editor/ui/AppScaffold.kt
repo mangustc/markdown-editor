@@ -389,21 +389,21 @@ fun NoteDrawerItem(
                         interactionSource = groupInteractionSource,
                     ) {
                         MenuPopupItem(
-                            text = "Open note",
+                            text = "Open",
                             index = 0, count = 4,
                             icon = Icons.AutoMirrored.Outlined.OpenInNew,
                             onClick = { menuExpanded = false; onOpen() }
                         )
 
                         MenuPopupItem(
-                            text = "Rename note",
+                            text = "Rename",
                             index = 1, count = 4,
                             icon = Icons.Outlined.DriveFileRenameOutline,
                             onClick = { menuExpanded = false; onRename() }
                         )
 
                         MenuPopupItem(
-                            text = "Delete note",
+                            text = "Delete",
                             index = 2, count = 4,
                             supportingText = "Cannot be undone",
                             icon = Icons.Outlined.Delete,

@@ -74,7 +74,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             repository.saveProject(project)
             _uiState.update { it.copy(project = project) }
             repository.syncDatabase(project)
-            onSearchQueryChanged()
+            updateNoteLists()
         }
     }
 
@@ -104,13 +104,13 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             val uri = repository.createNote(project, nameToUse)
             if (uri != null) {
                 repository.syncDatabase(project)
-                onSearchQueryChanged()
+                updateNoteLists()
             }
         }
     }
 
     private var searchJob: Job? = null
-    fun onSearchQueryChanged(raw: String? = null) {
+    fun onSearchQueryChanged(raw: String? = null, afterUpdate: () -> Unit = {}) {
         if (raw != null) _uiState.update { it.copy(searchQuery = raw) }
         val searchQuery = _uiState.value.searchQuery
         val project = _uiState.value.project ?: return
@@ -124,6 +124,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             repository.syncDatabase(project)
             val results = repository.getNotes(project, parsed)
             _uiState.update { it.copy(searchResults = results) }
+            afterUpdate()
         }
     }
 
@@ -212,7 +213,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun messengerOnMessengerOpened(project: Project) {
+    fun messengerOnMessengerOpened(project: Project, afterUpdate: () -> Unit = {}) {
         viewModelScope.launch {
             repository.syncDatabase(project)
             val notes = repository.getNotes(
@@ -228,6 +229,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 LinkPreviewFetcher.extractAllUrls(note.body ?: "")
                     .forEach { messengerEnsureLinkPreview(it) }
             }
+            afterUpdate()
         }
     }
 
@@ -235,7 +237,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.update { it.copy(messengerNewNoteText = text) }
     }
 
-    fun messengerOnSendNote() {
+    fun messengerOnSendNote(afterUpdate: () -> Unit = {}) {
         val project = _uiState.value.project ?: return
         val text = _uiState.value.messengerNewNoteText.trim()
         if (text.isBlank()) return
@@ -256,8 +258,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 withContext(Dispatchers.Main) {
                     _uiState.update { it.copy(messengerNewNoteText = "") }
                 }
-                messengerOnMessengerOpened(project)
-                onSearchQueryChanged()
+                updateNoteLists(afterUpdateMessenger = afterUpdate)
             }
         }
     }
@@ -305,7 +306,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             val project = repository.loadSavedProject()
             if (project != null) {
                 _uiState.update { it.copy(project = project) }
-                onSearchQueryChanged()
+                updateNoteLists()
             }
         }
     }
@@ -324,7 +325,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             val activeNote = _uiState.value.activeNote
             repository.deleteNote(note)
             repository.syncDatabase(project)
-            onSearchQueryChanged()
+            updateNoteLists()
             if (note.uri == activeNote?.uri) goBack()
         }
     }
@@ -362,7 +363,13 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             val project = _uiState.value.project ?: return@launch
             repository.renameNote(note, newName)
             repository.syncDatabase(project)
-            onSearchQueryChanged()
+            updateNoteLists()
         }
+    }
+
+    fun updateNoteLists(afterUpdateSearch: () -> Unit = {}, afterUpdateMessenger: () -> Unit = {}) {
+        val project = _uiState.value.project ?: return
+        onSearchQueryChanged(afterUpdate = afterUpdateSearch)
+        messengerOnMessengerOpened(project, afterUpdate = afterUpdateMessenger)
     }
 }

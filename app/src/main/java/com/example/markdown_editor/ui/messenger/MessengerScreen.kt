@@ -27,6 +27,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.automirrored.outlined.OpenInNew
+import androidx.compose.material.icons.outlined.ContentCopy
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
@@ -44,10 +48,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.ClipEntry
@@ -68,8 +72,10 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.example.markdown_editor.data.model.LinkPreview
-import com.example.markdown_editor.data.model.Note
 import com.example.markdown_editor.data.util.LinkPreviewFetcher
+import com.example.markdown_editor.ui.components.MenuPopup
+import com.example.markdown_editor.ui.components.MenuPopupGroup
+import com.example.markdown_editor.ui.components.MenuPopupItem
 import com.example.markdown_editor.ui.viewmodel.AppViewModel
 import kotlinx.coroutines.launch
 import java.net.URL
@@ -77,7 +83,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-private val URL_PATTERN = Regex("""https?://[^\s<>"'\)]+""")
+private val URL_PATTERN = Regex("""https?://[^\s<>"')]+""")
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -93,10 +99,8 @@ fun MessengerScreen(viewModel: AppViewModel) {
     }
 
     val listState = rememberLazyListState()
-
-    LaunchedEffect(sortedNotes.size) {
-        if (sortedNotes.isNotEmpty()) listState.animateScrollToItem(0)
-    }
+    val clipboard = LocalClipboard.current
+    val scope = rememberCoroutineScope()
 
     if (uiState.project == null) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -143,28 +147,95 @@ fun MessengerScreen(viewModel: AppViewModel) {
                         LazyColumn(
                             state = listState,
                             modifier = Modifier.fillMaxWidth(),
-                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
                             verticalArrangement = Arrangement.spacedBy(6.dp),
+                            contentPadding = PaddingValues(vertical = 8.dp),
                             reverseLayout = true,
                         ) {
                             items(sortedNotes, key = { it.uri.toString() }) { note ->
                                 val urls = remember(note.body) {
                                     LinkPreviewFetcher.extractAllUrls(note.body ?: "")
                                 }
-                                // Trigger fetch for every URL in this note
                                 LaunchedEffect(urls) {
                                     urls.forEach { viewModel.messengerEnsureLinkPreview(it) }
                                 }
-                                // Collect only the previews that have already loaded
                                 val previews = remember(urls, uiState.messengerLinkPreviews) {
                                     urls.mapNotNull { uiState.messengerLinkPreviews[it] }
                                 }
 
-                                MessageBubble(
-                                    note = note,
-                                    previews = previews,
-                                    onClick = { viewModel.onNoteSelected(note) }
-                                )
+                                var menuExpanded by remember { mutableStateOf(false) }
+                                val bodyText = note.body?.trim()?.ifBlank { note.name } ?: note.name
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable(onClick = { menuExpanded = true })
+                                        .padding(PaddingValues(horizontal = 12.dp)),
+                                ) {
+                                    MessageBubble(
+                                        name = note.name,
+                                        createdAt = note.createdAt ?: note.lastModified,
+                                        bodyText = bodyText,
+                                        previews = previews,
+                                        onClick = { menuExpanded = true },
+                                    )
+                                    MenuPopup(
+                                        expanded = menuExpanded,
+                                        onDismissRequest = { menuExpanded = false },
+                                    ) { groupInteractionSource ->
+                                        MenuPopupGroup(
+                                            index = 0,
+                                            count = 1,
+                                            label = "Actions",
+                                            interactionSource = groupInteractionSource,
+                                        ) {
+                                            MenuPopupItem(
+                                                text = "Open",
+                                                index = 0, count = 4,
+                                                icon = Icons.AutoMirrored.Outlined.OpenInNew,
+                                                onClick = {
+                                                    menuExpanded = false
+                                                    viewModel.onNoteSelected(note)
+                                                }
+                                            )
+                                            MenuPopupItem(
+                                                text = "Copy",
+                                                index = 1, count = 4,
+                                                icon = Icons.Outlined.ContentCopy,
+                                                onClick = {
+                                                    menuExpanded = false
+                                                    scope.launch {
+                                                        clipboard.setClipEntry(
+                                                            ClipEntry(
+                                                                ClipData.newPlainText(
+                                                                    "Note text",
+                                                                    bodyText
+                                                                )
+                                                            )
+                                                        )
+                                                    }
+                                                }
+                                            )
+                                            MenuPopupItem(
+                                                text = "Edit",
+                                                index = 2, count = 4,
+                                                icon = Icons.Outlined.Edit,
+                                                onClick = {
+                                                    menuExpanded = false
+                                                }
+                                            )
+                                            MenuPopupItem(
+                                                text = "Delete",
+                                                index = 3, count = 4,
+                                                supportingText = "Cannot be undone",
+                                                icon = Icons.Outlined.Delete,
+                                                tint = MaterialTheme.colorScheme.error,
+                                                onClick = {
+                                                    menuExpanded = false
+                                                    viewModel.onDeleteNote(note)
+                                                }
+                                            )
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
@@ -173,7 +244,15 @@ fun MessengerScreen(viewModel: AppViewModel) {
             MessengerInputBar(
                 value = uiState.messengerNewNoteText,
                 onValueChange = { viewModel.messengerOnNewNoteTextChanged(it) },
-                onSend = { viewModel.messengerOnSendNote() }
+                onSend = {
+                    viewModel.messengerOnSendNote(
+                        afterUpdate = {
+                            scope.launch {
+                                if (sortedNotes.isNotEmpty()) listState.animateScrollToItem(0)
+                            }
+                        }
+                    )
+                }
             )
         }
     }
@@ -181,13 +260,14 @@ fun MessengerScreen(viewModel: AppViewModel) {
 
 @Composable
 private fun MessageBubble(
-    note: Note,
+    name: String,
+    createdAt: Long,
+    bodyText: String,
     previews: List<LinkPreview>,
     onClick: () -> Unit,
 ) {
-    val timeString = remember(note.createdAt, note.lastModified) {
-        val millis = note.createdAt ?: note.lastModified
-        SimpleDateFormat("MMM d, HH:mm", Locale.getDefault()).format(Date(millis))
+    val timeString = remember(createdAt) {
+        SimpleDateFormat("MMM d, HH:mm", Locale.getDefault()).format(Date(createdAt))
     }
 
     val scope = rememberCoroutineScope()
@@ -195,8 +275,8 @@ private fun MessageBubble(
     val clipboard = LocalClipboard.current
     val focusManager = LocalFocusManager.current
     val context = LocalContext.current
-    val bodyText = note.body?.trim()?.ifBlank { note.name } ?: note.name
 
+    val urlColor = MaterialTheme.colorScheme.primary
     val annotatedBody = remember(bodyText) {
         buildAnnotatedString {
             var lastIndex = 0
@@ -205,8 +285,8 @@ private fun MessageBubble(
                 pushStringAnnotation(tag = "URL", annotation = match.value)
                 withStyle(
                     SpanStyle(
-                        color = Color(0xFF1A73E8),
-                        textDecoration = TextDecoration.Underline
+                        color = urlColor,
+                        textDecoration = TextDecoration.Underline,
                     )
                 ) {
                     append(match.value)
@@ -231,8 +311,7 @@ private fun MessageBubble(
                         bottomStart = 16.dp,
                         bottomEnd = 16.dp
                     )
-                )
-                .clickable(onClick = onClick),
+                ),
             color = MaterialTheme.colorScheme.primaryContainer,
             tonalElevation = 2.dp
         ) {
@@ -257,6 +336,7 @@ private fun MessageBubble(
                                             position
                                         )
                                             .firstOrNull()?.let { uriHandler.openUri(it.item) }
+                                            ?: onClick()
                                     }
                                 },
                                 onLongPress = { offset ->
@@ -300,7 +380,7 @@ private fun MessageBubble(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
-                        text = note.name,
+                        text = name,
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f),
                         maxLines = 1,

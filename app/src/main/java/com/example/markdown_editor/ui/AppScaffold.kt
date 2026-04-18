@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
@@ -24,7 +23,6 @@ import androidx.compose.material.icons.automirrored.outlined.OpenInNew
 import androidx.compose.material.icons.filled.Abc
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Menu
@@ -39,9 +37,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DockedSearchBar
 import androidx.compose.material3.DrawerValue
-import androidx.compose.material3.DropdownMenuGroup
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.DropdownMenuPopup
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.HorizontalDivider
@@ -50,7 +45,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
-import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.ModalDrawerSheet
@@ -77,7 +71,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -89,6 +82,9 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import com.example.markdown_editor.data.model.Note
+import com.example.markdown_editor.ui.components.MenuPopup
+import com.example.markdown_editor.ui.components.MenuPopupGroup
+import com.example.markdown_editor.ui.components.MenuPopupItem
 import com.example.markdown_editor.ui.editor.EditorScreen
 import com.example.markdown_editor.ui.messenger.MessengerScreen
 import com.example.markdown_editor.ui.navigation.EditorDestination
@@ -346,7 +342,7 @@ fun NoteDrawerItem(
     onRename: () -> Unit,
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
-    val groupInteractionSource = remember { MutableInteractionSource() }
+    remember { MutableInteractionSource() }
 
     Box(modifier = Modifier.wrapContentSize(Alignment.TopEnd)) {
         ListItem(
@@ -382,34 +378,31 @@ fun NoteDrawerItem(
                         )
                     }
                 }
-                DropdownMenuPopup(
+                MenuPopup(
                     expanded = menuExpanded,
                     onDismissRequest = { menuExpanded = false },
-                ) {
-                    DropdownMenuGroup(
-                        shapes = MenuDefaults.groupShape(index = 0, count = 2),
+                ) { groupInteractionSource ->
+                    MenuPopupGroup(
+                        index = 0,
+                        count = 2,
+                        label = "Actions",
                         interactionSource = groupInteractionSource,
                     ) {
-                        MenuDefaults.Label { Text("Actions") }
-                        HorizontalDivider(
-                            modifier = Modifier.padding(MenuDefaults.HorizontalDividerPadding)
-                        )
-
-                        NoteMenuItem(
+                        MenuPopupItem(
                             text = "Open note",
                             index = 0, count = 4,
                             icon = Icons.AutoMirrored.Outlined.OpenInNew,
                             onClick = { menuExpanded = false; onOpen() }
                         )
 
-                        NoteMenuItem(
+                        MenuPopupItem(
                             text = "Rename note",
                             index = 1, count = 4,
                             icon = Icons.Outlined.DriveFileRenameOutline,
                             onClick = { menuExpanded = false; onRename() }
                         )
 
-                        NoteMenuItem(
+                        MenuPopupItem(
                             text = "Delete note",
                             index = 2, count = 4,
                             supportingText = "Cannot be undone",
@@ -421,16 +414,13 @@ fun NoteDrawerItem(
 
                     Spacer(Modifier.height(MenuDefaults.GroupSpacing))
 
-                    DropdownMenuGroup(
-                        shapes = MenuDefaults.groupShape(index = 1, count = 2),
+                    MenuPopupGroup(
+                        index = 1,
+                        count = 2,
+                        label = "More",
                         interactionSource = groupInteractionSource,
                     ) {
-                        MenuDefaults.Label { Text("More") }
-                        HorizontalDivider(
-                            modifier = Modifier.padding(MenuDefaults.HorizontalDividerPadding)
-                        )
-
-                        NoteMenuItem(
+                        MenuPopupItem(
                             text = "Show details",
                             index = 3, count = 4,
                             icon = Icons.Outlined.Info,
@@ -442,45 +432,6 @@ fun NoteDrawerItem(
         )
 
     }
-}
-
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
-@Composable
-fun NoteMenuItem(
-    text: String,
-    supportingText: String? = null,
-    index: Int,
-    count: Int,
-    tint: Color? = null,
-    icon: ImageVector,
-    onClick: () -> Unit,
-) {
-    DropdownMenuItem(
-        text = { Text(text) },
-        supportingText = { if (supportingText != null) Text(supportingText) },
-        shapes = MenuDefaults.itemShape(index = index, count = count),
-        leadingIcon = {
-            Icon(
-                imageVector = icon,
-                modifier = Modifier.size(MenuDefaults.LeadingIconSize),
-                contentDescription = null,
-                tint = tint ?: LocalContentColor.current,
-            )
-        },
-        selectedLeadingIcon = {
-            Icon(
-                Icons.Filled.Delete,
-                modifier = Modifier.size(MenuDefaults.LeadingIconSize),
-                contentDescription = null,
-                tint = tint ?: LocalContentColor.current,
-            )
-        },
-        selected = false,
-        colors = MenuDefaults.itemColors(
-            textColor = tint ?: Color.Unspecified,
-        ),
-        onClick = onClick,
-    )
 }
 
 @Composable

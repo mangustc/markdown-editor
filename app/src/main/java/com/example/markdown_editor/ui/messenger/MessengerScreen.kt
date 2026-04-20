@@ -1,7 +1,13 @@
 package com.example.markdown_editor.ui.messenger
 
 import android.content.ClipData
+import android.content.Intent
+import android.net.Uri
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -10,6 +16,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -28,6 +35,9 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.automirrored.outlined.OpenInNew
+import androidx.compose.material.icons.filled.AttachFile
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
@@ -35,6 +45,8 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -45,6 +57,7 @@ import androidx.compose.material3.carousel.rememberCarouselState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -69,15 +82,23 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.core.net.toUri
+import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.example.markdown_editor.data.model.LinkPreview
+import com.example.markdown_editor.data.model.Project
 import com.example.markdown_editor.data.util.LinkPreviewFetcher
 import com.example.markdown_editor.ui.components.MenuPopup
 import com.example.markdown_editor.ui.components.MenuPopupGroup
 import com.example.markdown_editor.ui.components.MenuPopupItem
+import com.example.markdown_editor.domain.parser.MarkdownParser
 import com.example.markdown_editor.ui.viewmodel.AppViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.net.URL
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -85,10 +106,104 @@ import java.util.Locale
 
 private val URL_PATTERN = Regex("""https?://[^\s<>"')]+""")
 
+private data class ParsedNoteBody(
+    val text: String,
+    val attachments: List<Attachment>,
+)
+
+private fun extractLinkPath(matched: String): String =
+    matched
+        .substringAfter("](")
+        .dropLast(1)
+        .substringBefore(" \"")
+        .trim()
+        .removeSurrounding("<", ">")
+
+private fun extractLinkLabel(matched: String): String =
+    matched.substringAfter("[").substringBefore("]")
+
+private fun parseNoteBody(body: String): ParsedNoteBody {
+    val photoAttachments = MarkdownParser.IMAGE_REGEX.findAll(body)
+        .mapNotNull { match ->
+            val path = extractLinkPath(match.value)
+            if (path.startsWith("assets/")) {
+                Attachment.Photo(path)
+            } else {
+                null
+            }
+        }
+        .toList()
+
+    val fileAttachments = MarkdownParser.FILE_REGEX.findAll(body)
+        .mapNotNull { match ->
+            val label = extractLinkLabel(match.value)
+            val path = extractLinkPath(match.value)
+            if (path.startsWith("assets/")) {
+                Attachment.AttachedFile(path, label)
+            } else {
+                null
+            }
+        }
+        .toList()
+
+    var text = body
+
+    MarkdownParser.IMAGE_REGEX.findAll(body)
+        .filter { extractLinkPath(it.value).startsWith("assets/") }
+        .map { it.value }
+        .forEach { text = text.replace(it, "") }
+
+    MarkdownParser.FILE_REGEX.findAll(body)
+        .filter { extractLinkPath(it.value).startsWith("assets/") }
+        .map { it.value }
+        .forEach { text = text.replace(it, "") }
+
+    return ParsedNoteBody(
+        text = text.trim(),
+        attachments = photoAttachments + fileAttachments
+    )}
+
+@Composable
+private fun rememberAssetUri(path: String, project: Project?): Uri? {
+    val context = LocalContext.current
+    var uri by remember(path, project) { mutableStateOf<Uri?>(null) }
+    LaunchedEffect(path, project) {
+        if (project == null) return@LaunchedEffect
+        withContext(Dispatchers.IO) {
+            try {
+                uri = if (path.startsWith("assets/")) {
+                    val fileName = path.removePrefix("assets/")
+                    DocumentFile.fromTreeUri(context, project.assetsUri)
+                        ?.findFile(fileName)?.uri
+                } else {
+                    path.toUri()
+                }
+            } catch (_: Exception) { }
+        }
+    }
+    return uri
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MessengerScreen(viewModel: AppViewModel) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    // Hoisted attachment state – cleared after send
+    val attachments = remember { mutableStateListOf<Attachment>() }
+    var fullScreenPhotoUri by remember { mutableStateOf<Uri?>(null) }
+
+    // Launchers must be at composable top-level (unconditional)
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        if (uri != null) attachments.add(Attachment.PendingPhoto(uri))
+    }
+    val filePickerLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) attachments.add(Attachment.PendingAttachedFile(uri, null))
+    }
 
     LaunchedEffect(uiState.project) {
         uiState.project?.let { viewModel.messengerOnMessengerOpened(it) }
@@ -101,6 +216,7 @@ fun MessengerScreen(viewModel: AppViewModel) {
     val listState = rememberLazyListState()
     val clipboard = LocalClipboard.current
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
 
     if (uiState.project == null) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -162,8 +278,12 @@ fun MessengerScreen(viewModel: AppViewModel) {
                                     urls.mapNotNull { uiState.messengerLinkPreviews[it] }
                                 }
 
+                                val parsedBody = remember(note.body) {
+                                    parseNoteBody(note.body ?: "")
+                                }
+                                val bodyText = parsedBody.text.ifBlank { "" }
+
                                 var menuExpanded by remember { mutableStateOf(false) }
-                                val bodyText = note.body?.trim()?.ifBlank { note.name } ?: note.name
                                 Box(
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -175,6 +295,27 @@ fun MessengerScreen(viewModel: AppViewModel) {
                                         createdAt = note.createdAt ?: note.lastModified,
                                         bodyText = bodyText,
                                         previews = previews,
+                                        attachments = parsedBody.attachments,
+                                        project = uiState.project,
+                                        onPhotoClick = { uri -> fullScreenPhotoUri = uri },
+                                        onFileClick = { uri ->
+                                            try {
+                                                val mime =
+                                                    context.contentResolver.getType(uri) ?: "*/*"
+                                                val intent = Intent(Intent.ACTION_VIEW).apply {
+                                                    setDataAndType(uri, mime)
+                                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                                }
+                                                context.startActivity(
+                                                    Intent.createChooser(intent, null)
+                                                )
+                                            } catch (e: Exception) {
+                                                Toast.makeText(
+                                                    context, "No app found to open this file",
+                                                    Toast.LENGTH_SHORT
+                                                ).show()
+                                            }
+                                        },
                                         onClick = { menuExpanded = true },
                                     )
                                     MenuPopup(
@@ -241,19 +382,294 @@ fun MessengerScreen(viewModel: AppViewModel) {
                     }
                 }
             }
+
             MessengerInputBar(
                 value = uiState.messengerNewNoteText,
                 onValueChange = { viewModel.messengerOnNewNoteTextChanged(it) },
+                attachments = attachments,
+                onAddPhoto = {
+                    photoPickerLauncher.launch(
+                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                    )
+                },
+                onAddFile = { filePickerLauncher.launch(arrayOf("*/*")) },
+                onRemoveAttachment = { index -> attachments.removeAt(index) },
                 onSend = {
+                    val snapshot = attachments.toList()
+                    attachments.clear()
                     viewModel.messengerOnSendNote(
+                        attachments = snapshot,
                         afterUpdate = {
                             scope.launch {
                                 if (sortedNotes.isNotEmpty()) listState.animateScrollToItem(0)
                             }
                         }
                     )
-                }
+                },
+                project = uiState.project,
             )
+        }
+    }
+
+    fullScreenPhotoUri?.let { uri ->
+        FullScreenPhotoDialog(uri = uri, onDismiss = { fullScreenPhotoUri = null })
+    }
+}
+
+@Composable
+private fun MessengerInputBar(
+    value: String,
+    onValueChange: (String) -> Unit,
+    attachments: List<Attachment>,
+    onAddPhoto: () -> Unit,
+    onAddFile: () -> Unit,
+    onRemoveAttachment: (Int) -> Unit,
+    onSend: () -> Unit,
+    project: Project?,
+) {
+    Surface(modifier = Modifier.fillMaxWidth(), tonalElevation = 8.dp) {
+        Column {
+            AttachmentCarouselStrip(
+                attachments = attachments,
+                onAddPhoto = onAddPhoto,
+                onAddFile = onAddFile,
+                onRemove = onRemoveAttachment,
+                onPhotoClick = {},
+                onFileClick = {},
+                isViewing = false,
+                project = project,
+            )
+            Row(
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.Bottom
+            ) {
+                OutlinedTextField(
+                    value = value,
+                    onValueChange = onValueChange,
+                    modifier = Modifier.weight(1f),
+                    placeholder = { Text("New quick note…") },
+                    shape = RoundedCornerShape(24.dp),
+                    maxLines = 6,
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                        capitalization = androidx.compose.ui.text.input.KeyboardCapitalization.Sentences
+                    )
+                )
+                Spacer(Modifier.width(8.dp))
+                FilledIconButton(
+                    onClick = onSend,
+                    enabled = value.isNotBlank() || attachments.isNotEmpty(),
+                    modifier = Modifier.size(48.dp)
+                ) {
+                    Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send note")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AttachmentCarouselStrip(
+    attachments: List<Attachment>,
+    onAddPhoto: (() -> Unit)? = null,
+    onAddFile: (() -> Unit)? = null,
+    onRemove: ((Int) -> Unit)? = null,
+    onPhotoClick: (Uri) -> Unit,
+    onFileClick: (Uri) -> Unit,
+    project: Project?,
+    isViewing: Boolean,
+) {
+    val state = rememberCarouselState { if (isViewing) attachments.size else attachments.size + 2 }
+    HorizontalUncontainedCarousel(
+        state = state,
+        itemWidth = 80.dp,
+        itemSpacing = 4.dp,
+        contentPadding = PaddingValues(8.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .wrapContentHeight()
+    ) { page ->
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(1f)
+        ) {
+            if (!isViewing && page == 0) {
+                IconButton(
+                    onClick = onAddPhoto ?: {},
+                    shape = IconButtonDefaults.smallSquareShape,
+                    colors = IconButtonDefaults.iconButtonColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    ),
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(4.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
+                    ) {
+                        Icon(
+                            Icons.Default.Image,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Text(
+                            text = "Add photos",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                            textAlign = TextAlign.Center,
+                        )
+                    }
+                }
+            } else if (!isViewing && page == 1) {
+                IconButton(
+                    onClick = onAddFile ?: {},
+                    shape = IconButtonDefaults.smallSquareShape,
+                    colors = IconButtonDefaults.iconButtonColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    ),
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(4.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
+                    ) {
+                        Icon(
+                            Icons.Default.AttachFile,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Text(
+                            text = "Add files",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                            textAlign = TextAlign.Center,
+                        )
+                    }
+                }
+            } else {
+                when (val attachment = attachments[if (isViewing) page else page - 2]) {
+                    is Attachment.Photo -> {
+                        val uri = rememberAssetUri(attachment.path, project)
+                        Surface(
+                            shape = MaterialTheme.shapes.medium,
+                            tonalElevation = 2.dp,
+                            onClick = { uri?.let(onPhotoClick) },
+                        ) {
+                            AsyncImage(
+                                model = uri,
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+                    }
+
+                    is Attachment.PendingPhoto -> {
+                        Surface(
+                            shape = MaterialTheme.shapes.medium,
+                            onClick = { attachment.uri.let(onPhotoClick) },
+                            tonalElevation = 2.dp,
+                        ) {
+                            AsyncImage(
+                                model = attachment.uri,
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+                    }
+
+                    is Attachment.AttachedFile -> {
+                        val uri = rememberAssetUri(attachment.path, project)
+                        Surface(
+                            color = MaterialTheme.colorScheme.surfaceVariant,
+                            shape = MaterialTheme.shapes.medium,
+                            tonalElevation = 2.dp,
+                            onClick = { uri?.let { fileUri -> onFileClick(fileUri) } },
+                            modifier = Modifier
+                                .fillMaxSize()
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(4.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center,
+                            ) {
+                                Icon(
+                                    Icons.Default.AttachFile,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                                Text(
+                                    text = attachment.displayName,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis,
+                                    textAlign = TextAlign.Center,
+                                )
+                            }
+                        }
+                    }
+
+                    is Attachment.PendingAttachedFile -> {
+                        val context = LocalContext.current
+                        val displayName = remember(attachment.uri) {
+                            DocumentFile.fromSingleUri(context, attachment.uri)?.name ?: "File"
+                        }
+                        Surface(
+                            color = MaterialTheme.colorScheme.surfaceVariant,
+                            tonalElevation = 2.dp,
+                            shape = MaterialTheme.shapes.medium,
+                            onClick = { onFileClick(attachment.uri) },
+                            modifier = Modifier
+                                .fillMaxSize()
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(4.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center,
+                            ) {
+                                Icon(
+                                    Icons.Default.AttachFile,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                                Text(
+                                    text = displayName,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis,
+                                    textAlign = TextAlign.Center,
+                                )
+                            }
+                        }
+                    }
+                }
+                if (onRemove != null) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .size(18.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.errorContainer)
+                            .clickable { onRemove(page - 2) },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            Icons.Default.Close,
+                            contentDescription = "Remove",
+                            modifier = Modifier.size(12.dp),
+                            tint = MaterialTheme.colorScheme.onErrorContainer,
+                        )
+                    }
+                }
+            }
         }
     }
 }
@@ -264,6 +680,10 @@ private fun MessageBubble(
     createdAt: Long,
     bodyText: String,
     previews: List<LinkPreview>,
+    attachments: List<Attachment>,
+    project: Project?,
+    onPhotoClick: (Uri) -> Unit,
+    onFileClick: (Uri) -> Unit,
     onClick: () -> Unit,
 ) {
     val timeString = remember(createdAt) {
@@ -299,6 +719,7 @@ private fun MessageBubble(
     }
 
     val layoutResult = remember { mutableStateOf<TextLayoutResult?>(null) }
+    val hasAttachments = attachments.isNotEmpty()
 
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
         Surface(
@@ -316,56 +737,76 @@ private fun MessageBubble(
             tonalElevation = 2.dp
         ) {
             Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
-                SelectionContainer {
-                    Text(
-                        text = annotatedBody,
-                        style = TextStyle(
-                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                            fontSize = MaterialTheme.typography.bodyMedium.fontSize,
-                            lineHeight = MaterialTheme.typography.bodyMedium.lineHeight,
-                        ),
-                        onTextLayout = { layoutResult.value = it },
-                        modifier = Modifier.pointerInput(Unit) {
-                            detectTapGestures(
-                                onTap = { offset ->
-                                    layoutResult.value?.let { result ->
-                                        val position = result.getOffsetForPosition(offset)
-                                        annotatedBody.getStringAnnotations(
-                                            "URL",
-                                            position,
-                                            position
-                                        )
-                                            .firstOrNull()?.let { uriHandler.openUri(it.item) }
-                                            ?: onClick()
-                                    }
-                                },
-                                onLongPress = { offset ->
-                                    layoutResult.value?.let { result ->
-                                        val position = result.getOffsetForPosition(offset)
-                                        val link = annotatedBody.getStringAnnotations(
-                                            "URL",
-                                            position,
-                                            position
-                                        )
-                                            .firstOrNull()
 
-                                        if (link != null) {
-                                            val clipData = ClipData.newPlainText("URL", link.item)
-                                            scope.launch {
-                                                clipboard.setClipEntry(ClipEntry(clipData))
-                                                Toast.makeText(
-                                                    context,
-                                                    "Link copied",
-                                                    Toast.LENGTH_SHORT
-                                                ).show()
-                                                focusManager.clearFocus()
+                // ── Attachment carousel (photos + files) ──────────────────────
+                if (hasAttachments) {
+                    AttachmentCarouselStrip(
+                        attachments = attachments,
+                        project = project,
+                        onPhotoClick = onPhotoClick,
+                        onFileClick = onFileClick,
+                        isViewing = true,
+                    )
+                    if (bodyText.isNotBlank()) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+                }
+
+                // ── Text body ─────────────────────────────────────────────────
+                if (bodyText.isNotBlank()) {
+                    SelectionContainer {
+                        Text(
+                            text = annotatedBody,
+                            style = TextStyle(
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                fontSize = MaterialTheme.typography.bodyMedium.fontSize,
+                                lineHeight = MaterialTheme.typography.bodyMedium.lineHeight,
+                            ),
+                            onTextLayout = { layoutResult.value = it },
+                            modifier = Modifier.pointerInput(Unit) {
+                                detectTapGestures(
+                                    onTap = { offset ->
+                                        layoutResult.value?.let { result ->
+                                            val position = result.getOffsetForPosition(offset)
+                                            annotatedBody.getStringAnnotations(
+                                                "URL",
+                                                position,
+                                                position
+                                            )
+                                                .firstOrNull()
+                                                ?.let { uriHandler.openUri(it.item) }
+                                                ?: onClick()
+                                        }
+                                    },
+                                    onLongPress = { offset ->
+                                        layoutResult.value?.let { result ->
+                                            val position = result.getOffsetForPosition(offset)
+                                            val link = annotatedBody.getStringAnnotations(
+                                                "URL",
+                                                position,
+                                                position
+                                            )
+                                                .firstOrNull()
+
+                                            if (link != null) {
+                                                val clipData =
+                                                    ClipData.newPlainText("URL", link.item)
+                                                scope.launch {
+                                                    clipboard.setClipEntry(ClipEntry(clipData))
+                                                    Toast.makeText(
+                                                        context,
+                                                        "Link copied",
+                                                        Toast.LENGTH_SHORT
+                                                    ).show()
+                                                    focusManager.clearFocus()
+                                                }
                                             }
                                         }
                                     }
-                                }
-                            )
-                        }
-                    )
+                                )
+                            }
+                        )
+                    }
                 }
 
                 if (previews.isNotEmpty()) {
@@ -399,6 +840,47 @@ private fun MessageBubble(
     }
 }
 
+@Composable
+private fun FullScreenPhotoDialog(uri: Uri, onDismiss: () -> Unit) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(androidx.compose.ui.graphics.Color.Black)
+                .clickable(onClick = onDismiss),
+            contentAlignment = Alignment.Center,
+        ) {
+            AsyncImage(
+                model = uri,
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Fit,
+            )
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(16.dp)
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.5f))
+                    .clickable(onClick = onDismiss),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    Icons.Default.Close,
+                    contentDescription = "Close",
+                    tint = androidx.compose.ui.graphics.Color.White,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun LinkPreviewCarousel(previews: List<LinkPreview>) {
     val state = rememberCarouselState { previews.size }
@@ -485,40 +967,6 @@ private fun LinkPreviewCarousel(previews: List<LinkPreview>) {
                     style = MaterialTheme.typography.labelSmall,
                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
                 )
-            }
-        }
-    }
-}
-
-@Composable
-private fun MessengerInputBar(
-    value: String,
-    onValueChange: (String) -> Unit,
-    onSend: () -> Unit,
-) {
-    Surface(modifier = Modifier.fillMaxWidth(), tonalElevation = 8.dp) {
-        Row(
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.Bottom
-        ) {
-            OutlinedTextField(
-                value = value,
-                onValueChange = onValueChange,
-                modifier = Modifier.weight(1f),
-                placeholder = { Text("New quick note…") },
-                shape = RoundedCornerShape(24.dp),
-                maxLines = 6,
-                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                    capitalization = androidx.compose.ui.text.input.KeyboardCapitalization.Sentences
-                )
-            )
-            Spacer(Modifier.width(8.dp))
-            FilledIconButton(
-                onClick = onSend,
-                enabled = value.isNotBlank(),
-                modifier = Modifier.size(48.dp)
-            ) {
-                Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send note")
             }
         }
     }

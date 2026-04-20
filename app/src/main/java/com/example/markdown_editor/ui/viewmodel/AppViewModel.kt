@@ -17,6 +17,7 @@ import com.example.markdown_editor.data.util.LinkPreviewFetcher
 import com.example.markdown_editor.domain.parser.MarkdownParser
 import com.example.markdown_editor.ui.editor.EditorEvent
 import com.example.markdown_editor.ui.editor.MarkdownAnnotator
+import com.example.markdown_editor.ui.messenger.Attachment
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
@@ -237,10 +238,13 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.update { it.copy(messengerNewNoteText = text) }
     }
 
-    fun messengerOnSendNote(afterUpdate: () -> Unit = {}) {
+    fun messengerOnSendNote(
+        attachments: List<Attachment> = emptyList(),
+        afterUpdate: () -> Unit = {}
+    ) {
         val project = _uiState.value.project ?: return
         val text = _uiState.value.messengerNewNoteText.trim()
-        if (text.isBlank()) return
+        if (text.isBlank() && attachments.isEmpty()) return
 
         val timestamp = java.time.format.DateTimeFormatter
             .ofPattern("yyyyMMdd_HHmmss")
@@ -254,7 +258,35 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             if (uri != null) {
                 val newNote = repository.getNoteByUri(uri)
                 val currentContent = repository.getNoteText(newNote, includeFrontMatter = true)
-                repository.saveNoteText(newNote, "$currentContent\n\n$text")
+
+                val attachmentLines = buildString {
+                    attachments.forEach { attachment ->
+                        when (attachment) {
+                            is Attachment.PendingPhoto -> {
+                                val path = repository.copyToAssets(project, attachment.uri)
+                                append("\n![image](<$path>)")
+                            }
+                            is Attachment.PendingAttachedFile -> {
+                                val path = repository.copyToAssets(project, attachment.uri)
+                                val label =
+                                    attachment.displayName ?: path.substringAfterLast("/")
+                                append("\n[$label](<$path>)")
+                            }
+                            else -> {}
+                        }
+                    }
+                }
+
+                val fullContent = when {
+                    text.isNotEmpty() && attachmentLines.isNotEmpty() ->
+                        "$currentContent\n\n$text$attachmentLines"
+                    text.isNotEmpty() ->
+                        "$currentContent\n\n$text"
+                    else ->
+                        "$currentContent\n$attachmentLines"
+                }
+
+                repository.saveNoteText(newNote, fullContent)
                 withContext(Dispatchers.Main) {
                     _uiState.update { it.copy(messengerNewNoteText = "") }
                 }
@@ -263,17 +295,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    /**
-     * Ensures a link preview for [url] is in the in-memory state map.
-     *
-     * Priority:
-     *  1. State map already has key → skip (covers both hits and known-failures)
-     *  2. Room DB has a row → load into state, no network
-     *  3. Neither → fetch network, persist to DB, load into state
-     *
-     * Failed network fetches write nothing to DB so a fresh app launch will retry.
-     * Within a session they stay null in the state map to avoid hammering the network.
-     */
     fun messengerEnsureLinkPreview(url: String) {
         if (_uiState.value.messengerLinkPreviews.containsKey(url)) return
 

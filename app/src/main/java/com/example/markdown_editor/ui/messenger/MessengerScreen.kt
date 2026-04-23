@@ -1005,6 +1005,7 @@ private fun ZoomableImage(uri: Uri, onTap: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .statusBarsPadding()
             .onSizeChanged { containerSize = it }
             .pointerInput(Unit) {
                 detectTapGestures(

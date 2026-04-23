@@ -31,6 +31,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
@@ -43,17 +44,23 @@ import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.TooltipAnchorPosition
+import androidx.compose.material3.TooltipBox
+import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.carousel.CarouselDefaults
 import androidx.compose.material3.carousel.HorizontalUncontainedCarousel
 import androidx.compose.material3.carousel.rememberCarouselState
+import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -61,21 +68,26 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
@@ -84,6 +96,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.zIndex
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -191,11 +204,9 @@ private fun rememberAssetUri(path: String, project: Project?): Uri? {
 fun MessengerScreen(viewModel: AppViewModel) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    // Hoisted attachment state – cleared after send
     val attachments = remember { mutableStateListOf<Attachment>() }
     var fullScreenPhotoUri by remember { mutableStateOf<Uri?>(null) }
 
-    // Launchers must be at composable top-level (unconditional)
     val photoPickerLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.PickVisualMedia()
     ) { uri ->
@@ -219,6 +230,8 @@ fun MessengerScreen(viewModel: AppViewModel) {
     val clipboard = LocalClipboard.current
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    val density = LocalDensity.current
+    var inputBarHeightDp by remember { mutableStateOf(0.dp) }
 
     if (uiState.project == null) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -230,161 +243,11 @@ fun MessengerScreen(viewModel: AppViewModel) {
             )
         }
     } else {
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .imePadding()
         ) {
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxSize(),
-                contentAlignment = Alignment.BottomCenter,
-            ) {
-                when {
-                    uiState.messengerIsLoading -> {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            CircularProgressIndicator()
-                        }
-                    }
-
-                    sortedNotes.isEmpty() -> {
-                        Text(
-                            text = "No quick notes yet.\nType something below to get started.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.align(Alignment.Center)
-                        )
-                    }
-
-                    else -> {
-                        LazyColumn(
-                            state = listState,
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalArrangement = Arrangement.spacedBy(6.dp),
-                            contentPadding = PaddingValues(vertical = 8.dp),
-                            reverseLayout = true,
-                        ) {
-                            items(sortedNotes, key = { it.uri.toString() }) { note ->
-                                val urls = remember(note.body) {
-                                    LinkPreviewFetcher.extractAllUrls(note.body ?: "")
-                                }
-                                LaunchedEffect(urls) {
-                                    urls.forEach { viewModel.messengerEnsureLinkPreview(it) }
-                                }
-                                val previews = remember(urls, uiState.messengerLinkPreviews) {
-                                    urls.mapNotNull { uiState.messengerLinkPreviews[it] }
-                                }
-
-                                val parsedBody = remember(note.body) {
-                                    parseNoteBody(note.body ?: "")
-                                }
-                                val bodyText = parsedBody.text.ifBlank { "" }
-
-                                var menuExpanded by remember { mutableStateOf(false) }
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable(onClick = { menuExpanded = true })
-                                        .padding(PaddingValues(horizontal = 12.dp)),
-                                ) {
-                                    MessageBubble(
-                                        name = note.name,
-                                        createdAt = note.createdAt ?: note.lastModified,
-                                        bodyText = bodyText,
-                                        previews = previews,
-                                        attachments = parsedBody.attachments,
-                                        project = uiState.project,
-                                        onPhotoClick = { uri -> fullScreenPhotoUri = uri },
-                                        onFileClick = { uri ->
-                                            try {
-                                                val mime =
-                                                    context.contentResolver.getType(uri) ?: "*/*"
-                                                val intent = Intent(Intent.ACTION_VIEW).apply {
-                                                    setDataAndType(uri, mime)
-                                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                                }
-                                                context.startActivity(
-                                                    Intent.createChooser(intent, null)
-                                                )
-                                            } catch (e: Exception) {
-                                                Toast.makeText(
-                                                    context, "No app found to open this file",
-                                                    Toast.LENGTH_SHORT
-                                                ).show()
-                                            }
-                                        },
-                                        onClick = { menuExpanded = true },
-                                    )
-                                    MenuPopup(
-                                        expanded = menuExpanded,
-                                        onDismissRequest = { menuExpanded = false },
-                                    ) { groupInteractionSource ->
-                                        MenuPopupGroup(
-                                            index = 0,
-                                            count = 1,
-                                            label = "Actions",
-                                            interactionSource = groupInteractionSource,
-                                        ) {
-                                            MenuPopupItem(
-                                                text = "Open",
-                                                index = 0, count = 4,
-                                                icon = Icons.AutoMirrored.Outlined.OpenInNew,
-                                                onClick = {
-                                                    menuExpanded = false
-                                                    viewModel.onNoteSelected(note)
-                                                }
-                                            )
-                                            MenuPopupItem(
-                                                text = "Copy",
-                                                index = 1, count = 4,
-                                                icon = Icons.Outlined.ContentCopy,
-                                                onClick = {
-                                                    menuExpanded = false
-                                                    scope.launch {
-                                                        clipboard.setClipEntry(
-                                                            ClipEntry(
-                                                                ClipData.newPlainText(
-                                                                    "Note text",
-                                                                    bodyText
-                                                                )
-                                                            )
-                                                        )
-                                                    }
-                                                }
-                                            )
-                                            MenuPopupItem(
-                                                text = "Edit",
-                                                index = 2, count = 4,
-                                                icon = Icons.Outlined.Edit,
-                                                onClick = {
-                                                    menuExpanded = false
-                                                }
-                                            )
-                                            MenuPopupItem(
-                                                text = "Delete",
-                                                index = 3, count = 4,
-                                                supportingText = "Cannot be undone",
-                                                icon = Icons.Outlined.Delete,
-                                                tint = MaterialTheme.colorScheme.error,
-                                                onClick = {
-                                                    menuExpanded = false
-                                                    viewModel.onDeleteNote(note)
-                                                }
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
             MessengerInputBar(
                 value = uiState.messengerNewNoteText,
                 onValueChange = { viewModel.messengerOnNewNoteTextChanged(it) },
@@ -409,7 +272,170 @@ fun MessengerScreen(viewModel: AppViewModel) {
                     )
                 },
                 project = uiState.project,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .zIndex(1f)
+                    .onSizeChanged { inputBarHeightDp = with(density) { it.height.toDp() } }
+                    .fillMaxWidth()
             )
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+            ) {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxSize(),
+                    contentAlignment = Alignment.BottomCenter,
+                ) {
+                    when {
+                        uiState.messengerIsLoading -> {
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator()
+                            }
+                        }
+
+                        sortedNotes.isEmpty() -> {
+                            Text(
+                                text = "No quick notes yet.\nType something below to get started.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.align(Alignment.Center)
+                            )
+                        }
+
+                        else -> {
+                            LazyColumn(
+                                state = listState,
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalArrangement = Arrangement.spacedBy(6.dp),
+                                contentPadding = PaddingValues(
+                                    top = 8.dp,
+                                    bottom = 8.dp + inputBarHeightDp
+                                ),
+                                reverseLayout = true,
+                            ) {
+                                items(sortedNotes, key = { it.uri.toString() }) { note ->
+                                    val urls = remember(note.body) {
+                                        LinkPreviewFetcher.extractAllUrls(note.body ?: "")
+                                    }
+                                    LaunchedEffect(urls) {
+                                        urls.forEach { viewModel.messengerEnsureLinkPreview(it) }
+                                    }
+                                    val previews = remember(urls, uiState.messengerLinkPreviews) {
+                                        urls.mapNotNull { uiState.messengerLinkPreviews[it] }
+                                    }
+
+                                    val parsedBody = remember(note.body) {
+                                        parseNoteBody(note.body ?: "")
+                                    }
+                                    val bodyText = parsedBody.text.ifBlank { "" }
+
+                                    var menuExpanded by remember { mutableStateOf(false) }
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable(onClick = { menuExpanded = true })
+                                            .padding(PaddingValues(horizontal = 12.dp)),
+                                    ) {
+                                        MessageBubble(
+                                            name = note.name,
+                                            createdAt = note.createdAt ?: note.lastModified,
+                                            bodyText = bodyText,
+                                            previews = previews,
+                                            attachments = parsedBody.attachments,
+                                            project = uiState.project,
+                                            onPhotoClick = { uri -> fullScreenPhotoUri = uri },
+                                            onFileClick = { uri ->
+                                                try {
+                                                    val mime =
+                                                        context.contentResolver.getType(uri)
+                                                            ?: "*/*"
+                                                    val intent = Intent(Intent.ACTION_VIEW).apply {
+                                                        setDataAndType(uri, mime)
+                                                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                                    }
+                                                    context.startActivity(
+                                                        Intent.createChooser(intent, null)
+                                                    )
+                                                } catch (e: Exception) {
+                                                    Toast.makeText(
+                                                        context, "No app found to open this file",
+                                                        Toast.LENGTH_SHORT
+                                                    ).show()
+                                                }
+                                            },
+                                            onClick = { menuExpanded = true },
+                                        )
+                                        MenuPopup(
+                                            expanded = menuExpanded,
+                                            onDismissRequest = { menuExpanded = false },
+                                        ) { groupInteractionSource ->
+                                            MenuPopupGroup(
+                                                index = 0,
+                                                count = 1,
+                                                label = "Actions",
+                                                interactionSource = groupInteractionSource,
+                                            ) {
+                                                MenuPopupItem(
+                                                    text = "Open",
+                                                    index = 0, count = 4,
+                                                    icon = Icons.AutoMirrored.Outlined.OpenInNew,
+                                                    onClick = {
+                                                        menuExpanded = false
+                                                        viewModel.onNoteSelected(note)
+                                                    }
+                                                )
+                                                MenuPopupItem(
+                                                    text = "Copy",
+                                                    index = 1, count = 4,
+                                                    icon = Icons.Outlined.ContentCopy,
+                                                    onClick = {
+                                                        menuExpanded = false
+                                                        scope.launch {
+                                                            clipboard.setClipEntry(
+                                                                ClipEntry(
+                                                                    ClipData.newPlainText(
+                                                                        "Note text",
+                                                                        bodyText
+                                                                    )
+                                                                )
+                                                            )
+                                                        }
+                                                    }
+                                                )
+                                                MenuPopupItem(
+                                                    text = "Edit",
+                                                    index = 2, count = 4,
+                                                    icon = Icons.Outlined.Edit,
+                                                    onClick = {
+                                                        menuExpanded = false
+                                                    }
+                                                )
+                                                MenuPopupItem(
+                                                    text = "Delete",
+                                                    index = 3, count = 4,
+                                                    supportingText = "Cannot be undone",
+                                                    icon = Icons.Outlined.Delete,
+                                                    tint = MaterialTheme.colorScheme.error,
+                                                    onClick = {
+                                                        menuExpanded = false
+                                                        viewModel.onDeleteNote(note)
+                                                    }
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -418,6 +444,7 @@ fun MessengerScreen(viewModel: AppViewModel) {
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun MessengerInputBar(
     value: String,
@@ -428,9 +455,18 @@ private fun MessengerInputBar(
     onRemoveAttachment: (Int) -> Unit,
     onSend: () -> Unit,
     project: Project?,
+    modifier: Modifier = Modifier,
 ) {
-    Surface(modifier = Modifier.fillMaxWidth(), tonalElevation = 8.dp) {
-        Column {
+    var carouselExpanded by rememberSaveable { mutableStateOf(false) }
+    Column(
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = modifier
+            .background(
+                color = if (carouselExpanded) MaterialTheme.colorScheme.surfaceContainerLow else Color.Transparent,
+            )
+            .padding(8.dp)
+    ) {
+        if (carouselExpanded) {
             AttachmentCarouselStrip(
                 attachments = attachments,
                 onAddPhoto = onAddPhoto,
@@ -441,31 +477,58 @@ private fun MessengerInputBar(
                 isViewing = false,
                 project = project,
             )
-            Row(
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.Bottom
-            ) {
-                OutlinedTextField(
-                    value = value,
-                    onValueChange = onValueChange,
-                    modifier = Modifier.weight(1f),
-                    placeholder = { Text("New quick note…") },
-                    shape = RoundedCornerShape(24.dp),
-                    maxLines = 6,
-                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                        capitalization = androidx.compose.ui.text.input.KeyboardCapitalization.Sentences
-                    )
-                )
-                Spacer(Modifier.width(8.dp))
-                FilledIconButton(
-                    onClick = onSend,
-                    enabled = value.isNotBlank() || attachments.isNotEmpty(),
-                    modifier = Modifier.size(48.dp)
-                ) {
-                    Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send note")
-                }
-            }
         }
+        TextField(
+            value = value,
+            onValueChange = onValueChange,
+            placeholder = { Text("New quick note…") },
+            shape = MaterialTheme.shapes.extraLargeIncreased,
+            maxLines = 6,
+            keyboardOptions = KeyboardOptions(
+                capitalization = KeyboardCapitalization.Sentences
+            ),
+            colors = TextFieldDefaults.colors(
+                focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                focusedIndicatorColor = Color.Transparent,
+                unfocusedIndicatorColor = Color.Transparent,
+            ),
+            leadingIcon = {
+                TooltipBox(
+                    positionProvider =
+                        TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
+                    tooltip = { PlainTooltip { Text("Attach content") } },
+                    state = rememberTooltipState(),
+                ) {
+                    IconButton(
+                        onClick = { carouselExpanded = !carouselExpanded },
+                    ) {
+                        Icon(Icons.Default.AttachFile, contentDescription = "Attach content")
+                    }
+                }
+            },
+            trailingIcon = {
+                TooltipBox(
+                    positionProvider =
+                        TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
+                    tooltip = { PlainTooltip { Text("Create note") } },
+                    state = rememberTooltipState(),
+                ) {
+                    IconButton(
+                        onClick = onSend,
+                        colors = IconButtonDefaults.iconButtonColors(
+                            disabledContentColor = Color.Unspecified,
+                            contentColor = MaterialTheme.colorScheme.primary,
+                        ),
+                        enabled = value.isNotBlank() || attachments.isNotEmpty(),
+                    ) {
+                        Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Create note")
+                    }
+                }
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+        )
     }
 }
 
@@ -485,7 +548,6 @@ private fun AttachmentCarouselStrip(
         state = state,
         itemWidth = 80.dp,
         itemSpacing = 4.dp,
-        contentPadding = PaddingValues(8.dp),
         modifier = Modifier
             .fillMaxWidth()
             .wrapContentHeight()
@@ -496,61 +558,75 @@ private fun AttachmentCarouselStrip(
                 .aspectRatio(1f)
         ) {
             if (!isViewing && page == 0) {
-                IconButton(
-                    onClick = onAddPhoto ?: {},
-                    shape = IconButtonDefaults.smallSquareShape,
-                    colors = IconButtonDefaults.iconButtonColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant
-                    ),
-                    modifier = Modifier.fillMaxSize()
+                TooltipBox(
+                    positionProvider =
+                        TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
+                    tooltip = { PlainTooltip { Text("Attach photos") } },
+                    state = rememberTooltipState(),
                 ) {
-                    Column(
-                        modifier = Modifier.padding(4.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center,
+                    IconButton(
+                        onClick = onAddPhoto ?: {},
+                        shape = IconButtonDefaults.smallSquareShape,
+                        colors = IconButtonDefaults.iconButtonColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant
+                        ),
+                        modifier = Modifier.fillMaxSize()
                     ) {
-                        Icon(
-                            Icons.Default.Image,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Text(
-                            text = "Add photos",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
-                            textAlign = TextAlign.Center,
-                        )
+                        Column(
+                            modifier = Modifier.padding(4.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center,
+                        ) {
+                            Icon(
+                                Icons.Default.Image,
+                                contentDescription = "Image",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Text(
+                                text = "Add photos",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                                textAlign = TextAlign.Center,
+                            )
+                        }
                     }
                 }
             } else if (!isViewing && page == 1) {
-                IconButton(
-                    onClick = onAddFile ?: {},
-                    shape = IconButtonDefaults.smallSquareShape,
-                    colors = IconButtonDefaults.iconButtonColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant
-                    ),
-                    modifier = Modifier.fillMaxSize()
+                TooltipBox(
+                    positionProvider =
+                        TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
+                    tooltip = { PlainTooltip { Text("Attach files") } },
+                    state = rememberTooltipState(),
                 ) {
-                    Column(
-                        modifier = Modifier.padding(4.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center,
+                    IconButton(
+                        onClick = onAddFile ?: {},
+                        shape = IconButtonDefaults.smallSquareShape,
+                        colors = IconButtonDefaults.iconButtonColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant
+                        ),
+                        modifier = Modifier.fillMaxSize()
                     ) {
-                        Icon(
-                            Icons.Default.AttachFile,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Text(
-                            text = "Add files",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
-                            textAlign = TextAlign.Center,
-                        )
+                        Column(
+                            modifier = Modifier.padding(4.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center,
+                        ) {
+                            Icon(
+                                Icons.Default.AttachFile,
+                                contentDescription = "File",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Text(
+                                text = "Add files",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                                textAlign = TextAlign.Center,
+                            )
+                        }
                     }
                 }
             } else {
@@ -739,8 +815,6 @@ private fun MessageBubble(
             tonalElevation = 2.dp
         ) {
             Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
-
-                // ── Attachment carousel (photos + files) ──────────────────────
                 if (hasAttachments) {
                     AttachmentCarouselStrip(
                         attachments = attachments,
@@ -754,7 +828,6 @@ private fun MessageBubble(
                     }
                 }
 
-                // ── Text body ─────────────────────────────────────────────────
                 if (bodyText.isNotBlank()) {
                     SelectionContainer {
                         Text(
@@ -851,7 +924,7 @@ private fun FullScreenPhotoDialog(uri: Uri, onDismiss: () -> Unit) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(androidx.compose.ui.graphics.Color.Black)
+                .background(Color.Black)
                 .clickable(onClick = onDismiss),
             contentAlignment = Alignment.Center,
         ) {
@@ -867,14 +940,14 @@ private fun FullScreenPhotoDialog(uri: Uri, onDismiss: () -> Unit) {
                     .padding(16.dp)
                     .size(36.dp)
                     .clip(CircleShape)
-                    .background(androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.5f))
+                    .background(Color.Black.copy(alpha = 0.5f))
                     .clickable(onClick = onDismiss),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
                     Icons.Default.Close,
                     contentDescription = "Close",
-                    tint = androidx.compose.ui.graphics.Color.White,
+                    tint = Color.White,
                     modifier = Modifier.size(20.dp)
                 )
             }

@@ -471,8 +471,10 @@ private fun MessengerInputBar(
     ) {
         AnimatedVisibility(
             visible = carouselExpanded,
-            enter = expandVertically(MaterialTheme.motionScheme.defaultEffectsSpec()),
-            exit = shrinkVertically(MaterialTheme.motionScheme.defaultEffectsSpec()),
+            enter = expandVertically(MaterialTheme.motionScheme.defaultEffectsSpec()) +
+                    fadeIn(MaterialTheme.motionScheme.defaultEffectsSpec()),
+            exit = shrinkVertically(MaterialTheme.motionScheme.defaultEffectsSpec()) +
+                    fadeOut(MaterialTheme.motionScheme.defaultEffectsSpec()),
         ) {
             AttachmentCarouselStrip(
                 attachments = attachments,

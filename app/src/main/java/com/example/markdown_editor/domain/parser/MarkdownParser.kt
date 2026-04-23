@@ -11,7 +11,7 @@ object MarkdownParser {
     //   1. <[^>]*>  – angle-bracket destination: any character allowed, including ')'
     //   2. .+?      – bare destination: lazy, so ')' terminates as per spec
     val IMAGE_REGEX = Regex("""!\[.*?]\((?:<.+?>|.+?)\)""")
-    val FILE_REGEX  = Regex("""(?<!!)\[.*?]\((?:<.+?>|.+?)\)""")
+    val FILE_REGEX = Regex("""(?<!!)\[.*?]\((?:<.+?>|.+?)\)""")
 
     private val rules = listOf(
         TokenType.H1 to Regex("""^# .+""", RegexOption.MULTILINE),

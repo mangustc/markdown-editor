@@ -266,12 +266,14 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                                 val path = repository.copyToAssets(project, attachment.uri)
                                 append("\n![image](<$path>)")
                             }
+
                             is Attachment.PendingAttachedFile -> {
                                 val path = repository.copyToAssets(project, attachment.uri)
                                 val label =
                                     attachment.displayName ?: path.substringAfterLast("/")
                                 append("\n[$label](<$path>)")
                             }
+
                             else -> {}
                         }
                     }
@@ -280,8 +282,10 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 val fullContent = when {
                     text.isNotEmpty() && attachmentLines.isNotEmpty() ->
                         "$currentContent\n\n$text$attachmentLines"
+
                     text.isNotEmpty() ->
                         "$currentContent\n\n$text"
+
                     else ->
                         "$currentContent\n$attachmentLines"
                 }

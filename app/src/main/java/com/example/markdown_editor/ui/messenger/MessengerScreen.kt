@@ -91,10 +91,10 @@ import coil3.compose.AsyncImage
 import com.example.markdown_editor.data.model.LinkPreview
 import com.example.markdown_editor.data.model.Project
 import com.example.markdown_editor.data.util.LinkPreviewFetcher
+import com.example.markdown_editor.domain.parser.MarkdownParser
 import com.example.markdown_editor.ui.components.MenuPopup
 import com.example.markdown_editor.ui.components.MenuPopupGroup
 import com.example.markdown_editor.ui.components.MenuPopupItem
-import com.example.markdown_editor.domain.parser.MarkdownParser
 import com.example.markdown_editor.ui.viewmodel.AppViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -161,7 +161,8 @@ private fun parseNoteBody(body: String): ParsedNoteBody {
     return ParsedNoteBody(
         text = text.trim(),
         attachments = photoAttachments + fileAttachments
-    )}
+    )
+}
 
 @Composable
 private fun rememberAssetUri(path: String, project: Project?): Uri? {
@@ -178,7 +179,8 @@ private fun rememberAssetUri(path: String, project: Project?): Uri? {
                 } else {
                     path.toUri()
                 }
-            } catch (_: Exception) { }
+            } catch (_: Exception) {
+            }
         }
     }
     return uri

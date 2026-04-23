@@ -208,14 +208,18 @@ fun MessengerScreen(viewModel: AppViewModel) {
     var fullScreenPhotoUri by remember { mutableStateOf<Uri?>(null) }
 
     val photoPickerLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.PickVisualMedia()
-    ) { uri ->
-        if (uri != null) attachments.add(Attachment.PendingPhoto(uri))
+        ActivityResultContracts.PickMultipleVisualMedia()
+    ) { uris ->
+        uris.forEach { uri ->
+            attachments.add(Attachment.PendingPhoto(uri))
+        }
     }
     val filePickerLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenDocument()
-    ) { uri ->
-        if (uri != null) attachments.add(Attachment.PendingAttachedFile(uri, null))
+        ActivityResultContracts.OpenMultipleDocuments()
+    ) { uris ->
+        uris.forEach { uri ->
+            attachments.add(Attachment.PendingAttachedFile(uri, null))
+        }
     }
 
     LaunchedEffect(uiState.project) {

@@ -1007,9 +1007,18 @@ private fun ZoomableImage(uri: Uri, onTap: () -> Unit) {
             .fillMaxSize()
             .onSizeChanged { containerSize = it }
             .pointerInput(Unit) {
+                detectTapGestures(
+                    onTap = { onTap() },
+                    onDoubleTap = {
+                        scale = 1f
+                        offset = Offset.Zero
+                    }
+                )
+            }
+            .pointerInput(Unit) {
                 val slop = viewConfiguration.touchSlop
                 awaitEachGesture {
-                    awaitFirstDown()
+                    awaitFirstDown(requireUnconsumed = false)
                     var moved = false
                     var totalPan = Offset.Zero
 
@@ -1042,10 +1051,6 @@ private fun ZoomableImage(uri: Uri, onTap: () -> Unit) {
                             }
                         }
                     } while (event.changes.any { it.pressed })
-
-                    if (!moved) {
-                        onTap()
-                    }
                 }
             }
     ) {

@@ -255,6 +255,25 @@ fun MessengerScreen(viewModel: AppViewModel) {
                     val index = photoUris.indexOf(clickedUri)
                     photoPagerState = index to photoUris
                 },
+                onFileClick = { uri ->
+                    try {
+                        val mime =
+                            context.contentResolver.getType(uri)
+                                ?: "*/*"
+                        val intent = Intent(Intent.ACTION_VIEW).apply {
+                            setDataAndType(uri, mime)
+                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        }
+                        context.startActivity(
+                            Intent.createChooser(intent, null)
+                        )
+                    } catch (e: Exception) {
+                        Toast.makeText(
+                            context, "No app found to open this file",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                },
                 onRemoveAttachment = { index -> attachments.removeAt(index) },
                 onSend = {
                     val snapshot = attachments.toList()
@@ -467,6 +486,7 @@ private fun MessengerInputBar(
     onAddPhoto: () -> Unit,
     onAddFile: () -> Unit,
     onPhotoClick: (Uri) -> Unit,
+    onFileClick: (Uri) -> Unit,
     onRemoveAttachment: (Int) -> Unit,
     onSend: () -> Unit,
     project: Project?,
@@ -494,7 +514,7 @@ private fun MessengerInputBar(
                 onAddFile = onAddFile,
                 onRemove = onRemoveAttachment,
                 onPhotoClick = onPhotoClick,
-                onFileClick = {},
+                onFileClick = onFileClick,
                 isViewing = false,
                 project = project,
             )

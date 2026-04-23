@@ -54,23 +54,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusEvent
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
-import androidx.core.net.toUri
-import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.example.markdown_editor.data.model.Project
 import com.example.markdown_editor.domain.model.TokenType
 import com.example.markdown_editor.ui.viewmodel.AppViewModel
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 @OptIn(
     ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class,
@@ -337,23 +332,10 @@ fun extractImagePath(markdown: String): String {
 
 @Composable
 fun AsyncMarkdownImage(path: String, project: Project, onRatioMeasured: (Float) -> Unit) {
-    val context = LocalContext.current
     var imageUri by remember(path, project) { mutableStateOf<Uri?>(null) }
 
     LaunchedEffect(path, project) {
-        withContext(Dispatchers.IO) {
-            try {
-                if (path.startsWith("assets/")) {
-                    val fileName = path.removePrefix("assets/")
-                    val root = DocumentFile.fromTreeUri(context, project.assetsUri)
-                    imageUri = root?.findFile(fileName)?.uri
-                } else {
-                    imageUri = path.toUri()
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }
+        imageUri = project.getFileUri(path)
     }
 
     if (imageUri != null) {

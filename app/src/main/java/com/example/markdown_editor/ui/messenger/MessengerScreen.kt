@@ -958,19 +958,20 @@ private fun FullScreenPhotoCarouselDialog(
                 exit = fadeOut(MaterialTheme.motionScheme.defaultEffectsSpec()),
                 modifier = Modifier.align(Alignment.TopCenter)
             ) {
-                Row(
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(Color.Black.copy(alpha = 0.5f))
                         .statusBarsPadding()
                         .padding(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     TooltipBox(
                         positionProvider =
                             TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
                         tooltip = { PlainTooltip { Text("Go back") } },
                         state = rememberTooltipState(),
+                        modifier = Modifier
+                            .align(Alignment.CenterStart)
                     ) {
                         IconButton(onClick = onDismiss) {
                             Icon(
@@ -987,8 +988,7 @@ private fun FullScreenPhotoCarouselDialog(
                         style = MaterialTheme.typography.titleMedium,
                         textAlign = TextAlign.Center,
                         modifier = Modifier
-                            .weight(1f)
-                            .padding(end = 48.dp)
+                            .align(Alignment.Center)
                     )
                 }
             }

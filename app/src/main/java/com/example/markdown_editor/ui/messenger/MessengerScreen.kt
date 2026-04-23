@@ -7,8 +7,15 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.calculatePan
+import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -23,6 +30,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentHeight
@@ -34,6 +42,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.automirrored.outlined.OpenInNew
 import androidx.compose.material.icons.filled.AttachFile
@@ -64,6 +73,7 @@ import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -73,7 +83,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
@@ -93,11 +105,11 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.zIndex
-import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
@@ -109,9 +121,7 @@ import com.example.markdown_editor.ui.components.MenuPopup
 import com.example.markdown_editor.ui.components.MenuPopupGroup
 import com.example.markdown_editor.ui.components.MenuPopupItem
 import com.example.markdown_editor.ui.viewmodel.AppViewModel
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.net.URL
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -135,39 +145,31 @@ private fun extractLinkPath(matched: String): String =
 private fun extractLinkLabel(matched: String): String =
     matched.substringAfter("[").substringBefore("]")
 
-private fun parseNoteBody(body: String): ParsedNoteBody {
+private fun parseNoteBody(body: String, project: Project): ParsedNoteBody {
     val photoAttachments = MarkdownParser.IMAGE_REGEX.findAll(body)
-        .mapNotNull { match ->
+        .map { match ->
             val path = extractLinkPath(match.value)
-            if (path.startsWith("assets/")) {
-                Attachment.Photo(path)
-            } else {
-                null
-            }
+            val uri = project.getFileUri(path)
+            Attachment.Photo(uri = uri)
         }
         .toList()
 
     val fileAttachments = MarkdownParser.FILE_REGEX.findAll(body)
-        .mapNotNull { match ->
+        .map { match ->
             val label = extractLinkLabel(match.value)
             val path = extractLinkPath(match.value)
-            if (path.startsWith("assets/")) {
-                Attachment.AttachedFile(path, label)
-            } else {
-                null
-            }
+            val uri = project.getFileUri(path)
+            Attachment.AttachedFile(uri = uri, displayName = label)
         }
         .toList()
 
     var text = body
 
     MarkdownParser.IMAGE_REGEX.findAll(body)
-        .filter { extractLinkPath(it.value).startsWith("assets/") }
         .map { it.value }
         .forEach { text = text.replace(it, "") }
 
     MarkdownParser.FILE_REGEX.findAll(body)
-        .filter { extractLinkPath(it.value).startsWith("assets/") }
         .map { it.value }
         .forEach { text = text.replace(it, "") }
 
@@ -177,35 +179,13 @@ private fun parseNoteBody(body: String): ParsedNoteBody {
     )
 }
 
-@Composable
-private fun rememberAssetUri(path: String, project: Project?): Uri? {
-    val context = LocalContext.current
-    var uri by remember(path, project) { mutableStateOf<Uri?>(null) }
-    LaunchedEffect(path, project) {
-        if (project == null) return@LaunchedEffect
-        withContext(Dispatchers.IO) {
-            try {
-                uri = if (path.startsWith("assets/")) {
-                    val fileName = path.removePrefix("assets/")
-                    DocumentFile.fromTreeUri(context, project.assetsUri)
-                        ?.findFile(fileName)?.uri
-                } else {
-                    path.toUri()
-                }
-            } catch (_: Exception) {
-            }
-        }
-    }
-    return uri
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MessengerScreen(viewModel: AppViewModel) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     val attachments = remember { mutableStateListOf<Attachment>() }
-    var fullScreenPhotoUri by remember { mutableStateOf<Uri?>(null) }
+    var photoPagerState by remember { mutableStateOf<Pair<Int, List<Uri>>?>(null) }
 
     val photoPickerLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.PickMultipleVisualMedia()
@@ -335,7 +315,7 @@ fun MessengerScreen(viewModel: AppViewModel) {
                                     }
 
                                     val parsedBody = remember(note.body) {
-                                        parseNoteBody(note.body ?: "")
+                                        parseNoteBody(note.body ?: "", uiState.project!!)
                                     }
                                     val bodyText = parsedBody.text.ifBlank { "" }
 
@@ -353,7 +333,17 @@ fun MessengerScreen(viewModel: AppViewModel) {
                                             previews = previews,
                                             attachments = parsedBody.attachments,
                                             project = uiState.project,
-                                            onPhotoClick = { uri -> fullScreenPhotoUri = uri },
+                                            onPhotoClick = { clickedUri ->
+                                                val photoUris = parsedBody.attachments.mapNotNull {
+                                                    when (it) {
+                                                        is Attachment.Photo -> it.uri
+                                                        is Attachment.PendingPhoto -> it.uri
+                                                        else -> null
+                                                    }
+                                                }
+                                                val index = photoUris.indexOf(clickedUri)
+                                                photoPagerState = index to photoUris
+                                            },
                                             onFileClick = { uri ->
                                                 try {
                                                     val mime =
@@ -443,8 +433,12 @@ fun MessengerScreen(viewModel: AppViewModel) {
         }
     }
 
-    fullScreenPhotoUri?.let { uri ->
-        FullScreenPhotoDialog(uri = uri, onDismiss = { fullScreenPhotoUri = null })
+    photoPagerState?.let { (index, uris) ->
+        FullScreenPhotoCarouselDialog(
+            initialIndex = index,
+            uris = uris,
+            onDismiss = { photoPagerState = null }
+        )
     }
 }
 
@@ -636,14 +630,13 @@ private fun AttachmentCarouselStrip(
             } else {
                 when (val attachment = attachments[if (isViewing) page else page - 2]) {
                     is Attachment.Photo -> {
-                        val uri = rememberAssetUri(attachment.path, project)
                         Surface(
                             shape = MaterialTheme.shapes.medium,
                             tonalElevation = 2.dp,
-                            onClick = { uri?.let(onPhotoClick) },
+                            onClick = { onPhotoClick(attachment.uri) },
                         ) {
                             AsyncImage(
-                                model = uri,
+                                model = attachment.uri,
                                 contentDescription = null,
                                 contentScale = ContentScale.Crop,
                                 modifier = Modifier.fillMaxSize()
@@ -667,12 +660,11 @@ private fun AttachmentCarouselStrip(
                     }
 
                     is Attachment.AttachedFile -> {
-                        val uri = rememberAssetUri(attachment.path, project)
                         Surface(
                             color = MaterialTheme.colorScheme.surfaceVariant,
                             shape = MaterialTheme.shapes.medium,
                             tonalElevation = 2.dp,
-                            onClick = { uri?.let { fileUri -> onFileClick(fileUri) } },
+                            onClick = { onFileClick(attachment.uri) },
                             modifier = Modifier
                                 .fillMaxSize()
                         ) {
@@ -919,43 +911,151 @@ private fun MessageBubble(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun FullScreenPhotoDialog(uri: Uri, onDismiss: () -> Unit) {
+private fun FullScreenPhotoCarouselDialog(
+    initialIndex: Int,
+    uris: List<Uri>,
+    onDismiss: () -> Unit
+) {
+    val state = rememberCarouselState(initialItem = initialIndex) { uris.size }
+    var showTopPanel by remember { mutableStateOf(true) }
+
     Dialog(
         onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false)
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false,
+            decorFitsSystemWindows = false
+        )
     ) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color.Black)
-                .clickable(onClick = onDismiss),
-            contentAlignment = Alignment.Center,
         ) {
-            AsyncImage(
-                model = uri,
-                contentDescription = null,
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Fit,
-            )
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(16.dp)
-                    .size(36.dp)
-                    .clip(CircleShape)
-                    .background(Color.Black.copy(alpha = 0.5f))
-                    .clickable(onClick = onDismiss),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    Icons.Default.Close,
-                    contentDescription = "Close",
-                    tint = Color.White,
-                    modifier = Modifier.size(20.dp)
+            HorizontalUncontainedCarousel(
+                state = state,
+                itemWidth = Dp.Infinity,
+                itemSpacing = 0.dp,
+                flingBehavior = CarouselDefaults.singleAdvanceFlingBehavior(state),
+                modifier = Modifier.fillMaxSize()
+            ) { page ->
+                ZoomableImage(
+                    uri = uris[page],
+                    onTap = { showTopPanel = !showTopPanel }
                 )
             }
+
+            AnimatedVisibility(
+                visible = showTopPanel,
+                enter = fadeIn(MaterialTheme.motionScheme.defaultEffectsSpec()),
+                exit = fadeOut(MaterialTheme.motionScheme.defaultEffectsSpec()),
+                modifier = Modifier.align(Alignment.TopCenter)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color.Black.copy(alpha = 0.5f))
+                        .statusBarsPadding()
+                        .padding(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    TooltipBox(
+                        positionProvider =
+                            TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
+                        tooltip = { PlainTooltip { Text("Go back") } },
+                        state = rememberTooltipState(),
+                    ) {
+                        IconButton(onClick = onDismiss) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Back",
+                                tint = Color.White
+                            )
+                        }
+                    }
+
+                    Text(
+                        text = "${state.currentItem + 1} of ${uris.size}",
+                        color = Color.White,
+                        style = MaterialTheme.typography.titleMedium,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(end = 48.dp)
+                    )
+                }
+            }
         }
+    }
+}
+
+@Composable
+private fun ZoomableImage(uri: Uri, onTap: () -> Unit) {
+    var scale by remember { mutableFloatStateOf(1f) }
+    var offset by remember { mutableStateOf(Offset.Zero) }
+    var containerSize by remember { mutableStateOf(IntSize.Zero) }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .onSizeChanged { containerSize = it }
+            .pointerInput(Unit) {
+                val slop = viewConfiguration.touchSlop
+                awaitEachGesture {
+                    awaitFirstDown()
+                    var moved = false
+                    var totalPan = Offset.Zero
+
+                    do {
+                        val event = awaitPointerEvent()
+                        val zoom = event.calculateZoom()
+                        val pan = event.calculatePan()
+                        val pointers = event.changes.size
+
+                        totalPan += pan
+
+                        if (!moved && (zoom != 1f || totalPan.getDistance() > slop || pointers > 1)) {
+                            moved = true
+                        }
+
+                        if (moved) {
+                            scale = (scale * zoom).coerceIn(1f, 4f)
+
+                            if (scale > 1f) {
+                                val maxX = (containerSize.width * (scale - 1)) / 2f
+                                val maxY = (containerSize.height * (scale - 1)) / 2f
+
+                                offset = Offset(
+                                    x = (offset.x + pan.x).coerceIn(-maxX, maxX),
+                                    y = (offset.y + pan.y).coerceIn(-maxY, maxY)
+                                )
+                                event.changes.forEach { it.consume() }
+                            } else {
+                                offset = Offset.Zero
+                            }
+                        }
+                    } while (event.changes.any { it.pressed })
+
+                    if (!moved) {
+                        onTap()
+                    }
+                }
+            }
+    ) {
+        AsyncImage(
+            model = uri,
+            contentDescription = null,
+            contentScale = ContentScale.Fit,
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer(
+                    scaleX = scale,
+                    scaleY = scale,
+                    translationX = offset.x,
+                    translationY = offset.y
+                )
+        )
     }
 }
 

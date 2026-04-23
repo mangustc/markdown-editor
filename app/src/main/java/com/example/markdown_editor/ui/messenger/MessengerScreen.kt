@@ -244,6 +244,17 @@ fun MessengerScreen(viewModel: AppViewModel) {
                     )
                 },
                 onAddFile = { filePickerLauncher.launch(arrayOf("*/*")) },
+                onPhotoClick = { clickedUri ->
+                    val photoUris = attachments.mapNotNull {
+                        when (it) {
+                            is Attachment.Photo -> it.uri
+                            is Attachment.PendingPhoto -> it.uri
+                            else -> null
+                        }
+                    }
+                    val index = photoUris.indexOf(clickedUri)
+                    photoPagerState = index to photoUris
+                },
                 onRemoveAttachment = { index -> attachments.removeAt(index) },
                 onSend = {
                     val snapshot = attachments.toList()
@@ -455,6 +466,7 @@ private fun MessengerInputBar(
     attachments: List<Attachment>,
     onAddPhoto: () -> Unit,
     onAddFile: () -> Unit,
+    onPhotoClick: (Uri) -> Unit,
     onRemoveAttachment: (Int) -> Unit,
     onSend: () -> Unit,
     project: Project?,
@@ -481,7 +493,7 @@ private fun MessengerInputBar(
                 onAddPhoto = onAddPhoto,
                 onAddFile = onAddFile,
                 onRemove = onRemoveAttachment,
-                onPhotoClick = {},
+                onPhotoClick = onPhotoClick,
                 onFileClick = {},
                 isViewing = false,
                 project = project,

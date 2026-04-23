@@ -8,8 +8,10 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -464,7 +466,11 @@ private fun MessengerInputBar(
             )
             .padding(8.dp)
     ) {
-        if (carouselExpanded) {
+        AnimatedVisibility(
+            visible = carouselExpanded,
+            enter = expandVertically(MaterialTheme.motionScheme.defaultEffectsSpec()),
+            exit = shrinkVertically(MaterialTheme.motionScheme.defaultEffectsSpec()),
+        ) {
             AttachmentCarouselStrip(
                 attachments = attachments,
                 onAddPhoto = onAddPhoto,

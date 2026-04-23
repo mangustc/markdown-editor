@@ -96,8 +96,8 @@ class ProjectRepositoryImpl(
         return Project(
             name = name,
             uri = rootUri,
-            notesUri = notesDir?.uri ?: rootUri,
-            assetsUri = assetsDir?.uri ?: rootUri,
+            notesPath = if (notesDir != null) "notes" else "",
+            assetsPath = if (assetsDir != null) "assets" else "",
         )
     }
 

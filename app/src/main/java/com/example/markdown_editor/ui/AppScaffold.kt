@@ -164,10 +164,19 @@ fun AppScaffold() {
                                     leadingIcon = { Icon(Icons.Default.Search, null) },
                                     trailingIcon = {
                                         if (uiState.searchQuery.isNotEmpty()) {
-                                            IconButton(onClick = {
-                                                appViewModel.onSearchQueryChanged("")
-                                            }) {
-                                                Icon(Icons.Default.Close, null)
+                                            TooltipBox(
+                                                positionProvider =
+                                                    TooltipDefaults.rememberTooltipPositionProvider(
+                                                        TooltipAnchorPosition.Above
+                                                    ),
+                                                tooltip = { PlainTooltip { Text("Clear search") } },
+                                                state = rememberTooltipState(),
+                                            ) {
+                                                IconButton(onClick = {
+                                                    appViewModel.onSearchQueryChanged("")
+                                                }) {
+                                                    Icon(Icons.Default.Close, "Clear search")
+                                                }
                                             }
                                         }
                                     }

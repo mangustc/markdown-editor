@@ -35,6 +35,12 @@ import androidx.compose.material3.HorizontalFloatingToolbar
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.PlainTooltip
+import androidx.compose.material3.Text
+import androidx.compose.material3.TooltipAnchorPosition
+import androidx.compose.material3.TooltipBox
+import androidx.compose.material3.TooltipDefaults
+import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -133,25 +139,88 @@ fun EditorScreen(
                 .zIndex(1f)
                 .imePadding()
         ) {
-            IconButton(onClick = {
-                photoPickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
-            }) {
-                Icon(Icons.Default.Image, contentDescription = "Attach photo")
+            TooltipBox(
+                positionProvider =
+                    TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
+                tooltip = { PlainTooltip { Text("Attach photo") } },
+                state = rememberTooltipState(),
+            ) {
+                IconButton(onClick = {
+                    photoPickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                }) {
+                    Icon(Icons.Default.Image, contentDescription = "Attach photo")
+                }
             }
-            IconButton(onClick = { filePickerLauncher.launch(arrayOf("*/*")) }) {
-                Icon(Icons.Default.AttachFile, contentDescription = "Attach file")
+            TooltipBox(
+                positionProvider =
+                    TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
+                tooltip = { PlainTooltip { Text("Attach file") } },
+                state = rememberTooltipState(),
+            ) {
+                IconButton(onClick = { filePickerLauncher.launch(arrayOf("*/*")) }) {
+                    Icon(Icons.Default.AttachFile, contentDescription = "Attach file")
+                }
             }
-            IconButton(onClick = { viewModel.editorOnEvent(EditorEvent.InsertSyntax("****", 2)) }) {
-                Icon(Icons.Default.FormatBold, contentDescription = "Bold")
+            TooltipBox(
+                positionProvider =
+                    TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
+                tooltip = { PlainTooltip { Text("Bold") } },
+                state = rememberTooltipState(),
+            ) {
+                IconButton(onClick = {
+                    viewModel.editorOnEvent(
+                        EditorEvent.InsertSyntax(
+                            "****",
+                            2
+                        )
+                    )
+                }) {
+                    Icon(Icons.Default.FormatBold, contentDescription = "Bold")
+                }
             }
-            IconButton(onClick = { viewModel.editorOnEvent(EditorEvent.InsertSyntax("**", 1)) }) {
-                Icon(Icons.Default.FormatItalic, contentDescription = "Italic")
+            TooltipBox(
+                positionProvider =
+                    TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
+                tooltip = { PlainTooltip { Text("Italic") } },
+                state = rememberTooltipState(),
+            ) {
+                IconButton(onClick = {
+                    viewModel.editorOnEvent(
+                        EditorEvent.InsertSyntax(
+                            "**",
+                            1
+                        )
+                    )
+                }) {
+                    Icon(Icons.Default.FormatItalic, contentDescription = "Italic")
+                }
             }
-            IconButton(onClick = { viewModel.editorOnEvent(EditorEvent.InsertSyntax("``", 1)) }) {
-                Icon(Icons.Default.Code, contentDescription = "Inline code")
+            TooltipBox(
+                positionProvider =
+                    TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
+                tooltip = { PlainTooltip { Text("Inline code") } },
+                state = rememberTooltipState(),
+            ) {
+                IconButton(onClick = {
+                    viewModel.editorOnEvent(
+                        EditorEvent.InsertSyntax(
+                            "``",
+                            1
+                        )
+                    )
+                }) {
+                    Icon(Icons.Default.Code, contentDescription = "Inline code")
+                }
             }
-            IconButton(onClick = { viewModel.editorOnSave() }) {
-                Icon(Icons.Default.Save, contentDescription = "Save file")
+            TooltipBox(
+                positionProvider =
+                    TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
+                tooltip = { PlainTooltip { Text("Save file") } },
+                state = rememberTooltipState(),
+            ) {
+                IconButton(onClick = { viewModel.editorOnSave() }) {
+                    Icon(Icons.Default.Save, contentDescription = "Save file")
+                }
             }
         }
         Column(

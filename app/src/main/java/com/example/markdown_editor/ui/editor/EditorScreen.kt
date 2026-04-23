@@ -7,7 +7,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -28,9 +27,11 @@ import androidx.compose.material.icons.filled.FormatBold
 import androidx.compose.material.icons.filled.FormatItalic
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Save
-import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.FloatingToolbarDefaults.ScreenOffset
+import androidx.compose.material3.HorizontalFloatingToolbar
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -52,6 +53,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -64,7 +66,10 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@OptIn(
+    ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class,
+    ExperimentalMaterial3ExpressiveApi::class
+)
 @Composable
 fun EditorScreen(
     viewModel: AppViewModel,
@@ -119,106 +124,23 @@ fun EditorScreen(
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-    ) {
-        Box(
+    Box {
+        HorizontalFloatingToolbar(
+            expanded = true,
             modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
-                .imeNestedScroll()
-                .verticalScroll(scrollState)
+                .align(Alignment.BottomCenter)
+                .offset(y = -ScreenOffset)
+                .zIndex(1f)
+                .imePadding()
         ) {
-            BasicTextField(
-                value = uiState.editorTextFieldValue,
-                onValueChange = { viewModel.editorOnContentChanged(it) },
-                visualTransformation = visualTransformation,
-                textStyle = MaterialTheme.typography.bodyLarge.copy(
-                    color = MaterialTheme.colorScheme.onSurface,
-                    lineHeight = androidx.compose.ui.unit.TextUnit.Unspecified,
-                ),
-                onTextLayout = {
-                    textLayoutResult = it
-                    if (editorWidth != it.size.width) {
-                        editorWidth = it.size.width
-                    }
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .bringIntoViewRequester(bringIntoViewRequester)
-                    .padding(16.dp)
-                    .onFocusEvent { focusState ->
-                        if (focusState.isFocused) {
-                            scope.launch {
-                                delay(300)
-                                bringIntoViewRequester.bringIntoView()
-                            }
-                        }
-                    }
-            )
-
-            textLayoutResult?.let { layoutResult ->
-                val imageSpans = uiState.editorSpans.filter { it.type == TokenType.IMAGE }
-
-                if (imageSpans.isNotEmpty() && uiState.project != null) {
-                    imageSpans.forEachIndexed { index, span ->
-                        val selection = uiState.editorTextFieldValue.selection
-                        val isSelected = selection.start <= span.end && selection.end >= span.start
-
-                        if (!isSelected) {
-                            val rawText =
-                                uiState.editorTextFieldValue.text.substring(span.start, span.end)
-                            val path = extractImagePath(rawText)
-
-                            val ratio = imageAspectRatios[path] ?: 1.777f
-                            val exactHeightPx = if (editorWidth > 0) editorWidth / ratio else 400f
-
-                            val layoutTextLength = layoutResult.layoutInput.text.length
-                            val offsetToUse =
-                                span.start.coerceIn(0, (layoutTextLength - 1).coerceAtLeast(0))
-
-                            var topPx = 0f
-                            if (layoutTextLength > 0) {
-                                val lineIndex = layoutResult.getLineForOffset(offsetToUse)
-                                topPx = layoutResult.getLineTop(lineIndex)
-                            }
-
-                            if (path.isNotEmpty()) {
-                                val topOffset = topPx + with(density) { 16.dp.toPx() }
-                                val leftOffset = with(density) { 16.dp.roundToPx() }
-
-                                key(path, ratio) {
-                                    Box(
-                                        modifier = Modifier
-                                            .offset { IntOffset(leftOffset, topOffset.toInt()) }
-                                            .width(with(density) { editorWidth.toDp() })
-                                            .height(with(density) { exactHeightPx.toDp() })
-                                    ) {
-                                        AsyncMarkdownImage(
-                                            path = path,
-                                            project = uiState.project!!,
-                                            onRatioMeasured = { newRatio ->
-                                                if (imageAspectRatios[path] != newRatio) {
-                                                    imageAspectRatios =
-                                                        imageAspectRatios + (path to newRatio)
-                                                }
-                                            }
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+            IconButton(onClick = {
+                photoPickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+            }) {
+                Icon(Icons.Default.Image, contentDescription = "Attach photo")
             }
-        }
-        BottomAppBar(
-            modifier = Modifier
-                .fillMaxWidth()
-                .imePadding(),
-            contentPadding = PaddingValues(horizontal = 8.dp)
-        ) {
+            IconButton(onClick = { filePickerLauncher.launch(arrayOf("*/*")) }) {
+                Icon(Icons.Default.AttachFile, contentDescription = "Attach file")
+            }
             IconButton(onClick = { viewModel.editorOnEvent(EditorEvent.InsertSyntax("****", 2)) }) {
                 Icon(Icons.Default.FormatBold, contentDescription = "Bold")
             }
@@ -231,13 +153,105 @@ fun EditorScreen(
             IconButton(onClick = { viewModel.editorOnSave() }) {
                 Icon(Icons.Default.Save, contentDescription = "Save file")
             }
-            IconButton(onClick = {
-                photoPickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
-            }) {
-                Icon(Icons.Default.Image, contentDescription = "Attach photo")
-            }
-            IconButton(onClick = { filePickerLauncher.launch(arrayOf("*/*")) }) {
-                Icon(Icons.Default.AttachFile, contentDescription = "Attach file")
+        }
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+        ) {
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .imeNestedScroll()
+                    .verticalScroll(scrollState)
+            ) {
+                BasicTextField(
+                    value = uiState.editorTextFieldValue,
+                    onValueChange = { viewModel.editorOnContentChanged(it) },
+                    visualTransformation = visualTransformation,
+                    textStyle = MaterialTheme.typography.bodyLarge.copy(
+                        color = MaterialTheme.colorScheme.onSurface,
+                        lineHeight = androidx.compose.ui.unit.TextUnit.Unspecified,
+                    ),
+                    onTextLayout = {
+                        textLayoutResult = it
+                        if (editorWidth != it.size.width) {
+                            editorWidth = it.size.width
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .bringIntoViewRequester(bringIntoViewRequester)
+                        .padding(16.dp)
+                        .onFocusEvent { focusState ->
+                            if (focusState.isFocused) {
+                                scope.launch {
+                                    delay(300)
+                                    bringIntoViewRequester.bringIntoView()
+                                }
+                            }
+                        }
+                )
+
+                textLayoutResult?.let { layoutResult ->
+                    val imageSpans = uiState.editorSpans.filter { it.type == TokenType.IMAGE }
+
+                    if (imageSpans.isNotEmpty() && uiState.project != null) {
+                        imageSpans.forEachIndexed { index, span ->
+                            val selection = uiState.editorTextFieldValue.selection
+                            val isSelected =
+                                selection.start <= span.end && selection.end >= span.start
+
+                            if (!isSelected) {
+                                val rawText =
+                                    uiState.editorTextFieldValue.text.substring(
+                                        span.start,
+                                        span.end
+                                    )
+                                val path = extractImagePath(rawText)
+
+                                val ratio = imageAspectRatios[path] ?: 1.777f
+                                val exactHeightPx =
+                                    if (editorWidth > 0) editorWidth / ratio else 400f
+
+                                val layoutTextLength = layoutResult.layoutInput.text.length
+                                val offsetToUse =
+                                    span.start.coerceIn(0, (layoutTextLength - 1).coerceAtLeast(0))
+
+                                var topPx = 0f
+                                if (layoutTextLength > 0) {
+                                    val lineIndex = layoutResult.getLineForOffset(offsetToUse)
+                                    topPx = layoutResult.getLineTop(lineIndex)
+                                }
+
+                                if (path.isNotEmpty()) {
+                                    val topOffset = topPx + with(density) { 16.dp.toPx() }
+                                    val leftOffset = with(density) { 16.dp.roundToPx() }
+
+                                    key(path, ratio) {
+                                        Box(
+                                            modifier = Modifier
+                                                .offset { IntOffset(leftOffset, topOffset.toInt()) }
+                                                .width(with(density) { editorWidth.toDp() })
+                                                .height(with(density) { exactHeightPx.toDp() })
+                                        ) {
+                                            AsyncMarkdownImage(
+                                                path = path,
+                                                project = uiState.project!!,
+                                                onRatioMeasured = { newRatio ->
+                                                    if (imageAspectRatios[path] != newRatio) {
+                                                        imageAspectRatios =
+                                                            imageAspectRatios + (path to newRatio)
+                                                    }
+                                                }
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }

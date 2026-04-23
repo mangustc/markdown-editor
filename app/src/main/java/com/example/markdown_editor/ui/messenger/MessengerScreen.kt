@@ -301,10 +301,13 @@ fun MessengerScreen(viewModel: AppViewModel) {
                                 verticalArrangement = Arrangement.spacedBy(6.dp),
                                 contentPadding = PaddingValues(
                                     top = 8.dp,
-                                    bottom = 8.dp + inputBarHeightDp
+                                    bottom = 8.dp
                                 ),
                                 reverseLayout = true,
                             ) {
+                                item(key = "input_spacer") {
+                                    Spacer(modifier = Modifier.height(inputBarHeightDp))
+                                }
                                 items(sortedNotes, key = { it.uri.toString() }) { note ->
                                     val urls = remember(note.body) {
                                         LinkPreviewFetcher.extractAllUrls(note.body ?: "")

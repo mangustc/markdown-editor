@@ -54,6 +54,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusEvent
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.IntOffset
@@ -108,6 +109,7 @@ fun EditorScreen(
     val bringIntoViewRequester = remember { BringIntoViewRequester() }
     val scope = rememberCoroutineScope()
     var textLayoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
+    var toolbarHeightDp by remember { mutableStateOf(0.dp) }
 
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
@@ -125,14 +127,19 @@ fun EditorScreen(
         }
     }
 
-    Box {
+    Box(
+        modifier = Modifier
+            .imePadding()
+    ) {
         HorizontalFloatingToolbar(
             expanded = true,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .offset(y = -ScreenOffset)
                 .zIndex(1f)
-                .imePadding()
+                .onSizeChanged {
+                    toolbarHeightDp = with(density) { it.height.toDp() + ScreenOffset * 3 }
+                }
         ) {
             TooltipBox(
                 positionProvider =
@@ -246,7 +253,7 @@ fun EditorScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .bringIntoViewRequester(bringIntoViewRequester)
-                        .padding(16.dp)
+                        .padding(start = 16.dp, end = 16.dp, bottom = toolbarHeightDp)
                         .onFocusEvent { focusState ->
                             if (focusState.isFocused) {
                                 scope.launch {

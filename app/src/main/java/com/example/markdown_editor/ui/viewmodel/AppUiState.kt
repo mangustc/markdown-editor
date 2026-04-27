@@ -6,6 +6,7 @@ import com.example.markdown_editor.data.model.LinkPreview
 import com.example.markdown_editor.data.model.Note
 import com.example.markdown_editor.data.model.Project
 import com.example.markdown_editor.domain.model.SpanInfo
+import com.example.markdown_editor.ui.messenger.Attachment
 
 data class AppUiState(
     val project: Project? = null,
@@ -32,4 +33,6 @@ data class AppUiState(
     val messengerIsLoading: Boolean = true,
     val messengerNewNoteText: String = "",
     val messengerLinkPreviews: Map<String, LinkPreview?> = emptyMap(),
+
+    val pendingIntentAttachments: List<Attachment> = emptyList(),
 )

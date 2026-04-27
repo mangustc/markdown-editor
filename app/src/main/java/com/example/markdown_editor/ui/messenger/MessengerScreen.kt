@@ -188,6 +188,7 @@ fun MessengerScreen(viewModel: AppViewModel) {
 
     val attachments = remember { mutableStateListOf<Attachment>() }
     var photoPagerState by remember { mutableStateOf<Pair<Int, List<Uri>>?>(null) }
+    var carouselExpanded by rememberSaveable { mutableStateOf(false) }
 
     val photoPickerLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.PickMultipleVisualMedia()
@@ -206,6 +207,12 @@ fun MessengerScreen(viewModel: AppViewModel) {
 
     LaunchedEffect(uiState.project) {
         uiState.project?.let { viewModel.messengerOnMessengerOpened(it) }
+    }
+
+    LaunchedEffect(Unit) {
+        val pending = viewModel.consumePendingIntentAttachments()
+        if (pending.isNotEmpty()) carouselExpanded = true
+        attachments.addAll(pending)
     }
 
     val sortedNotes = remember(uiState.messengerNotesList) {
@@ -288,6 +295,8 @@ fun MessengerScreen(viewModel: AppViewModel) {
                     )
                 },
                 project = uiState.project,
+                carouselExpanded = carouselExpanded,
+                onCarouselExpandClick = { carouselExpanded = !carouselExpanded },
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .zIndex(1f)
@@ -490,9 +499,10 @@ private fun MessengerInputBar(
     onRemoveAttachment: (Int) -> Unit,
     onSend: () -> Unit,
     project: Project?,
+    carouselExpanded: Boolean,
+    onCarouselExpandClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var carouselExpanded by rememberSaveable { mutableStateOf(false) }
     Column(
         verticalArrangement = Arrangement.spacedBy(8.dp),
         modifier = modifier
@@ -542,7 +552,7 @@ private fun MessengerInputBar(
                     state = rememberTooltipState(),
                 ) {
                     IconButton(
-                        onClick = { carouselExpanded = !carouselExpanded },
+                        onClick = onCarouselExpandClick,
                     ) {
                         Icon(Icons.Default.AttachFile, contentDescription = "Attach content")
                     }

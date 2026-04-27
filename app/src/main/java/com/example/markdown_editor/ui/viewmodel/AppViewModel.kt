@@ -397,4 +397,22 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         onSearchQueryChanged(afterUpdate = afterUpdateSearch)
         messengerOnMessengerOpened(project, afterUpdate = afterUpdateMessenger)
     }
+
+    fun onShareIntent(text: String?, attachments: List<Attachment>) {
+        _uiState.update { state ->
+            state.copy(
+                messengerNewNoteText = if (!text.isNullOrEmpty()) text else state.messengerNewNoteText,
+                pendingIntentAttachments = attachments,
+            )
+        }
+    }
+
+    fun consumePendingIntentAttachments(): List<Attachment> {
+        val pending = _uiState.value.pendingIntentAttachments
+        if (pending.isNotEmpty()) {
+            _uiState.update { it.copy(pendingIntentAttachments = emptyList()) }
+        }
+        return pending
+    }
+
 }

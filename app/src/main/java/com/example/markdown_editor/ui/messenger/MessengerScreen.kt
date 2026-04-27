@@ -152,7 +152,7 @@ private fun parseNoteBody(body: String, project: Project): ParsedNoteBody {
         .map { match ->
             val path = extractLinkPath(match.value)
             val uri = project.getFileUri(path)
-            Attachment.Photo(uri = uri)
+            Attachment.Photo(uri = uri, path = path)
         }
         .toList()
 
@@ -161,7 +161,7 @@ private fun parseNoteBody(body: String, project: Project): ParsedNoteBody {
             val label = extractLinkLabel(match.value)
             val path = extractLinkPath(match.value)
             val uri = project.getFileUri(path)
-            Attachment.AttachedFile(uri = uri, displayName = label)
+            Attachment.AttachedFile(uri = uri, displayName = label, path = path)
         }
         .toList()
 
@@ -245,6 +245,12 @@ fun MessengerScreen(viewModel: AppViewModel) {
                 value = uiState.messengerNewNoteText,
                 onValueChange = { viewModel.messengerOnNewNoteTextChanged(it) },
                 attachments = attachments,
+                isEditing = uiState.messengerEditingNote != null,
+                onCancelEdit = {
+                    viewModel.messengerCancelEditNote()
+                    attachments.clear()
+                    carouselExpanded = false
+                },
                 onAddPhoto = {
                     photoPickerLauncher.launch(
                         PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
@@ -285,14 +291,25 @@ fun MessengerScreen(viewModel: AppViewModel) {
                 onSend = {
                     val snapshot = attachments.toList()
                     attachments.clear()
-                    viewModel.messengerOnSendNote(
-                        attachments = snapshot,
-                        afterUpdate = {
-                            scope.launch {
-                                if (sortedNotes.isNotEmpty()) listState.animateScrollToItem(0)
+                    if (uiState.messengerEditingNote != null) {
+                        viewModel.messengerOnSaveEditedNote(
+                            attachments = snapshot,
+                            afterUpdate = {
+                                scope.launch {
+                                    if (sortedNotes.isNotEmpty()) listState.animateScrollToItem(0)
+                                }
                             }
-                        }
-                    )
+                        )
+                    } else {
+                        viewModel.messengerOnSendNote(
+                            attachments = snapshot,
+                            afterUpdate = {
+                                scope.launch {
+                                    if (sortedNotes.isNotEmpty()) listState.animateScrollToItem(0)
+                                }
+                            }
+                        )
+                    }
                 },
                 project = uiState.project,
                 carouselExpanded = carouselExpanded,
@@ -452,6 +469,14 @@ fun MessengerScreen(viewModel: AppViewModel) {
                                                     icon = Icons.Outlined.Edit,
                                                     onClick = {
                                                         menuExpanded = false
+                                                        viewModel.messengerStartEditNote(
+                                                            note,
+                                                            parsedBody.text
+                                                        )
+                                                        attachments.clear()
+                                                        attachments.addAll(parsedBody.attachments)
+                                                        if (attachments.isNotEmpty()) carouselExpanded =
+                                                            true
                                                     }
                                                 )
                                                 MenuPopupItem(
@@ -492,6 +517,8 @@ private fun MessengerInputBar(
     value: String,
     onValueChange: (String) -> Unit,
     attachments: List<Attachment>,
+    isEditing: Boolean,
+    onCancelEdit: () -> Unit,
     onAddPhoto: () -> Unit,
     onAddFile: () -> Unit,
     onPhotoClick: (Uri) -> Unit,
@@ -507,10 +534,50 @@ private fun MessengerInputBar(
         verticalArrangement = Arrangement.spacedBy(8.dp),
         modifier = modifier
             .background(
-                color = if (carouselExpanded) MaterialTheme.colorScheme.surfaceContainerLow else Color.Transparent,
+                color = if (carouselExpanded || isEditing) MaterialTheme.colorScheme.surfaceContainerLow else Color.Transparent,
             )
             .padding(8.dp)
     ) {
+        AnimatedVisibility(
+            visible = isEditing,
+            enter = expandVertically(MaterialTheme.motionScheme.defaultEffectsSpec()) +
+                    fadeIn(MaterialTheme.motionScheme.defaultEffectsSpec()),
+            exit = shrinkVertically(MaterialTheme.motionScheme.defaultEffectsSpec()) +
+                    fadeOut(MaterialTheme.motionScheme.defaultEffectsSpec()),
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 4.dp),
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Icon(
+                        Icons.Outlined.Edit,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(16.dp),
+                    )
+                    Text(
+                        text = "Editing note",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+                IconButton(onClick = onCancelEdit, modifier = Modifier.size(32.dp)) {
+                    Icon(
+                        Icons.Default.Close,
+                        contentDescription = "Cancel editing",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(16.dp),
+                    )
+                }
+            }
+        }
         AnimatedVisibility(
             visible = carouselExpanded,
             enter = expandVertically(MaterialTheme.motionScheme.defaultEffectsSpec()) +
@@ -532,7 +599,7 @@ private fun MessengerInputBar(
         TextField(
             value = value,
             onValueChange = onValueChange,
-            placeholder = { Text("New quick note…") },
+            placeholder = { Text(if (isEditing) "Edit note…" else "New quick note…") },
             shape = MaterialTheme.shapes.extraLargeIncreased,
             maxLines = 6,
             keyboardOptions = KeyboardOptions(
@@ -562,7 +629,7 @@ private fun MessengerInputBar(
                 TooltipBox(
                     positionProvider =
                         TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
-                    tooltip = { PlainTooltip { Text("Create note") } },
+                    tooltip = { PlainTooltip { Text(if (isEditing) "Save changes" else "Create note") } },
                     state = rememberTooltipState(),
                 ) {
                     IconButton(
@@ -573,7 +640,10 @@ private fun MessengerInputBar(
                         ),
                         enabled = value.isNotBlank() || attachments.isNotEmpty(),
                     ) {
-                        Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Create note")
+                        Icon(
+                            Icons.AutoMirrored.Filled.Send,
+                            contentDescription = if (isEditing) "Save changes" else "Create note"
+                        )
                     }
                 }
             },

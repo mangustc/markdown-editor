@@ -238,6 +238,80 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.update { it.copy(messengerNewNoteText = text) }
     }
 
+    fun messengerStartEditNote(note: Note, parsedText: String) {
+        _uiState.update {
+            it.copy(
+                messengerEditingNote = note,
+                messengerNewNoteText = parsedText,
+            )
+        }
+    }
+
+    fun messengerCancelEditNote() {
+        _uiState.update {
+            it.copy(messengerEditingNote = null, messengerNewNoteText = "")
+        }
+    }
+
+    fun messengerOnSaveEditedNote(
+        attachments: List<Attachment> = emptyList(),
+        afterUpdate: () -> Unit = {}
+    ) {
+        val project = _uiState.value.project ?: return
+        val note = _uiState.value.messengerEditingNote ?: return
+        val newBodyText = _uiState.value.messengerNewNoteText.trim()
+
+        viewModelScope.launch(Dispatchers.IO) {
+            val fullText = repository.getNoteText(note, includeFrontMatter = true)
+            val frontMatterEnd = run {
+                if (!fullText.trimStart().startsWith("---")) return@run 0
+                val lines = fullText.lines()
+                val closeIdx = lines.drop(1).indexOfFirst { it.trim() == "---" }
+                if (closeIdx < 0) 0
+                else lines.take(closeIdx + 2).joinToString("\n").length
+            }
+            val frontMatter = fullText.substring(0, frontMatterEnd).trimEnd()
+
+            val attachmentLines = buildString {
+                attachments.forEach { attachment ->
+                    when (attachment) {
+                        is Attachment.PendingPhoto -> {
+                            val path = repository.copyToAssets(project, attachment.uri)
+                            append("\n![image](<$path>)")
+                        }
+
+                        is Attachment.PendingAttachedFile -> {
+                            val path = repository.copyToAssets(project, attachment.uri)
+                            val label = attachment.displayName ?: path.substringAfterLast("/")
+                            append("\n[$label](<$path>)")
+                        }
+
+                        is Attachment.Photo -> append("\n![image](<${attachment.path}>)")
+                        is Attachment.AttachedFile -> append("\n[${attachment.displayName}](<${attachment.path}>)")
+                    }
+                }
+            }
+            val newFullContent = when {
+                newBodyText.isNotEmpty() && attachmentLines.isNotEmpty() ->
+                    "$frontMatter\n\n$newBodyText$attachmentLines"
+
+                newBodyText.isNotEmpty() ->
+                    "$frontMatter\n\n$newBodyText"
+
+                attachmentLines.isNotEmpty() ->
+                    "$frontMatter\n$attachmentLines"
+
+                else -> frontMatter
+            }
+
+            repository.saveNoteText(note, newFullContent)
+            withContext(Dispatchers.Main) {
+                _uiState.update { it.copy(messengerNewNoteText = "", messengerEditingNote = null) }
+            }
+            updateNoteLists(afterUpdateMessenger = afterUpdate)
+        }
+    }
+
     fun messengerOnSendNote(
         attachments: List<Attachment> = emptyList(),
         afterUpdate: () -> Unit = {}

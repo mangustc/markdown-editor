@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -107,6 +108,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -381,9 +383,22 @@ fun MessengerScreen(viewModel: AppViewModel) {
                                     val bodyText = parsedBody.text.ifBlank { "" }
 
                                     var menuExpanded by remember { mutableStateOf(false) }
+                                    var touchX by remember { mutableStateOf(0.dp) }
+                                    var touchY by remember { mutableStateOf(0.dp) }
+
                                     Box(
                                         modifier = Modifier
                                             .fillMaxWidth()
+                                            .pointerInput(Unit) {
+                                                awaitEachGesture {
+                                                    val event =
+                                                        awaitFirstDown(requireUnconsumed = false)
+                                                    touchX =
+                                                        with(density) { event.position.x.toDp() }
+                                                    touchY =
+                                                        with(density) { event.position.y.toDp() }
+                                                }
+                                            }
                                             .clickable(onClick = { menuExpanded = true })
                                             .padding(PaddingValues(horizontal = 12.dp)),
                                     ) {
@@ -426,70 +441,75 @@ fun MessengerScreen(viewModel: AppViewModel) {
                                             },
                                             onClick = { menuExpanded = true },
                                         )
-                                        MenuPopup(
-                                            expanded = menuExpanded,
-                                            onDismissRequest = { menuExpanded = false },
-                                        ) { groupInteractionSource ->
-                                            MenuPopupGroup(
-                                                index = 0,
-                                                count = 1,
-                                                label = "Actions",
-                                                interactionSource = groupInteractionSource,
-                                            ) {
-                                                MenuPopupItem(
-                                                    text = "Open",
-                                                    index = 0, count = 4,
-                                                    icon = Icons.AutoMirrored.Outlined.OpenInNew,
-                                                    onClick = {
-                                                        menuExpanded = false
-                                                        viewModel.onNoteSelected(note)
-                                                    }
-                                                )
-                                                MenuPopupItem(
-                                                    text = "Copy",
-                                                    index = 1, count = 4,
-                                                    icon = Icons.Outlined.ContentCopy,
-                                                    onClick = {
-                                                        menuExpanded = false
-                                                        scope.launch {
-                                                            clipboard.setClipEntry(
-                                                                ClipEntry(
-                                                                    ClipData.newPlainText(
-                                                                        "Note text",
-                                                                        bodyText
+                                        Box(
+                                            modifier = Modifier.offset {
+                                                IntOffset(touchX.roundToPx(), touchY.roundToPx())
+                                            }) {
+                                            MenuPopup(
+                                                expanded = menuExpanded,
+                                                onDismissRequest = { menuExpanded = false },
+                                            ) { groupInteractionSource ->
+                                                MenuPopupGroup(
+                                                    index = 0,
+                                                    count = 1,
+                                                    label = "Actions",
+                                                    interactionSource = groupInteractionSource,
+                                                ) {
+                                                    MenuPopupItem(
+                                                        text = "Open",
+                                                        index = 0, count = 4,
+                                                        icon = Icons.AutoMirrored.Outlined.OpenInNew,
+                                                        onClick = {
+                                                            menuExpanded = false
+                                                            viewModel.onNoteSelected(note)
+                                                        }
+                                                    )
+                                                    MenuPopupItem(
+                                                        text = "Copy",
+                                                        index = 1, count = 4,
+                                                        icon = Icons.Outlined.ContentCopy,
+                                                        onClick = {
+                                                            menuExpanded = false
+                                                            scope.launch {
+                                                                clipboard.setClipEntry(
+                                                                    ClipEntry(
+                                                                        ClipData.newPlainText(
+                                                                            "Note text",
+                                                                            bodyText
+                                                                        )
                                                                     )
                                                                 )
-                                                            )
+                                                            }
                                                         }
-                                                    }
-                                                )
-                                                MenuPopupItem(
-                                                    text = "Edit",
-                                                    index = 2, count = 4,
-                                                    icon = Icons.Outlined.Edit,
-                                                    onClick = {
-                                                        menuExpanded = false
-                                                        viewModel.messengerStartEditNote(
-                                                            note,
-                                                            parsedBody.text
-                                                        )
-                                                        attachments.clear()
-                                                        attachments.addAll(parsedBody.attachments)
-                                                        if (attachments.isNotEmpty()) carouselExpanded =
-                                                            true
-                                                    }
-                                                )
-                                                MenuPopupItem(
-                                                    text = "Delete",
-                                                    index = 3, count = 4,
-                                                    supportingText = "Cannot be undone",
-                                                    icon = Icons.Outlined.Delete,
-                                                    tint = MaterialTheme.colorScheme.error,
-                                                    onClick = {
-                                                        menuExpanded = false
-                                                        viewModel.onDeleteNote(note)
-                                                    }
-                                                )
+                                                    )
+                                                    MenuPopupItem(
+                                                        text = "Edit",
+                                                        index = 2, count = 4,
+                                                        icon = Icons.Outlined.Edit,
+                                                        onClick = {
+                                                            menuExpanded = false
+                                                            viewModel.messengerStartEditNote(
+                                                                note,
+                                                                parsedBody.text
+                                                            )
+                                                            attachments.clear()
+                                                            attachments.addAll(parsedBody.attachments)
+                                                            if (attachments.isNotEmpty()) carouselExpanded =
+                                                                true
+                                                        }
+                                                    )
+                                                    MenuPopupItem(
+                                                        text = "Delete",
+                                                        index = 3, count = 4,
+                                                        supportingText = "Cannot be undone",
+                                                        icon = Icons.Outlined.Delete,
+                                                        tint = MaterialTheme.colorScheme.error,
+                                                        onClick = {
+                                                            menuExpanded = false
+                                                            viewModel.onDeleteNote(note)
+                                                        }
+                                                    )
+                                                }
                                             }
                                         }
                                     }

@@ -17,6 +17,7 @@ import com.example.markdown_editor.data.model.LinkPreview
 import com.example.markdown_editor.data.model.Note
 import com.example.markdown_editor.data.model.Project
 import com.example.markdown_editor.data.model.SearchQuery
+import com.example.markdown_editor.data.model.SortBy
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -345,7 +346,16 @@ class ProjectRepositoryImpl(
             sb.append("\nWHERE ")
             sb.append(conditions.joinToString("\n  AND "))
         }
-        sb.append("\nORDER BY notes.lastModified DESC")
+
+        val pinnedClause = if (query.pinnedFirst)
+            "CASE WHEN notes.tags LIKE '%pinned%' THEN 0 ELSE 1 END ASC,\n  "
+        else ""
+        val sortClause = when (query.sortBy) {
+            SortBy.LAST_MODIFIED -> "notes.lastModified DESC"
+            SortBy.CREATED_AT ->
+                "notes.createdAt DESC, notes.lastModified DESC"
+        }
+        sb.append("\nORDER BY $pinnedClause$sortClause")
 
         return SimpleSQLiteQuery(sb.toString(), args.toTypedArray())
     }

@@ -217,10 +217,6 @@ fun MessengerScreen(viewModel: AppViewModel) {
         attachments.addAll(pending)
     }
 
-    val sortedNotes = remember(uiState.messengerNotesList) {
-        uiState.messengerNotesList.sortedByDescending { it.createdAt ?: it.lastModified }
-    }
-
     val listState = rememberLazyListState()
     val clipboard = LocalClipboard.current
     val scope = rememberCoroutineScope()
@@ -296,18 +292,16 @@ fun MessengerScreen(viewModel: AppViewModel) {
                     if (uiState.messengerEditingNote != null) {
                         viewModel.messengerOnSaveEditedNote(
                             attachments = snapshot,
-                            afterUpdate = {
-                                scope.launch {
-                                    if (sortedNotes.isNotEmpty()) listState.animateScrollToItem(0)
-                                }
-                            }
+                            afterUpdate = {},
                         )
                     } else {
                         viewModel.messengerOnSendNote(
                             attachments = snapshot,
                             afterUpdate = {
                                 scope.launch {
-                                    if (sortedNotes.isNotEmpty()) listState.animateScrollToItem(0)
+                                    if (uiState.messengerNotesList.isNotEmpty()) listState.animateScrollToItem(
+                                        0
+                                    )
                                 }
                             }
                         )
@@ -342,7 +336,7 @@ fun MessengerScreen(viewModel: AppViewModel) {
                             }
                         }
 
-                        sortedNotes.isEmpty() -> {
+                        uiState.messengerNotesList.isEmpty() -> {
                             Text(
                                 text = "No quick notes yet.\nType something below to get started.",
                                 style = MaterialTheme.typography.bodyMedium,
@@ -366,7 +360,9 @@ fun MessengerScreen(viewModel: AppViewModel) {
                                 item(key = "input_spacer") {
                                     Spacer(modifier = Modifier.height(inputBarHeightDp))
                                 }
-                                items(sortedNotes, key = { it.uri.toString() }) { note ->
+                                items(
+                                    uiState.messengerNotesList,
+                                    key = { it.uri.toString() }) { note ->
                                     val urls = remember(note.body) {
                                         LinkPreviewFetcher.extractAllUrls(note.body ?: "")
                                     }

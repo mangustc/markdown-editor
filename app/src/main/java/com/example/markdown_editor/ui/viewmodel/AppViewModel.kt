@@ -12,6 +12,7 @@ import com.example.markdown_editor.data.database.NoteDb
 import com.example.markdown_editor.data.model.Note
 import com.example.markdown_editor.data.model.Project
 import com.example.markdown_editor.data.model.SearchQuery
+import com.example.markdown_editor.data.model.SortBy
 import com.example.markdown_editor.data.repository.ProjectRepositoryImpl
 import com.example.markdown_editor.data.util.LinkPreviewFetcher
 import com.example.markdown_editor.domain.parser.MarkdownParser
@@ -219,7 +220,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             repository.syncDatabase(project)
             val notes = repository.getNotes(
                 project,
-                SearchQuery(tagFilters = listOf("quick-note")),
+                SearchQuery(tagFilters = listOf("quick-note"), sortBy = SortBy.CREATED_AT),
                 includeText = true,
                 includeFrontMatter = false
             )

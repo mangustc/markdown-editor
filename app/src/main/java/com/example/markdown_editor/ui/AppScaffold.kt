@@ -17,6 +17,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.InlineTextContent
+import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.OpenInNew
@@ -27,6 +29,7 @@ import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Tag
 import androidx.compose.material.icons.outlined.Delete
@@ -71,9 +74,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.Placeholder
+import androidx.compose.ui.text.PlaceholderVerticalAlign
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
@@ -202,6 +209,7 @@ fun AppScaffold() {
                                             supportingText = if (!note.tags.isNullOrEmpty()) note.tags.joinToString(
                                                 ", "
                                             ) else null,
+                                            isPinned = note.tags?.contains("pinned") == true,
                                             selected = note.uri == uiState.activeNote?.uri,
                                             onClick = { appViewModel.onNoteSelected(note) },
                                             onOpen = { appViewModel.onNoteSelected(note) },
@@ -297,7 +305,7 @@ fun AppScaffold() {
     if (uiState.isCreateNoteDialogVisible) {
         CreateNoteDialog(
             onDismissRequest = { appViewModel.dismissCreateNoteDialog() },
-            onConfirmCreate = { name ->
+            onConfirmCreate = {
                 appViewModel.onCreateNote()
                 appViewModel.dismissCreateNoteDialog()
             },
@@ -343,6 +351,7 @@ fun AppScaffold() {
 fun NoteDrawerItem(
     name: String,
     supportingText: String? = null,
+    isPinned: Boolean = false,
     selected: Boolean,
     onClick: () -> Unit,
     onOpen: () -> Unit,
@@ -359,7 +368,27 @@ fun NoteDrawerItem(
             onLongClick = { menuExpanded = true },
             content = {
                 Text(
-                    name,
+                    text = buildAnnotatedString {
+                        append(name + if (isPinned) " " else "")
+                        if (isPinned) appendInlineContent("inlinePinned", "[icon]")
+                    },
+                    inlineContent = mapOf(
+                        Pair(
+                        "inlinePinned",
+                        InlineTextContent(
+                            Placeholder(
+                                width = 1.em,
+                                height = 1.em,
+                                placeholderVerticalAlign = PlaceholderVerticalAlign.Center
+                            )
+                        ) {
+                            Icon(
+                                Icons.Filled.PushPin,
+                                "pinned",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    )),
                     color = if (selected) MaterialTheme.colorScheme.primary
                     else MaterialTheme.colorScheme.onSurface
                 )
@@ -446,7 +475,7 @@ fun NoteDrawerItem(
 @Composable
 fun CreateNoteDialog(
     onDismissRequest: () -> Unit,
-    onConfirmCreate: (String) -> Unit,
+    onConfirmCreate: () -> Unit,
     initialName: String,
     onNameChange: (String) -> Unit,
 ) {
@@ -467,7 +496,7 @@ fun CreateNoteDialog(
         },
         confirmButton = {
             Button(
-                onClick = { if (initialName.isNotBlank()) onConfirmCreate(initialName) }
+                onClick = { if (initialName.isNotBlank()) onConfirmCreate() }
             ) { Text("Create") }
         },
         dismissButton = {

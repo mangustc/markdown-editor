@@ -1,5 +1,7 @@
 package com.example.markdown_editor.data.model
 
+enum class SortBy { LAST_MODIFIED, CREATED_AT }
+
 data class SearchQuery(
     val bodyTerms: List<String> = emptyList(),
     val negatedBodyTerms: List<String> = emptyList(),
@@ -8,6 +10,8 @@ data class SearchQuery(
     val propFilters: Map<String, String> = emptyMap(),
     val nameFilter: String? = null,
     val negatedNameFilter: String? = null,
+    val sortBy: SortBy = SortBy.LAST_MODIFIED,
+    val pinnedFirst: Boolean = false,
 ) {
     val isEmpty: Boolean
         get() =

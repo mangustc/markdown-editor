@@ -48,6 +48,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.ModalDrawerSheet
@@ -78,6 +79,7 @@ import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.PlaceholderVerticalAlign
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
@@ -369,10 +371,12 @@ fun NoteDrawerItem(
             content = {
                 Text(
                     text = buildAnnotatedString {
-                        append(name + if (isPinned) " " else "")
-                        if (isPinned) appendInlineContent("inlinePinned", "[icon]")
+                        if (isPinned) {
+                            appendInlineContent("inlinePinned", "[icon]")
+                        }
+                        append((if (isPinned) " " else "") + name)
                     },
-                    inlineContent = mapOf(
+                    inlineContent = if (isPinned) mapOf(
                         Pair(
                         "inlinePinned",
                         InlineTextContent(
@@ -388,7 +392,10 @@ fun NoteDrawerItem(
                                 tint = MaterialTheme.colorScheme.primary
                             )
                         }
-                    )),
+                    )) else mapOf(),
+                    style = LocalTextStyle.current.copy(
+                        lineBreak = LineBreak.Paragraph,
+                    ),
                     color = if (selected) MaterialTheme.colorScheme.primary
                     else MaterialTheme.colorScheme.onSurface
                 )

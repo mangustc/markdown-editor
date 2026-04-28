@@ -70,7 +70,7 @@ import kotlinx.coroutines.launch
 
 @OptIn(
     ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class,
-    ExperimentalMaterial3ExpressiveApi::class
+    ExperimentalMaterial3ExpressiveApi::class,
 )
 @Composable
 fun EditorScreen(
@@ -93,7 +93,7 @@ fun EditorScreen(
         uiState.editorTextFieldValue.selection,
         imageAspectRatios,
         editorWidth,
-        density
+        density,
     ) {
         MarkdownVisualTransformation(
             annotated = uiState.editorAnnotatedString,
@@ -101,7 +101,7 @@ fun EditorScreen(
             selection = uiState.editorTextFieldValue.selection,
             imageAspectRatios = imageAspectRatios,
             editorWidth = editorWidth,
-            density = density
+            density = density,
         )
     }
 
@@ -112,7 +112,7 @@ fun EditorScreen(
     var toolbarHeightDp by remember { mutableStateOf(0.dp) }
 
     val photoPickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.PickVisualMedia()
+        contract = ActivityResultContracts.PickVisualMedia(),
     ) { uri ->
         if (uri != null) {
             viewModel.editorOnEvent(EditorEvent.AttachPhoto(uri = uri))
@@ -120,7 +120,7 @@ fun EditorScreen(
     }
 
     val filePickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument()
+        contract = ActivityResultContracts.OpenDocument(),
     ) { uri ->
         if (uri != null) {
             viewModel.editorOnEvent(EditorEvent.AttachFile(uri = uri))
@@ -129,7 +129,7 @@ fun EditorScreen(
 
     Box(
         modifier = Modifier
-            .imePadding()
+            .imePadding(),
     ) {
         HorizontalFloatingToolbar(
             expanded = true,
@@ -139,7 +139,7 @@ fun EditorScreen(
                 .zIndex(1f)
                 .onSizeChanged {
                     toolbarHeightDp = with(density) { it.height.toDp() + ScreenOffset * 3 }
-                }
+                },
         ) {
             TooltipBox(
                 positionProvider =
@@ -147,9 +147,11 @@ fun EditorScreen(
                 tooltip = { PlainTooltip { Text("Attach photo") } },
                 state = rememberTooltipState(),
             ) {
-                IconButton(onClick = {
-                    photoPickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
-                }) {
+                IconButton(
+                    onClick = {
+                        photoPickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                    },
+                ) {
                     Icon(Icons.Default.Image, contentDescription = "Attach photo")
                 }
             }
@@ -169,14 +171,16 @@ fun EditorScreen(
                 tooltip = { PlainTooltip { Text("Bold") } },
                 state = rememberTooltipState(),
             ) {
-                IconButton(onClick = {
-                    viewModel.editorOnEvent(
-                        EditorEvent.InsertSyntax(
-                            "****",
-                            2
+                IconButton(
+                    onClick = {
+                        viewModel.editorOnEvent(
+                            EditorEvent.InsertSyntax(
+                                "****",
+                                2,
+                            ),
                         )
-                    )
-                }) {
+                    },
+                ) {
                     Icon(Icons.Default.FormatBold, contentDescription = "Bold")
                 }
             }
@@ -186,14 +190,16 @@ fun EditorScreen(
                 tooltip = { PlainTooltip { Text("Italic") } },
                 state = rememberTooltipState(),
             ) {
-                IconButton(onClick = {
-                    viewModel.editorOnEvent(
-                        EditorEvent.InsertSyntax(
-                            "**",
-                            1
+                IconButton(
+                    onClick = {
+                        viewModel.editorOnEvent(
+                            EditorEvent.InsertSyntax(
+                                "**",
+                                1,
+                            ),
                         )
-                    )
-                }) {
+                    },
+                ) {
                     Icon(Icons.Default.FormatItalic, contentDescription = "Italic")
                 }
             }
@@ -203,14 +209,16 @@ fun EditorScreen(
                 tooltip = { PlainTooltip { Text("Inline code") } },
                 state = rememberTooltipState(),
             ) {
-                IconButton(onClick = {
-                    viewModel.editorOnEvent(
-                        EditorEvent.InsertSyntax(
-                            "``",
-                            1
+                IconButton(
+                    onClick = {
+                        viewModel.editorOnEvent(
+                            EditorEvent.InsertSyntax(
+                                "``",
+                                1,
+                            ),
                         )
-                    )
-                }) {
+                    },
+                ) {
                     Icon(Icons.Default.Code, contentDescription = "Inline code")
                 }
             }
@@ -227,14 +235,14 @@ fun EditorScreen(
         }
         Column(
             modifier = Modifier
-                .fillMaxSize()
+                .fillMaxSize(),
         ) {
             Box(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
                     .imeNestedScroll()
-                    .verticalScroll(scrollState)
+                    .verticalScroll(scrollState),
             ) {
                 BasicTextField(
                     value = uiState.editorTextFieldValue,
@@ -261,7 +269,7 @@ fun EditorScreen(
                                     bringIntoViewRequester.bringIntoView()
                                 }
                             }
-                        }
+                        },
                 )
 
                 textLayoutResult?.let { layoutResult ->
@@ -277,7 +285,7 @@ fun EditorScreen(
                                 val rawText =
                                     uiState.editorTextFieldValue.text.substring(
                                         span.start,
-                                        span.end
+                                        span.end,
                                     )
                                 val path = extractImagePath(rawText)
 
@@ -304,7 +312,7 @@ fun EditorScreen(
                                             modifier = Modifier
                                                 .offset { IntOffset(leftOffset, topOffset.toInt()) }
                                                 .width(with(density) { editorWidth.toDp() })
-                                                .height(with(density) { exactHeightPx.toDp() })
+                                                .height(with(density) { exactHeightPx.toDp() }),
                                         ) {
                                             AsyncMarkdownImage(
                                                 path = path,
@@ -314,7 +322,7 @@ fun EditorScreen(
                                                         imageAspectRatios =
                                                             imageAspectRatios + (path to newRatio)
                                                     }
-                                                }
+                                                },
                                             )
                                         }
                                     }
@@ -357,12 +365,12 @@ fun AsyncMarkdownImage(path: String, project: Project, onRatioMeasured: (Float) 
                 if (w > 0 && h > 0) {
                     onRatioMeasured(w / h)
                 }
-            }
+            },
         )
     } else {
         Box(
             modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
+            contentAlignment = Alignment.Center,
         ) {
             CircularProgressIndicator()
         }

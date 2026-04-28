@@ -7,7 +7,7 @@ data class Project(
     val name: String,
     val uri: Uri,           // the root directory URI from the picker
     val notesPath: String,      // notes
-    val assetsPath: String      // assets
+    val assetsPath: String,      // assets
 ) {
     val notesUri: Uri get() = buildChildUri(notesPath)
     val assetsUri: Uri get() = buildChildUri(assetsPath)

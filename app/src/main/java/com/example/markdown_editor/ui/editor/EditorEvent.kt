@@ -7,6 +7,6 @@ sealed class EditorEvent {
     data class AttachPhoto(val uri: Uri) : EditorEvent()
     data class AttachFile(
         val uri: Uri,
-        val displayName: String? = null
+        val displayName: String? = null,
     ) : EditorEvent()
 }

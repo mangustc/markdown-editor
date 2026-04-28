@@ -23,7 +23,7 @@ object LinkPreviewFetcher {
             connection.instanceFollowRedirects = true
             connection.setRequestProperty(
                 "User-Agent",
-                "Mozilla/5.0 (compatible; LinkPreviewBot/1.0)"
+                "Mozilla/5.0 (compatible; LinkPreviewBot/1.0)",
             )
             val html = connection.inputStream.bufferedReader(Charsets.UTF_8).readText()
             connection.disconnect()
@@ -32,18 +32,18 @@ object LinkPreviewFetcher {
                 // handles both attribute orderings
                 val a = Regex(
                     """<meta[^>]+property=["']og:$property["'][^>]+content=["']([^"']+)["']""",
-                    RegexOption.IGNORE_CASE
+                    RegexOption.IGNORE_CASE,
                 ).find(html)?.groupValues?.get(1)
                 if (a != null) return a
                 return Regex(
                     """<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:$property["']""",
-                    RegexOption.IGNORE_CASE
+                    RegexOption.IGNORE_CASE,
                 ).find(html)?.groupValues?.get(1)
             }
 
             // Fallback: <title> tag if og:title absent
             val title = og("title") ?: Regex(
-                """<title[^>]*>([^<]+)</title>""", RegexOption.IGNORE_CASE
+                """<title[^>]*>([^<]+)</title>""", RegexOption.IGNORE_CASE,
             ).find(html)?.groupValues?.get(1)?.trim()
 
             LinkPreview(

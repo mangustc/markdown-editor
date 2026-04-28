@@ -6,7 +6,7 @@ import androidx.room.RoomDatabase
 @Database(
     entities = [NoteEntity::class, NoteEntityFts::class, LinkPreviewEntity::class],
     version = 4,
-    exportSchema = false
+    exportSchema = false,
 )
 abstract class NoteDb : RoomDatabase() {
     abstract fun noteDao(): NoteDao

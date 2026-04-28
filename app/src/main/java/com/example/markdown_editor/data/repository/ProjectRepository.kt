@@ -13,14 +13,14 @@ interface ProjectRepository {
     suspend fun createNote(
         project: Project,
         name: String? = "New Note",
-        tags: List<String>? = emptyList()
+        tags: List<String>? = emptyList(),
     ): Uri?
 
     suspend fun getNotes(
         project: Project,
         query: SearchQuery = SearchQuery(),
         includeText: Boolean = false,
-        includeFrontMatter: Boolean = true
+        includeFrontMatter: Boolean = true,
     ): List<Note>
 
     suspend fun getNoteText(note: Note, includeFrontMatter: Boolean = true): String

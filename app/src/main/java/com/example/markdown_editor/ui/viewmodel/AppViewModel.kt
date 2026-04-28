@@ -33,7 +33,7 @@ import kotlinx.coroutines.withContext
 class AppViewModel(application: Application) : AndroidViewModel(application) {
     private val db = Room.databaseBuilder(
         application,
-        NoteDb::class.java, "database-notes"
+        NoteDb::class.java, "database-notes",
     )
         .fallbackToDestructiveMigration(true)
         .build()
@@ -222,7 +222,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 project,
                 SearchQuery(tagFilters = listOf("quick-note"), sortBy = SortBy.CREATED_AT),
                 includeText = true,
-                includeFrontMatter = false
+                includeFrontMatter = false,
             )
             _uiState.update { it.copy(messengerNotesList = notes, messengerIsLoading = false) }
 
@@ -256,7 +256,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     fun messengerOnSaveEditedNote(
         attachments: List<Attachment> = emptyList(),
-        afterUpdate: () -> Unit = {}
+        afterUpdate: () -> Unit = {},
     ) {
         val project = _uiState.value.project ?: return
         val note = _uiState.value.messengerEditingNote ?: return
@@ -315,7 +315,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     fun messengerOnSendNote(
         attachments: List<Attachment> = emptyList(),
-        afterUpdate: () -> Unit = {}
+        afterUpdate: () -> Unit = {},
     ) {
         val project = _uiState.value.project ?: return
         val text = _uiState.value.messengerNewNoteText.trim()
@@ -443,7 +443,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             it.copy(
                 isNoteRenameDialogVisible = true,
                 noteRenameInput = note.name,
-                dialogNote = note
+                dialogNote = note,
             )
         }
     }

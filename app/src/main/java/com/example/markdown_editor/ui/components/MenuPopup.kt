@@ -43,7 +43,7 @@ fun MenuPopupGroup(
     index: Int,
     count: Int,
     label: String,
-    content: @Composable (ColumnScope.() -> Unit)
+    content: @Composable (ColumnScope.() -> Unit),
 ) {
     DropdownMenuGroup(
         shapes = MenuDefaults.groupShape(index = index, count = count),
@@ -51,7 +51,7 @@ fun MenuPopupGroup(
     ) {
         MenuDefaults.Label { Text(label) }
         HorizontalDivider(
-            modifier = Modifier.padding(MenuDefaults.HorizontalDividerPadding)
+            modifier = Modifier.padding(MenuDefaults.HorizontalDividerPadding),
         )
         content()
     }

@@ -27,8 +27,8 @@ class ProjectRepositoryImpl(
     private val linkPreviewDao: LinkPreviewDao,
     private val prefs: SharedPreferences = context.getSharedPreferences(
         "project_prefs",
-        Context.MODE_PRIVATE
-    )
+        Context.MODE_PRIVATE,
+    ),
 ) : ProjectRepository {
 
     override suspend fun getNotes(
@@ -47,7 +47,7 @@ class ProjectRepositoryImpl(
                 lastModified = entity.lastModified,
                 createdAt = entity.createdAt,
                 body = if (includeText) entity.body else null,
-                tags = if (entity.tags.isNotEmpty()) entity.tags.split(" ") else emptyList()
+                tags = if (entity.tags.isNotEmpty()) entity.tags.split(" ") else emptyList(),
             )
         }
     }
@@ -218,7 +218,7 @@ class ProjectRepositoryImpl(
         DocumentsContract.renameDocument(
             context.contentResolver,
             note.uri,
-            "$newName.md"
+            "$newName.md",
         ) ?: throw IllegalStateException("Failed to rename file in storage")
         Unit
     }
@@ -247,7 +247,7 @@ class ProjectRepositoryImpl(
                 title = preview.title,
                 description = preview.description,
                 imageUrl = preview.imageUrl,
-            )
+            ),
         )
     }
 

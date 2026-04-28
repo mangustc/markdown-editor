@@ -19,7 +19,7 @@ class MarkdownVisualTransformation(
     private val selection: TextRange,
     private val imageAspectRatios: Map<String, Float>,
     private val editorWidth: Int,
-    private val density: Density
+    private val density: Density,
 ) : VisualTransformation {
 
     override fun filter(text: AnnotatedString): TransformedText {
@@ -42,16 +42,16 @@ class MarkdownVisualTransformation(
                     lineHeightStyle = LineHeightStyle(
                         alignment = LineHeightStyle.Alignment.Proportional,
                         trim = LineHeightStyle.Trim.None,
-                    )
+                    ),
                 ),
                 start = span.start,
-                end = span.end
+                end = span.end,
             )
 
             builder.addStyle(
                 style = SpanStyle(color = Color.Transparent),
                 start = span.start,
-                end = span.end
+                end = span.end,
             )
         }
 

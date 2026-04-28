@@ -20,44 +20,49 @@ object MarkdownAnnotator {
                     TokenType.H1 -> addStyle(
                         SpanStyle(
                             fontSize = 2.em,
-                            fontWeight = FontWeight.Bold
-                        ), info.start, info.end
+                            fontWeight = FontWeight.Bold,
+                        ),
+                        info.start, info.end,
                     )
 
                     TokenType.H2 -> addStyle(
                         SpanStyle(
                             fontSize = 1.5.em,
-                            fontWeight = FontWeight.Bold
-                        ), info.start, info.end
+                            fontWeight = FontWeight.Bold,
+                        ),
+                        info.start, info.end,
                     )
 
                     TokenType.H3 -> addStyle(
                         SpanStyle(
                             fontSize = 1.2.em,
-                            fontWeight = FontWeight.Bold
-                        ), info.start, info.end
+                            fontWeight = FontWeight.Bold,
+                        ),
+                        info.start, info.end,
                     )
 
                     TokenType.BOLD -> addStyle(
                         SpanStyle(fontWeight = FontWeight.Bold),
-                        info.start, info.end
+                        info.start, info.end,
                     )
 
                     TokenType.ITALIC -> addStyle(
                         SpanStyle(fontStyle = FontStyle.Italic),
-                        info.start, info.end
+                        info.start, info.end,
                     )
 
                     TokenType.CODE_INLINE -> addStyle(
                         SpanStyle(
                             fontFamily = FontFamily.Monospace,
-                        ), info.start, info.end
+                        ),
+                        info.start, info.end,
                     )
 
                     TokenType.CODE_BLOCK -> addStyle(
                         SpanStyle(
                             fontFamily = FontFamily.Monospace,
-                        ), info.start, info.end
+                        ),
+                        info.start, info.end,
                     )
 
                     TokenType.IMAGE -> addStyle(
@@ -65,14 +70,14 @@ object MarkdownAnnotator {
                             fontWeight = FontWeight.Bold,
                             fontStyle = FontStyle.Italic,
                         ),
-                        info.start, info.end
+                        info.start, info.end,
                     )
 
                     TokenType.FILE -> addStyle(
                         SpanStyle(
                             fontWeight = FontWeight.Bold,
                         ),
-                        info.start, info.end
+                        info.start, info.end,
                     )
                 }
             }

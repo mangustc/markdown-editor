@@ -179,7 +179,7 @@ private fun parseNoteBody(body: String, project: Project): ParsedNoteBody {
 
     return ParsedNoteBody(
         text = text.trim(),
-        attachments = photoAttachments + fileAttachments
+        attachments = photoAttachments + fileAttachments,
     )
 }
 
@@ -193,14 +193,14 @@ fun MessengerScreen(viewModel: AppViewModel) {
     var carouselExpanded by rememberSaveable { mutableStateOf(false) }
 
     val photoPickerLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.PickMultipleVisualMedia()
+        ActivityResultContracts.PickMultipleVisualMedia(),
     ) { uris ->
         uris.forEach { uri ->
             attachments.add(Attachment.PendingPhoto(uri))
         }
     }
     val filePickerLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenMultipleDocuments()
+        ActivityResultContracts.OpenMultipleDocuments(),
     ) { uris ->
         uris.forEach { uri ->
             attachments.add(Attachment.PendingAttachedFile(uri, null))
@@ -230,14 +230,14 @@ fun MessengerScreen(viewModel: AppViewModel) {
                 text = "Open a project folder to see notes",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(16.dp)
+                modifier = Modifier.padding(16.dp),
             )
         }
     } else {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .imePadding()
+                .imePadding(),
         ) {
             MessengerInputBar(
                 value = uiState.messengerNewNoteText,
@@ -251,7 +251,7 @@ fun MessengerScreen(viewModel: AppViewModel) {
                 },
                 onAddPhoto = {
                     photoPickerLauncher.launch(
-                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
                     )
                 },
                 onAddFile = { filePickerLauncher.launch(arrayOf("*/*")) },
@@ -276,12 +276,12 @@ fun MessengerScreen(viewModel: AppViewModel) {
                             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                         }
                         context.startActivity(
-                            Intent.createChooser(intent, null)
+                            Intent.createChooser(intent, null),
                         )
                     } catch (e: Exception) {
                         Toast.makeText(
                             context, "No app found to open this file",
-                            Toast.LENGTH_SHORT
+                            Toast.LENGTH_SHORT,
                         ).show()
                     }
                 },
@@ -300,10 +300,10 @@ fun MessengerScreen(viewModel: AppViewModel) {
                             afterUpdate = {
                                 scope.launch {
                                     if (uiState.messengerNotesList.isNotEmpty()) listState.animateScrollToItem(
-                                        0
+                                        0,
                                     )
                                 }
-                            }
+                            },
                         )
                     }
                 },
@@ -314,11 +314,11 @@ fun MessengerScreen(viewModel: AppViewModel) {
                     .align(Alignment.BottomCenter)
                     .zIndex(1f)
                     .onSizeChanged { inputBarHeightDp = with(density) { it.height.toDp() } }
-                    .fillMaxWidth()
+                    .fillMaxWidth(),
             )
             Column(
                 modifier = Modifier
-                    .fillMaxSize()
+                    .fillMaxSize(),
             ) {
                 Box(
                     modifier = Modifier
@@ -330,7 +330,7 @@ fun MessengerScreen(viewModel: AppViewModel) {
                         uiState.messengerIsLoading -> {
                             Box(
                                 modifier = Modifier.fillMaxSize(),
-                                contentAlignment = Alignment.Center
+                                contentAlignment = Alignment.Center,
                             ) {
                                 CircularProgressIndicator()
                             }
@@ -342,7 +342,7 @@ fun MessengerScreen(viewModel: AppViewModel) {
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 textAlign = TextAlign.Center,
-                                modifier = Modifier.align(Alignment.Center)
+                                modifier = Modifier.align(Alignment.Center),
                             )
                         }
 
@@ -353,7 +353,7 @@ fun MessengerScreen(viewModel: AppViewModel) {
                                 verticalArrangement = Arrangement.spacedBy(6.dp),
                                 contentPadding = PaddingValues(
                                     top = 8.dp,
-                                    bottom = 8.dp
+                                    bottom = 8.dp,
                                 ),
                                 reverseLayout = true,
                             ) {
@@ -362,7 +362,8 @@ fun MessengerScreen(viewModel: AppViewModel) {
                                 }
                                 items(
                                     uiState.messengerNotesList,
-                                    key = { it.uri.toString() }) { note ->
+                                    key = { it.uri.toString() },
+                                ) { note ->
                                     val urls = remember(note.body) {
                                         LinkPreviewFetcher.extractAllUrls(note.body ?: "")
                                     }
@@ -426,12 +427,12 @@ fun MessengerScreen(viewModel: AppViewModel) {
                                                         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                                                     }
                                                     context.startActivity(
-                                                        Intent.createChooser(intent, null)
+                                                        Intent.createChooser(intent, null),
                                                     )
                                                 } catch (e: Exception) {
                                                     Toast.makeText(
                                                         context, "No app found to open this file",
-                                                        Toast.LENGTH_SHORT
+                                                        Toast.LENGTH_SHORT,
                                                     ).show()
                                                 }
                                             },
@@ -440,7 +441,8 @@ fun MessengerScreen(viewModel: AppViewModel) {
                                         Box(
                                             modifier = Modifier.offset {
                                                 IntOffset(touchX.roundToPx(), touchY.roundToPx())
-                                            }) {
+                                            },
+                                        ) {
                                             MenuPopup(
                                                 expanded = menuExpanded,
                                                 onDismissRequest = { menuExpanded = false },
@@ -458,7 +460,7 @@ fun MessengerScreen(viewModel: AppViewModel) {
                                                         onClick = {
                                                             menuExpanded = false
                                                             viewModel.onNoteSelected(note)
-                                                        }
+                                                        },
                                                     )
                                                     MenuPopupItem(
                                                         text = "Copy",
@@ -471,12 +473,12 @@ fun MessengerScreen(viewModel: AppViewModel) {
                                                                     ClipEntry(
                                                                         ClipData.newPlainText(
                                                                             "Note text",
-                                                                            bodyText
-                                                                        )
-                                                                    )
+                                                                            bodyText,
+                                                                        ),
+                                                                    ),
                                                                 )
                                                             }
-                                                        }
+                                                        },
                                                     )
                                                     MenuPopupItem(
                                                         text = "Edit",
@@ -486,13 +488,13 @@ fun MessengerScreen(viewModel: AppViewModel) {
                                                             menuExpanded = false
                                                             viewModel.messengerStartEditNote(
                                                                 note,
-                                                                parsedBody.text
+                                                                parsedBody.text,
                                                             )
                                                             attachments.clear()
                                                             attachments.addAll(parsedBody.attachments)
                                                             if (attachments.isNotEmpty()) carouselExpanded =
                                                                 true
-                                                        }
+                                                        },
                                                     )
                                                     MenuPopupItem(
                                                         text = "Delete",
@@ -503,7 +505,7 @@ fun MessengerScreen(viewModel: AppViewModel) {
                                                         onClick = {
                                                             menuExpanded = false
                                                             viewModel.onDeleteNote(note)
-                                                        }
+                                                        },
                                                     )
                                                 }
                                             }
@@ -522,7 +524,7 @@ fun MessengerScreen(viewModel: AppViewModel) {
         FullScreenPhotoCarouselDialog(
             initialIndex = index,
             uris = uris,
-            onDismiss = { photoPagerState = null }
+            onDismiss = { photoPagerState = null },
         )
     }
 }
@@ -552,7 +554,7 @@ private fun MessengerInputBar(
             .background(
                 color = if (carouselExpanded || isEditing) MaterialTheme.colorScheme.surfaceContainerLow else Color.Transparent,
             )
-            .padding(8.dp)
+            .padding(8.dp),
     ) {
         AnimatedVisibility(
             visible = isEditing,
@@ -619,7 +621,7 @@ private fun MessengerInputBar(
             shape = MaterialTheme.shapes.extraLargeIncreased,
             maxLines = 6,
             keyboardOptions = KeyboardOptions(
-                capitalization = KeyboardCapitalization.Sentences
+                capitalization = KeyboardCapitalization.Sentences,
             ),
             colors = TextFieldDefaults.colors(
                 focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
@@ -658,13 +660,13 @@ private fun MessengerInputBar(
                     ) {
                         Icon(
                             Icons.AutoMirrored.Filled.Send,
-                            contentDescription = if (isEditing) "Save changes" else "Create note"
+                            contentDescription = if (isEditing) "Save changes" else "Create note",
                         )
                     }
                 }
             },
             modifier = Modifier
-                .fillMaxWidth()
+                .fillMaxWidth(),
         )
     }
 }
@@ -687,12 +689,12 @@ private fun AttachmentCarouselStrip(
         itemSpacing = 4.dp,
         modifier = Modifier
             .fillMaxWidth()
-            .wrapContentHeight()
+            .wrapContentHeight(),
     ) { page ->
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .aspectRatio(1f)
+                .aspectRatio(1f),
         ) {
             if (!isViewing && page == 0) {
                 TooltipBox(
@@ -705,9 +707,9 @@ private fun AttachmentCarouselStrip(
                         onClick = onAddPhoto ?: {},
                         shape = IconButtonDefaults.smallSquareShape,
                         colors = IconButtonDefaults.iconButtonColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
                         ),
-                        modifier = Modifier.fillMaxSize()
+                        modifier = Modifier.fillMaxSize(),
                     ) {
                         Column(
                             modifier = Modifier.padding(4.dp),
@@ -741,9 +743,9 @@ private fun AttachmentCarouselStrip(
                         onClick = onAddFile ?: {},
                         shape = IconButtonDefaults.smallSquareShape,
                         colors = IconButtonDefaults.iconButtonColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
                         ),
-                        modifier = Modifier.fillMaxSize()
+                        modifier = Modifier.fillMaxSize(),
                     ) {
                         Column(
                             modifier = Modifier.padding(4.dp),
@@ -778,7 +780,7 @@ private fun AttachmentCarouselStrip(
                                 model = attachment.uri,
                                 contentDescription = null,
                                 contentScale = ContentScale.Crop,
-                                modifier = Modifier.fillMaxSize()
+                                modifier = Modifier.fillMaxSize(),
                             )
                         }
                     }
@@ -793,7 +795,7 @@ private fun AttachmentCarouselStrip(
                                 model = attachment.uri,
                                 contentDescription = null,
                                 contentScale = ContentScale.Crop,
-                                modifier = Modifier.fillMaxSize()
+                                modifier = Modifier.fillMaxSize(),
                             )
                         }
                     }
@@ -805,7 +807,7 @@ private fun AttachmentCarouselStrip(
                             tonalElevation = 2.dp,
                             onClick = { onFileClick(attachment.uri) },
                             modifier = Modifier
-                                .fillMaxSize()
+                                .fillMaxSize(),
                         ) {
                             Column(
                                 modifier = Modifier.padding(4.dp),
@@ -840,7 +842,7 @@ private fun AttachmentCarouselStrip(
                             shape = MaterialTheme.shapes.medium,
                             onClick = { onFileClick(attachment.uri) },
                             modifier = Modifier
-                                .fillMaxSize()
+                                .fillMaxSize(),
                         ) {
                             Column(
                                 modifier = Modifier.padding(4.dp),
@@ -920,7 +922,7 @@ private fun MessageBubble(
                     SpanStyle(
                         color = urlColor,
                         textDecoration = TextDecoration.Underline,
-                    )
+                    ),
                 ) {
                     append(match.value)
                 }
@@ -943,11 +945,11 @@ private fun MessageBubble(
                         topStart = 16.dp,
                         topEnd = 4.dp,
                         bottomStart = 16.dp,
-                        bottomEnd = 16.dp
-                    )
+                        bottomEnd = 16.dp,
+                    ),
                 ),
             color = MaterialTheme.colorScheme.primaryContainer,
-            tonalElevation = 2.dp
+            tonalElevation = 2.dp,
         ) {
             Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
                 if (hasAttachments) {
@@ -981,7 +983,7 @@ private fun MessageBubble(
                                             annotatedBody.getStringAnnotations(
                                                 "URL",
                                                 position,
-                                                position
+                                                position,
                                             )
                                                 .firstOrNull()
                                                 ?.let { uriHandler.openUri(it.item) }
@@ -994,7 +996,7 @@ private fun MessageBubble(
                                             val link = annotatedBody.getStringAnnotations(
                                                 "URL",
                                                 position,
-                                                position
+                                                position,
                                             )
                                                 .firstOrNull()
 
@@ -1006,15 +1008,15 @@ private fun MessageBubble(
                                                     Toast.makeText(
                                                         context,
                                                         "Link copied",
-                                                        Toast.LENGTH_SHORT
+                                                        Toast.LENGTH_SHORT,
                                                     ).show()
                                                     focusManager.clearFocus()
                                                 }
                                             }
                                         }
-                                    }
+                                    },
                                 )
-                            }
+                            },
                         )
                     }
                 }
@@ -1028,7 +1030,7 @@ private fun MessageBubble(
 
                 Row(
                     horizontalArrangement = Arrangement.SpaceBetween,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(
                         text = name,
@@ -1036,13 +1038,13 @@ private fun MessageBubble(
                         color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f, fill = false)
+                        modifier = Modifier.weight(1f, fill = false),
                     )
                     Spacer(Modifier.width(8.dp))
                     Text(
                         text = timeString,
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f)
+                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f),
                     )
                 }
             }
@@ -1055,7 +1057,7 @@ private fun MessageBubble(
 private fun FullScreenPhotoCarouselDialog(
     initialIndex: Int,
     uris: List<Uri>,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
 ) {
     val state = rememberCarouselState(initialItem = initialIndex) { uris.size }
     var showTopPanel by remember { mutableStateOf(true) }
@@ -1064,24 +1066,24 @@ private fun FullScreenPhotoCarouselDialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(
             usePlatformDefaultWidth = false,
-            decorFitsSystemWindows = false
-        )
+            decorFitsSystemWindows = false,
+        ),
     ) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black)
+                .background(Color.Black),
         ) {
             HorizontalUncontainedCarousel(
                 state = state,
                 itemWidth = Dp.Infinity,
                 itemSpacing = 0.dp,
                 flingBehavior = CarouselDefaults.singleAdvanceFlingBehavior(state),
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier.fillMaxSize(),
             ) { page ->
                 ZoomableImage(
                     uri = uris[page],
-                    onTap = { showTopPanel = !showTopPanel }
+                    onTap = { showTopPanel = !showTopPanel },
                 )
             }
 
@@ -1089,7 +1091,7 @@ private fun FullScreenPhotoCarouselDialog(
                 visible = showTopPanel,
                 enter = fadeIn(MaterialTheme.motionScheme.defaultEffectsSpec()),
                 exit = fadeOut(MaterialTheme.motionScheme.defaultEffectsSpec()),
-                modifier = Modifier.align(Alignment.TopCenter)
+                modifier = Modifier.align(Alignment.TopCenter),
             ) {
                 Box(
                     modifier = Modifier
@@ -1104,13 +1106,13 @@ private fun FullScreenPhotoCarouselDialog(
                         tooltip = { PlainTooltip { Text("Go back") } },
                         state = rememberTooltipState(),
                         modifier = Modifier
-                            .align(Alignment.CenterStart)
+                            .align(Alignment.CenterStart),
                     ) {
                         IconButton(onClick = onDismiss) {
                             Icon(
                                 Icons.AutoMirrored.Filled.ArrowBack,
                                 contentDescription = "Back",
-                                tint = Color.White
+                                tint = Color.White,
                             )
                         }
                     }
@@ -1121,7 +1123,7 @@ private fun FullScreenPhotoCarouselDialog(
                         style = MaterialTheme.typography.titleMedium,
                         textAlign = TextAlign.Center,
                         modifier = Modifier
-                            .align(Alignment.Center)
+                            .align(Alignment.Center),
                     )
                 }
             }
@@ -1146,7 +1148,7 @@ private fun ZoomableImage(uri: Uri, onTap: () -> Unit) {
                     onDoubleTap = {
                         scale = 1f
                         offset = Offset.Zero
-                    }
+                    },
                 )
             }
             .pointerInput(Unit) {
@@ -1177,7 +1179,7 @@ private fun ZoomableImage(uri: Uri, onTap: () -> Unit) {
 
                                 offset = Offset(
                                     x = (offset.x + pan.x).coerceIn(-maxX, maxX),
-                                    y = (offset.y + pan.y).coerceIn(-maxY, maxY)
+                                    y = (offset.y + pan.y).coerceIn(-maxY, maxY),
                                 )
                                 event.changes.forEach { it.consume() }
                             } else {
@@ -1186,7 +1188,7 @@ private fun ZoomableImage(uri: Uri, onTap: () -> Unit) {
                         }
                     } while (event.changes.any { it.pressed })
                 }
-            }
+            },
     ) {
         AsyncImage(
             model = uri,
@@ -1198,8 +1200,8 @@ private fun ZoomableImage(uri: Uri, onTap: () -> Unit) {
                     scaleX = scale,
                     scaleY = scale,
                     translationX = offset.x,
-                    translationY = offset.y
-                )
+                    translationY = offset.y,
+                ),
         )
     }
 }
@@ -1216,7 +1218,7 @@ private fun LinkPreviewCarousel(previews: List<LinkPreview>) {
             flingBehavior = CarouselDefaults.singleAdvanceFlingBehavior(state),
             modifier = Modifier
                 .fillMaxWidth()
-                .wrapContentHeight()
+                .wrapContentHeight(),
         ) { page ->
             val preview = previews[page]
             val uriHandler = LocalUriHandler.current
@@ -1284,12 +1286,12 @@ private fun LinkPreviewCarousel(previews: List<LinkPreview>) {
                 contentColor = MaterialTheme.colorScheme.inverseOnSurface,
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .padding(12.dp)
+                    .padding(12.dp),
             ) {
                 Text(
                     text = "${state.currentItem + 1}/${previews.size}",
                     style = MaterialTheme.typography.labelSmall,
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
                 )
             }
         }

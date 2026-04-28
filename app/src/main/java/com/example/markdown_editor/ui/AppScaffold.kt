@@ -113,7 +113,7 @@ fun AppScaffold() {
     val uiState by appViewModel.uiState.collectAsStateWithLifecycle()
 
     val folderPicker = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocumentTree()
+        contract = ActivityResultContracts.OpenDocumentTree(),
     ) { uri ->
         uri?.let { appViewModel.onProjectSelected(it) }
     }
@@ -139,12 +139,12 @@ fun AppScaffold() {
             ) {
                 Column(
                     modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     Button(
                         onClick = { folderPicker.launch(null) },
                         modifier = Modifier
-                            .fillMaxWidth()
+                            .fillMaxWidth(),
                     ) {
                         Icon(Icons.Default.FolderOpen, contentDescription = null)
                         Spacer(Modifier.width(8.dp))
@@ -155,7 +155,7 @@ fun AppScaffold() {
 
                     Button(
                         onClick = { appViewModel.showCreateNoteDialog() },
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
                     ) {
                         Text("Create New Note")
                     }
@@ -176,30 +176,32 @@ fun AppScaffold() {
                                             TooltipBox(
                                                 positionProvider =
                                                     TooltipDefaults.rememberTooltipPositionProvider(
-                                                        TooltipAnchorPosition.Above
+                                                        TooltipAnchorPosition.Above,
                                                     ),
                                                 tooltip = { PlainTooltip { Text("Clear search") } },
                                                 state = rememberTooltipState(),
                                             ) {
-                                                IconButton(onClick = {
-                                                    appViewModel.onSearchQueryChanged("")
-                                                }) {
+                                                IconButton(
+                                                    onClick = {
+                                                        appViewModel.onSearchQueryChanged("")
+                                                    },
+                                                ) {
                                                     Icon(Icons.Default.Close, "Clear search")
                                                 }
                                             }
                                         }
-                                    }
+                                    },
                                 )
                             },
                             expanded = true,
                             onExpandedChange = {},
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier.fillMaxWidth(),
                         ) {
                             if (uiState.searchResults.isEmpty()) {
                                 Text(
                                     "No matches",
                                     modifier = Modifier.padding(16.dp),
-                                    style = MaterialTheme.typography.bodyMedium
+                                    style = MaterialTheme.typography.bodyMedium,
                                 )
                             } else {
                                 LazyColumn(
@@ -209,7 +211,7 @@ fun AppScaffold() {
                                         NoteDrawerItem(
                                             name = note.name,
                                             supportingText = if (!note.tags.isNullOrEmpty()) note.tags.joinToString(
-                                                ", "
+                                                ", ",
                                             ) else null,
                                             isPinned = note.tags?.contains("pinned") == true,
                                             selected = note.uri == uiState.activeNote?.uri,
@@ -231,7 +233,7 @@ fun AppScaffold() {
                     }
                 }
             }
-        }
+        },
     ) {
         Scaffold(
             topBar = {
@@ -241,7 +243,7 @@ fun AppScaffold() {
                             if (navBackStackEntry?.destination?.route == MessengerDestination::class.qualifiedName) "Quick Notes" else uiState.activeNote?.name
                                 ?: "Markdown Editor",
                             maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
+                            overflow = TextOverflow.Ellipsis,
                         )
                     },
                     navigationIcon = {
@@ -249,14 +251,14 @@ fun AppScaffold() {
                             TooltipBox(
                                 positionProvider =
                                     TooltipDefaults.rememberTooltipPositionProvider(
-                                        TooltipAnchorPosition.Above
+                                        TooltipAnchorPosition.Above,
                                     ),
                                 tooltip = { PlainTooltip { Text("Go back") } },
                                 state = rememberTooltipState(),
                             ) {
                                 IconButton(
                                     onClick = { scope.launch { appViewModel.goBack() } },
-                                    shapes = IconButtonDefaults.shapes()
+                                    shapes = IconButtonDefaults.shapes(),
                                 ) {
                                     Icon(
                                         Icons.AutoMirrored.Filled.ArrowBack,
@@ -268,14 +270,14 @@ fun AppScaffold() {
                             TooltipBox(
                                 positionProvider =
                                     TooltipDefaults.rememberTooltipPositionProvider(
-                                        TooltipAnchorPosition.Above
+                                        TooltipAnchorPosition.Above,
                                     ),
                                 tooltip = { PlainTooltip { Text("Open menu") } },
                                 state = rememberTooltipState(),
                             ) {
                                 IconButton(
                                     onClick = { scope.launch { appViewModel.openDrawer() } },
-                                    shapes = IconButtonDefaults.shapes()
+                                    shapes = IconButtonDefaults.shapes(),
                                 ) {
                                     Icon(
                                         Icons.Default.Menu,
@@ -284,14 +286,14 @@ fun AppScaffold() {
                                 }
                             }
                         }
-                    }
+                    },
                 )
-            }
+            },
         ) { innerPadding ->
             NavHost(
                 navController = navController,
                 startDestination = MessengerDestination,
-                modifier = Modifier.padding(innerPadding)
+                modifier = Modifier.padding(innerPadding),
             ) {
                 composable<EditorDestination> { backStackEntry ->
                     val data: EditorDestination = backStackEntry.toRoute()
@@ -312,7 +314,7 @@ fun AppScaffold() {
                 appViewModel.dismissCreateNoteDialog()
             },
             initialName = uiState.newNoteNameInput,
-            onNameChange = { newName -> appViewModel.updateNewNoteName(newName) }
+            onNameChange = { newName -> appViewModel.updateNewNoteName(newName) },
         )
     }
     if (uiState.isNoteDeleteDialogVisible && uiState.dialogNote != null) {
@@ -378,26 +380,27 @@ fun NoteDrawerItem(
                     },
                     inlineContent = if (isPinned) mapOf(
                         Pair(
-                        "inlinePinned",
-                        InlineTextContent(
-                            Placeholder(
-                                width = 1.em,
-                                height = 1.em,
-                                placeholderVerticalAlign = PlaceholderVerticalAlign.Center
-                            )
-                        ) {
-                            Icon(
-                                Icons.Filled.PushPin,
-                                "pinned",
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                    )) else mapOf(),
+                            "inlinePinned",
+                            InlineTextContent(
+                                Placeholder(
+                                    width = 1.em,
+                                    height = 1.em,
+                                    placeholderVerticalAlign = PlaceholderVerticalAlign.Center,
+                                ),
+                            ) {
+                                Icon(
+                                    Icons.Filled.PushPin,
+                                    "pinned",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                )
+                            },
+                        ),
+                    ) else mapOf(),
                     style = LocalTextStyle.current.copy(
                         lineBreak = LineBreak.Paragraph,
                     ),
                     color = if (selected) MaterialTheme.colorScheme.primary
-                    else MaterialTheme.colorScheme.onSurface
+                    else MaterialTheme.colorScheme.onSurface,
                 )
             },
             supportingContent = {
@@ -415,7 +418,7 @@ fun NoteDrawerItem(
                 ) {
                     IconButton(
                         onClick = { menuExpanded = true },
-                        shapes = IconButtonDefaults.shapes()
+                        shapes = IconButtonDefaults.shapes(),
                     ) {
                         Icon(
                             Icons.Default.MoreVert,
@@ -437,14 +440,14 @@ fun NoteDrawerItem(
                             text = "Open",
                             index = 0, count = 4,
                             icon = Icons.AutoMirrored.Outlined.OpenInNew,
-                            onClick = { menuExpanded = false; onOpen() }
+                            onClick = { menuExpanded = false; onOpen() },
                         )
 
                         MenuPopupItem(
                             text = "Rename",
                             index = 1, count = 4,
                             icon = Icons.Outlined.DriveFileRenameOutline,
-                            onClick = { menuExpanded = false; onRename() }
+                            onClick = { menuExpanded = false; onRename() },
                         )
 
                         MenuPopupItem(
@@ -453,7 +456,7 @@ fun NoteDrawerItem(
                             supportingText = "Cannot be undone",
                             icon = Icons.Outlined.Delete,
                             tint = MaterialTheme.colorScheme.error,
-                            onClick = { menuExpanded = false; onDelete() }
+                            onClick = { menuExpanded = false; onDelete() },
                         )
                     }
 
@@ -469,7 +472,7 @@ fun NoteDrawerItem(
                             text = "Show details",
                             index = 3, count = 4,
                             icon = Icons.Outlined.Info,
-                            onClick = { menuExpanded = false; onShowInfo() }
+                            onClick = { menuExpanded = false; onShowInfo() },
                         )
                     }
                 }
@@ -503,7 +506,7 @@ fun CreateNoteDialog(
         },
         confirmButton = {
             Button(
-                onClick = { if (initialName.isNotBlank()) onConfirmCreate() }
+                onClick = { if (initialName.isNotBlank()) onConfirmCreate() },
             ) { Text("Create") }
         },
         dismissButton = {
@@ -569,7 +572,7 @@ fun DeleteNoteDialog(
         confirmButton = {
             Button(
                 onClick = onConfirmDelete,
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
             ) { Text("Delete") }
         },
         dismissButton = {
@@ -592,7 +595,7 @@ fun ShowInfoDialog(
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                     headlineContent = { Text("Name") },
                     supportingContent = { Text(note.name) },
-                    leadingContent = { Icon(Icons.Default.Abc, contentDescription = null) }
+                    leadingContent = { Icon(Icons.Default.Abc, contentDescription = null) },
                 )
                 ListItem(
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),
@@ -602,12 +605,12 @@ fun ShowInfoDialog(
                             note.lastModified,
                             System.currentTimeMillis(),
                             DateUtils.SECOND_IN_MILLIS,
-                            DateUtils.FORMAT_ABBREV_RELATIVE
+                            DateUtils.FORMAT_ABBREV_RELATIVE,
                         )
                         val result = if (!timeString.isNullOrBlank()) timeString else "N/A"
                         Text(result.toString())
                     },
-                    leadingContent = { Icon(Icons.Default.History, contentDescription = null) }
+                    leadingContent = { Icon(Icons.Default.History, contentDescription = null) },
                 )
                 ListItem(
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),
@@ -618,7 +621,7 @@ fun ShowInfoDialog(
                                 note.createdAt,
                                 System.currentTimeMillis(),
                                 DateUtils.SECOND_IN_MILLIS,
-                                DateUtils.FORMAT_ABBREV_RELATIVE
+                                DateUtils.FORMAT_ABBREV_RELATIVE,
                             ) else null
                         val result = if (!timeString.isNullOrBlank()) timeString else "N/A"
                         Text(result.toString())
@@ -626,9 +629,9 @@ fun ShowInfoDialog(
                     leadingContent = {
                         Icon(
                             Icons.Default.CalendarMonth,
-                            contentDescription = null
+                            contentDescription = null,
                         )
-                    }
+                    },
                 )
                 ListItem(
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),
@@ -636,7 +639,7 @@ fun ShowInfoDialog(
                     supportingContent = {
                         Text(if (!note.tags.isNullOrEmpty()) note.tags.joinToString(", ") else "None")
                     },
-                    leadingContent = { Icon(Icons.Default.Tag, contentDescription = null) }
+                    leadingContent = { Icon(Icons.Default.Tag, contentDescription = null) },
                 )
             }
         },

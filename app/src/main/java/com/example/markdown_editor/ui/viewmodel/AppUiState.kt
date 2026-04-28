@@ -26,7 +26,7 @@ data class AppUiState(
     val searchResults: List<Note> = emptyList(),
 
     val editorTextFieldValue: TextFieldValue = TextFieldValue(),
-    val editorAnnotatedString: AnnotatedString = androidx.compose.ui.text.AnnotatedString(""),
+    val editorAnnotatedString: AnnotatedString = AnnotatedString(""),
     val editorSpans: List<SpanInfo> = emptyList(),
 
     val messengerNotesList: List<Note> = emptyList(),

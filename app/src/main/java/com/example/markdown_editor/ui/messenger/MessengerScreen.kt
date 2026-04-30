@@ -125,6 +125,7 @@ import com.example.markdown_editor.domain.parser.MarkdownParser
 import com.example.markdown_editor.ui.components.MenuPopup
 import com.example.markdown_editor.ui.components.MenuPopupGroup
 import com.example.markdown_editor.ui.components.MenuPopupItem
+import com.example.markdown_editor.ui.util.scrollbar
 import com.example.markdown_editor.ui.viewmodel.AppViewModel
 import kotlinx.coroutines.launch
 import java.net.URL
@@ -346,10 +347,12 @@ fun MessengerScreen(viewModel: AppViewModel) {
                 else -> {
                     LazyColumn(
                         state = listState,
-                        modifier = Modifier.fillMaxWidth(),
                         verticalArrangement = Arrangement.spacedBy(6.dp),
                         contentPadding = PaddingValues(top = 8.dp, bottom = 8.dp),
                         reverseLayout = true,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .scrollbar(listState),
                     ) {
                         item(key = "input_spacer") {
                             Spacer(modifier = Modifier.height(inputBarHeightDp))

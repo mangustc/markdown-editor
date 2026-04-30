@@ -53,12 +53,12 @@ import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Surface
@@ -226,7 +226,7 @@ fun MessengerScreen(viewModel: AppViewModel) {
     val density = LocalDensity.current
     var inputBarHeightDp by remember { mutableStateOf(0.dp) }
 
-    if (uiState.project == null) {
+    if (!uiState.messengerIsLoading && uiState.project == null) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text(
                 text = "Open a project folder to see notes",
@@ -318,205 +318,198 @@ fun MessengerScreen(viewModel: AppViewModel) {
                     .onSizeChanged { inputBarHeightDp = with(density) { it.height.toDp() } }
                     .fillMaxWidth(),
             )
-            Column(
-                modifier = Modifier
-                    .fillMaxSize(),
-            ) {
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxSize(),
-                    contentAlignment = Alignment.BottomCenter,
-                ) {
-                    when {
-                        uiState.messengerIsLoading -> {
-                            Box(
-                                modifier = Modifier.fillMaxSize(),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                CircularProgressIndicator()
-                            }
-                        }
+            when {
+                uiState.messengerIsLoading -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        LoadingIndicator()
+                    }
+                }
 
-                        pagedNotes.itemCount == 0 -> {
-                            Text(
-                                text = "No quick notes yet.\nType something below to get started.",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                textAlign = TextAlign.Center,
-                                modifier = Modifier.align(Alignment.Center),
-                            )
-                        }
+                pagedNotes.itemCount == 0 -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = "No quick notes yet.\nType something below to get started.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.align(Alignment.Center),
+                        )
+                    }
+                }
 
-                        else -> {
-                            LazyColumn(
-                                state = listState,
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalArrangement = Arrangement.spacedBy(6.dp),
-                                contentPadding = PaddingValues(top = 8.dp, bottom = 8.dp),
-                                reverseLayout = true,
-                            ) {
-                                item(key = "input_spacer") {
-                                    Spacer(modifier = Modifier.height(inputBarHeightDp))
+                else -> {
+                    LazyColumn(
+                        state = listState,
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                        contentPadding = PaddingValues(top = 8.dp, bottom = 8.dp),
+                        reverseLayout = true,
+                    ) {
+                        item(key = "input_spacer") {
+                            Spacer(modifier = Modifier.height(inputBarHeightDp))
+                        }
+                        items(
+                            count = pagedNotes.itemCount,
+                            key = pagedNotes.itemKey { it.uri.toString() },
+                        ) { index ->
+                            val note = pagedNotes[index]
+                            if (note != null) {
+                                val urls = remember(note.body) {
+                                    LinkPreviewFetcher.extractAllUrls(note.body ?: "")
                                 }
-                                items(
-                                    count = pagedNotes.itemCount,
-                                    key = pagedNotes.itemKey { it.uri.toString() },
-                                ) { index ->
-                                    val note = pagedNotes[index]
-                                    if (note != null) {
-                                        val urls = remember(note.body) {
-                                            LinkPreviewFetcher.extractAllUrls(note.body ?: "")
-                                        }
-                                        LaunchedEffect(urls) {
-                                            urls.forEach { viewModel.messengerEnsureLinkPreview(it) }
-                                        }
-                                        val previews =
-                                            remember(urls, uiState.messengerLinkPreviews) {
-                                                urls.mapNotNull { uiState.messengerLinkPreviews[it] }
+                                LaunchedEffect(urls) {
+                                    urls.forEach { viewModel.messengerEnsureLinkPreview(it) }
+                                }
+                                val previews =
+                                    remember(urls, uiState.messengerLinkPreviews) {
+                                        urls.mapNotNull { uiState.messengerLinkPreviews[it] }
+                                    }
+
+                                val parsedBody = remember(note.body) {
+                                    parseNoteBody(note.body ?: "", uiState.project!!)
+                                }
+                                val bodyText = parsedBody.text.ifBlank { "" }
+
+                                var menuExpanded by remember { mutableStateOf(false) }
+                                var touchX by remember { mutableStateOf(0.dp) }
+                                var touchY by remember { mutableStateOf(0.dp) }
+
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .pointerInput(Unit) {
+                                            awaitEachGesture {
+                                                val event =
+                                                    awaitFirstDown(requireUnconsumed = false)
+                                                touchX =
+                                                    with(density) { event.position.x.toDp() }
+                                                touchY =
+                                                    with(density) { event.position.y.toDp() }
                                             }
-
-                                        val parsedBody = remember(note.body) {
-                                            parseNoteBody(note.body ?: "", uiState.project!!)
                                         }
-                                        val bodyText = parsedBody.text.ifBlank { "" }
-
-                                        var menuExpanded by remember { mutableStateOf(false) }
-                                        var touchX by remember { mutableStateOf(0.dp) }
-                                        var touchY by remember { mutableStateOf(0.dp) }
-
-                                        Box(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .pointerInput(Unit) {
-                                                    awaitEachGesture {
-                                                        val event =
-                                                            awaitFirstDown(requireUnconsumed = false)
-                                                        touchX =
-                                                            with(density) { event.position.x.toDp() }
-                                                        touchY =
-                                                            with(density) { event.position.y.toDp() }
+                                        .clickable(onClick = { menuExpanded = true })
+                                        .padding(PaddingValues(horizontal = 12.dp)),
+                                ) {
+                                    MessageBubble(
+                                        name = note.name,
+                                        createdAt = note.createdAt ?: note.lastModified,
+                                        bodyText = bodyText,
+                                        previews = previews,
+                                        attachments = parsedBody.attachments,
+                                        project = uiState.project,
+                                        onPhotoClick = { clickedUri ->
+                                            val photoUris =
+                                                parsedBody.attachments.mapNotNull {
+                                                    when (it) {
+                                                        is Attachment.Photo -> it.uri
+                                                        is Attachment.PendingPhoto -> it.uri
+                                                        else -> null
                                                     }
                                                 }
-                                                .clickable(onClick = { menuExpanded = true })
-                                                .padding(PaddingValues(horizontal = 12.dp)),
-                                        ) {
-                                            MessageBubble(
-                                                name = note.name,
-                                                createdAt = note.createdAt ?: note.lastModified,
-                                                bodyText = bodyText,
-                                                previews = previews,
-                                                attachments = parsedBody.attachments,
-                                                project = uiState.project,
-                                                onPhotoClick = { clickedUri ->
-                                                    val photoUris =
-                                                        parsedBody.attachments.mapNotNull {
-                                                            when (it) {
-                                                                is Attachment.Photo -> it.uri
-                                                                is Attachment.PendingPhoto -> it.uri
-                                                                else -> null
-                                                            }
-                                                        }
-                                                    val index = photoUris.indexOf(clickedUri)
-                                                    photoPagerState = index to photoUris
-                                                },
-                                                onFileClick = { uri ->
-                                                    try {
-                                                        val mime =
-                                                            context.contentResolver.getType(uri)
-                                                                ?: "*/*"
-                                                        val intent =
-                                                            Intent(Intent.ACTION_VIEW).apply {
-                                                                setDataAndType(uri, mime)
-                                                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                                            }
-                                                        context.startActivity(
-                                                            Intent.createChooser(intent, null),
-                                                        )
-                                                    } catch (e: Exception) {
-                                                        Toast.makeText(
-                                                            context,
-                                                            "No app found to open this file",
-                                                            Toast.LENGTH_SHORT,
-                                                        ).show()
+                                            val index = photoUris.indexOf(clickedUri)
+                                            photoPagerState = index to photoUris
+                                        },
+                                        onFileClick = { uri ->
+                                            try {
+                                                val mime =
+                                                    context.contentResolver.getType(uri)
+                                                        ?: "*/*"
+                                                val intent =
+                                                    Intent(Intent.ACTION_VIEW).apply {
+                                                        setDataAndType(uri, mime)
+                                                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                                                     }
-                                                },
-                                                onClick = { menuExpanded = true },
+                                                context.startActivity(
+                                                    Intent.createChooser(intent, null),
+                                                )
+                                            } catch (e: Exception) {
+                                                Toast.makeText(
+                                                    context,
+                                                    "No app found to open this file",
+                                                    Toast.LENGTH_SHORT,
+                                                ).show()
+                                            }
+                                        },
+                                        onClick = { menuExpanded = true },
+                                    )
+                                    Box(
+                                        modifier = Modifier.offset {
+                                            IntOffset(
+                                                touchX.roundToPx(),
+                                                touchY.roundToPx(),
                                             )
-                                            Box(
-                                                modifier = Modifier.offset {
-                                                    IntOffset(
-                                                        touchX.roundToPx(),
-                                                        touchY.roundToPx(),
-                                                    )
-                                                },
+                                        },
+                                    ) {
+                                        MenuPopup(
+                                            expanded = menuExpanded,
+                                            onDismissRequest = { menuExpanded = false },
+                                        ) { groupInteractionSource ->
+                                            MenuPopupGroup(
+                                                index = 0,
+                                                count = 1,
+                                                label = "Actions",
+                                                interactionSource = groupInteractionSource,
                                             ) {
-                                                MenuPopup(
-                                                    expanded = menuExpanded,
-                                                    onDismissRequest = { menuExpanded = false },
-                                                ) { groupInteractionSource ->
-                                                    MenuPopupGroup(
-                                                        index = 0,
-                                                        count = 1,
-                                                        label = "Actions",
-                                                        interactionSource = groupInteractionSource,
-                                                    ) {
-                                                        MenuPopupItem(
-                                                            text = "Open",
-                                                            index = 0, count = 4,
-                                                            icon = Icons.AutoMirrored.Outlined.OpenInNew,
-                                                            onClick = {
-                                                                menuExpanded = false
-                                                                viewModel.onNoteSelected(note)
-                                                            },
+                                                MenuPopupItem(
+                                                    text = "Open",
+                                                    index = 0, count = 4,
+                                                    icon = Icons.AutoMirrored.Outlined.OpenInNew,
+                                                    onClick = {
+                                                        menuExpanded = false
+                                                        viewModel.onNoteSelected(note)
+                                                    },
+                                                )
+                                                MenuPopupItem(
+                                                    text = "Copy",
+                                                    index = 1, count = 4,
+                                                    icon = Icons.Outlined.ContentCopy,
+                                                    onClick = {
+                                                        menuExpanded = false
+                                                        scope.launch {
+                                                            clipboard.setClipEntry(
+                                                                ClipEntry(
+                                                                    ClipData.newPlainText(
+                                                                        "Note text",
+                                                                        bodyText,
+                                                                    ),
+                                                                ),
+                                                            )
+                                                        }
+                                                    },
+                                                )
+                                                MenuPopupItem(
+                                                    text = "Edit",
+                                                    index = 2, count = 4,
+                                                    icon = Icons.Outlined.Edit,
+                                                    onClick = {
+                                                        menuExpanded = false
+                                                        viewModel.messengerStartEditNote(
+                                                            note,
+                                                            parsedBody.text,
                                                         )
-                                                        MenuPopupItem(
-                                                            text = "Copy",
-                                                            index = 1, count = 4,
-                                                            icon = Icons.Outlined.ContentCopy,
-                                                            onClick = {
-                                                                menuExpanded = false
-                                                                scope.launch {
-                                                                    clipboard.setClipEntry(
-                                                                        ClipEntry(
-                                                                            ClipData.newPlainText(
-                                                                                "Note text",
-                                                                                bodyText,
-                                                                            ),
-                                                                        ),
-                                                                    )
-                                                                }
-                                                            },
-                                                        )
-                                                        MenuPopupItem(
-                                                            text = "Edit",
-                                                            index = 2, count = 4,
-                                                            icon = Icons.Outlined.Edit,
-                                                            onClick = {
-                                                                menuExpanded = false
-                                                                viewModel.messengerStartEditNote(
-                                                                    note,
-                                                                    parsedBody.text,
-                                                                )
-                                                                attachments.clear()
-                                                                attachments.addAll(parsedBody.attachments)
-                                                                if (attachments.isNotEmpty()) carouselExpanded =
-                                                                    true
-                                                            },
-                                                        )
-                                                        MenuPopupItem(
-                                                            text = "Delete",
-                                                            index = 3, count = 4,
-                                                            supportingText = "Cannot be undone",
-                                                            icon = Icons.Outlined.Delete,
-                                                            tint = MaterialTheme.colorScheme.error,
-                                                            onClick = {
-                                                                menuExpanded = false
-                                                                viewModel.onDeleteNote(note)
-                                                            },
-                                                        )
-                                                    }
-                                                }
+                                                        attachments.clear()
+                                                        attachments.addAll(parsedBody.attachments)
+                                                        if (attachments.isNotEmpty()) carouselExpanded =
+                                                            true
+                                                    },
+                                                )
+                                                MenuPopupItem(
+                                                    text = "Delete",
+                                                    index = 3, count = 4,
+                                                    supportingText = "Cannot be undone",
+                                                    icon = Icons.Outlined.Delete,
+                                                    tint = MaterialTheme.colorScheme.error,
+                                                    onClick = {
+                                                        menuExpanded = false
+                                                        viewModel.onDeleteNote(note)
+                                                    },
+                                                )
                                             }
                                         }
                                     }

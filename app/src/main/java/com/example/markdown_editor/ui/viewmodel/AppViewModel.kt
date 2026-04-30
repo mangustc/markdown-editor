@@ -214,6 +214,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch(Dispatchers.IO) {
             repository.saveNoteText(note, text)
             repository.syncDatabase(project)
+            updateNoteLists()
         }
     }
 

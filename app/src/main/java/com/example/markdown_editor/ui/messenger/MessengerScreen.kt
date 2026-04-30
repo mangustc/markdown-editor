@@ -119,6 +119,7 @@ import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
 import coil3.compose.AsyncImage
 import com.example.markdown_editor.data.model.LinkPreview
+import com.example.markdown_editor.data.model.Note
 import com.example.markdown_editor.data.model.Project
 import com.example.markdown_editor.data.util.LinkPreviewFetcher
 import com.example.markdown_editor.domain.parser.MarkdownParser
@@ -221,7 +222,7 @@ fun MessengerScreen(viewModel: AppViewModel) {
     val pagedNotes = viewModel.messengerNotesPaged.collectAsLazyPagingItems()
 
     val listState = rememberLazyListState()
-    val clipboard = LocalClipboard.current
+    LocalClipboard.current
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val density = LocalDensity.current
@@ -363,160 +364,21 @@ fun MessengerScreen(viewModel: AppViewModel) {
                         ) { index ->
                             val note = pagedNotes[index]
                             if (note != null) {
-                                val urls = remember(note.body) {
-                                    LinkPreviewFetcher.extractAllUrls(note.body ?: "")
-                                }
-                                LaunchedEffect(urls) {
-                                    urls.forEach { viewModel.messengerEnsureLinkPreview(it) }
-                                }
-                                val previews =
-                                    remember(urls, uiState.messengerLinkPreviews) {
-                                        urls.mapNotNull { uiState.messengerLinkPreviews[it] }
-                                    }
-
-                                val parsedBody = remember(note.body) {
-                                    parseNoteBody(note.body ?: "", uiState.project!!)
-                                }
-                                val bodyText = parsedBody.text.ifBlank { "" }
-
-                                var menuExpanded by remember { mutableStateOf(false) }
-                                var touchX by remember { mutableStateOf(0.dp) }
-                                var touchY by remember { mutableStateOf(0.dp) }
-
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .pointerInput(Unit) {
-                                            awaitEachGesture {
-                                                val event =
-                                                    awaitFirstDown(requireUnconsumed = false)
-                                                touchX =
-                                                    with(density) { event.position.x.toDp() }
-                                                touchY =
-                                                    with(density) { event.position.y.toDp() }
-                                            }
-                                        }
-                                        .clickable(onClick = { menuExpanded = true })
-                                        .padding(PaddingValues(horizontal = 12.dp)),
-                                ) {
-                                    MessageBubble(
-                                        name = note.name,
-                                        createdAt = note.createdAt ?: note.lastModified,
-                                        bodyText = bodyText,
-                                        previews = previews,
-                                        attachments = parsedBody.attachments,
-                                        project = uiState.project,
-                                        onPhotoClick = { clickedUri ->
-                                            val photoUris =
-                                                parsedBody.attachments.mapNotNull {
-                                                    when (it) {
-                                                        is Attachment.Photo -> it.uri
-                                                        is Attachment.PendingPhoto -> it.uri
-                                                        else -> null
-                                                    }
-                                                }
-                                            val index = photoUris.indexOf(clickedUri)
-                                            photoPagerState = index to photoUris
-                                        },
-                                        onFileClick = { uri ->
-                                            try {
-                                                val mime =
-                                                    context.contentResolver.getType(uri)
-                                                        ?: "*/*"
-                                                val intent =
-                                                    Intent(Intent.ACTION_VIEW).apply {
-                                                        setDataAndType(uri, mime)
-                                                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                                    }
-                                                context.startActivity(
-                                                    Intent.createChooser(intent, null),
-                                                )
-                                            } catch (e: Exception) {
-                                                Toast.makeText(
-                                                    context,
-                                                    "No app found to open this file",
-                                                    Toast.LENGTH_SHORT,
-                                                ).show()
-                                            }
-                                        },
-                                        onClick = { menuExpanded = true },
-                                    )
-                                    Box(
-                                        modifier = Modifier.offset {
-                                            IntOffset(
-                                                touchX.roundToPx(),
-                                                touchY.roundToPx(),
-                                            )
-                                        },
-                                    ) {
-                                        MenuPopup(
-                                            expanded = menuExpanded,
-                                            onDismissRequest = { menuExpanded = false },
-                                        ) { groupInteractionSource ->
-                                            MenuPopupGroup(
-                                                index = 0,
-                                                count = 1,
-                                                label = "Actions",
-                                                interactionSource = groupInteractionSource,
-                                            ) {
-                                                MenuPopupItem(
-                                                    text = "Open",
-                                                    index = 0, count = 4,
-                                                    icon = Icons.AutoMirrored.Outlined.OpenInNew,
-                                                    onClick = {
-                                                        menuExpanded = false
-                                                        viewModel.onNoteSelected(note)
-                                                    },
-                                                )
-                                                MenuPopupItem(
-                                                    text = "Copy",
-                                                    index = 1, count = 4,
-                                                    icon = Icons.Outlined.ContentCopy,
-                                                    onClick = {
-                                                        menuExpanded = false
-                                                        scope.launch {
-                                                            clipboard.setClipEntry(
-                                                                ClipEntry(
-                                                                    ClipData.newPlainText(
-                                                                        "Note text",
-                                                                        bodyText,
-                                                                    ),
-                                                                ),
-                                                            )
-                                                        }
-                                                    },
-                                                )
-                                                MenuPopupItem(
-                                                    text = "Edit",
-                                                    index = 2, count = 4,
-                                                    icon = Icons.Outlined.Edit,
-                                                    onClick = {
-                                                        menuExpanded = false
-                                                        viewModel.messengerStartEditNote(
-                                                            note,
-                                                            parsedBody.text,
-                                                        )
-                                                        attachments.clear()
-                                                        attachments.addAll(parsedBody.attachments)
-                                                        if (attachments.isNotEmpty()) carouselExpanded =
-                                                            true
-                                                    },
-                                                )
-                                                MenuPopupItem(
-                                                    text = "Delete",
-                                                    index = 3, count = 4,
-                                                    supportingText = "Cannot be undone",
-                                                    icon = Icons.Outlined.Delete,
-                                                    tint = MaterialTheme.colorScheme.error,
-                                                    onClick = {
-                                                        menuExpanded = false
-                                                        viewModel.onDeleteNote(note)
-                                                    },
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
+                                MessageBubble(
+                                    note = note,
+                                    project = uiState.project!!,
+                                    linkPreviews = uiState.messengerLinkPreviews,
+                                    onEnsurePreview = { viewModel.messengerEnsureLinkPreview(it) },
+                                    onNoteSelected = { viewModel.onNoteSelected(it) },
+                                    onDeleteNote = { viewModel.onDeleteNote(it) },
+                                    onEditNote = { n, text, attach ->
+                                        viewModel.messengerStartEditNote(n, text)
+                                        attachments.clear()
+                                        attachments.addAll(attach)
+                                        if (attachments.isNotEmpty()) carouselExpanded = true
+                                    },
+                                    onPhotoClick = { idx, uris -> photoPagerState = idx to uris },
+                                )
                             }
                         }
                     }
@@ -896,25 +758,39 @@ private fun AttachmentCarouselStrip(
 
 @Composable
 private fun MessageBubble(
-    name: String,
-    createdAt: Long,
-    bodyText: String,
-    previews: List<LinkPreview>,
-    attachments: List<Attachment>,
-    project: Project?,
-    onPhotoClick: (Uri) -> Unit,
-    onFileClick: (Uri) -> Unit,
-    onClick: () -> Unit,
+    note: Note,
+    project: Project,
+    linkPreviews: Map<String, LinkPreview?>,
+    onEnsurePreview: (String) -> Unit,
+    onNoteSelected: (Note) -> Unit,
+    onDeleteNote: (Note) -> Unit,
+    onEditNote: (Note, String, List<Attachment>) -> Unit,
+    onPhotoClick: (Int, List<Uri>) -> Unit,
 ) {
-    val timeString = remember(createdAt) {
-        SimpleDateFormat("MMM d, HH:mm", Locale.getDefault()).format(Date(createdAt))
+    val context = LocalContext.current
+    val density = LocalDensity.current
+    val scope = rememberCoroutineScope()
+    val clipboard = LocalClipboard.current
+    val uriHandler = LocalUriHandler.current
+    val focusManager = LocalFocusManager.current
+
+    val urls = remember(note.body) { LinkPreviewFetcher.extractAllUrls(note.body ?: "") }
+    LaunchedEffect(urls) { urls.forEach { onEnsurePreview(it) } }
+
+    val previews = remember(urls, linkPreviews) { urls.mapNotNull { linkPreviews[it] } }
+    val parsedBody = remember(note.body) { parseNoteBody(note.body ?: "", project) }
+    val bodyText = parsedBody.text.ifBlank { "" }
+    val timeString = remember(note.createdAt, note.lastModified) {
+        SimpleDateFormat("MMM d, HH:mm", Locale.getDefault()).format(
+            Date(
+                note.createdAt ?: note.lastModified,
+            ),
+        )
     }
 
-    val scope = rememberCoroutineScope()
-    val uriHandler = LocalUriHandler.current
-    val clipboard = LocalClipboard.current
-    val focusManager = LocalFocusManager.current
-    val context = LocalContext.current
+    var menuExpanded by remember { mutableStateOf(false) }
+    var touchX by remember { mutableStateOf(0.dp) }
+    var touchY by remember { mutableStateOf(0.dp) }
 
     val urlColor = MaterialTheme.colorScheme.primary
     val annotatedBody = remember(bodyText) {
@@ -923,12 +799,7 @@ private fun MessageBubble(
             URL_PATTERN.findAll(bodyText).forEach { match ->
                 append(bodyText.substring(lastIndex, match.range.first))
                 pushStringAnnotation(tag = "URL", annotation = match.value)
-                withStyle(
-                    SpanStyle(
-                        color = urlColor,
-                        textDecoration = TextDecoration.Underline,
-                    ),
-                ) {
+                withStyle(SpanStyle(color = urlColor, textDecoration = TextDecoration.Underline)) {
                     append(match.value)
                 }
                 pop()
@@ -939,117 +810,201 @@ private fun MessageBubble(
     }
 
     val layoutResult = remember { mutableStateOf<TextLayoutResult?>(null) }
-    val hasAttachments = attachments.isNotEmpty()
 
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-        Surface(
-            modifier = Modifier
-                .widthIn(min = 80.dp, max = 300.dp)
-                .clip(
-                    RoundedCornerShape(
-                        topStart = 16.dp,
-                        topEnd = 4.dp,
-                        bottomStart = 16.dp,
-                        bottomEnd = 16.dp,
-                    ),
-                ),
-            color = MaterialTheme.colorScheme.primaryContainer,
-            tonalElevation = 2.dp,
-        ) {
-            Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
-                if (hasAttachments) {
-                    AttachmentCarouselStrip(
-                        attachments = attachments,
-                        project = project,
-                        onPhotoClick = onPhotoClick,
-                        onFileClick = onFileClick,
-                        isViewing = true,
-                    )
-                    if (bodyText.isNotBlank()) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                    }
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .pointerInput(Unit) {
+                awaitEachGesture {
+                    val event = awaitFirstDown(requireUnconsumed = false)
+                    touchX = with(density) { event.position.x.toDp() }
+                    touchY = with(density) { event.position.y.toDp() }
                 }
-
-                if (bodyText.isNotBlank()) {
-                    SelectionContainer {
-                        Text(
-                            text = annotatedBody,
-                            style = TextStyle(
-                                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                fontSize = MaterialTheme.typography.bodyMedium.fontSize,
-                                lineHeight = MaterialTheme.typography.bodyMedium.lineHeight,
-                            ),
-                            onTextLayout = { layoutResult.value = it },
-                            modifier = Modifier.pointerInput(Unit) {
-                                detectTapGestures(
-                                    onTap = { offset ->
-                                        layoutResult.value?.let { result ->
-                                            val position = result.getOffsetForPosition(offset)
-                                            annotatedBody.getStringAnnotations(
-                                                "URL",
-                                                position,
-                                                position,
-                                            )
-                                                .firstOrNull()
-                                                ?.let { uriHandler.openUri(it.item) }
-                                                ?: onClick()
-                                        }
-                                    },
-                                    onLongPress = { offset ->
-                                        layoutResult.value?.let { result ->
-                                            val position = result.getOffsetForPosition(offset)
-                                            val link = annotatedBody.getStringAnnotations(
-                                                "URL",
-                                                position,
-                                                position,
-                                            )
-                                                .firstOrNull()
-
-                                            if (link != null) {
-                                                val clipData =
-                                                    ClipData.newPlainText("URL", link.item)
-                                                scope.launch {
-                                                    clipboard.setClipEntry(ClipEntry(clipData))
-                                                    Toast.makeText(
-                                                        context,
-                                                        "Link copied",
-                                                        Toast.LENGTH_SHORT,
-                                                    ).show()
-                                                    focusManager.clearFocus()
-                                                }
-                                            }
-                                        }
-                                    },
-                                )
+            }
+            .clickable(onClick = { menuExpanded = true })
+            .padding(horizontal = 12.dp),
+    ) {
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+            Surface(
+                modifier = Modifier
+                    .widthIn(min = 80.dp, max = 300.dp)
+                    .clip(
+                        RoundedCornerShape(
+                            topStart = 16.dp,
+                            topEnd = 4.dp,
+                            bottomStart = 16.dp,
+                            bottomEnd = 16.dp,
+                        ),
+                    ),
+                color = MaterialTheme.colorScheme.primaryContainer,
+                tonalElevation = 2.dp,
+            ) {
+                Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
+                    if (parsedBody.attachments.isNotEmpty()) {
+                        AttachmentCarouselStrip(
+                            attachments = parsedBody.attachments,
+                            project = project,
+                            onPhotoClick = { clickedUri ->
+                                val photoUris = parsedBody.attachments.mapNotNull {
+                                    when (it) {
+                                        is Attachment.Photo -> it.uri
+                                        is Attachment.PendingPhoto -> it.uri
+                                        else -> null
+                                    }
+                                }
+                                onPhotoClick(photoUris.indexOf(clickedUri), photoUris)
                             },
+                            onFileClick = { uri ->
+                                try {
+                                    val mime = context.contentResolver.getType(uri) ?: "*/*"
+                                    val intent = Intent(Intent.ACTION_VIEW).apply {
+                                        setDataAndType(uri, mime)
+                                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                    }
+                                    context.startActivity(Intent.createChooser(intent, null))
+                                } catch (e: Exception) {
+                                    Toast.makeText(
+                                        context,
+                                        "No app found to open this file",
+                                        Toast.LENGTH_SHORT,
+                                    ).show()
+                                }
+                            },
+                            isViewing = true,
+                        )
+                        if (bodyText.isNotBlank()) Spacer(modifier = Modifier.height(8.dp))
+                    }
+
+                    if (bodyText.isNotBlank()) {
+                        SelectionContainer {
+                            Text(
+                                text = annotatedBody,
+                                style = TextStyle(
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    fontSize = MaterialTheme.typography.bodyMedium.fontSize,
+                                    lineHeight = MaterialTheme.typography.bodyMedium.lineHeight,
+                                ),
+                                onTextLayout = { layoutResult.value = it },
+                                modifier = Modifier.pointerInput(Unit) {
+                                    detectTapGestures(
+                                        onTap = { offset ->
+                                            layoutResult.value?.let { result ->
+                                                val position = result.getOffsetForPosition(offset)
+                                                annotatedBody.getStringAnnotations(
+                                                    "URL",
+                                                    position,
+                                                    position,
+                                                )
+                                                    .firstOrNull()
+                                                    ?.let { uriHandler.openUri(it.item) }
+                                                    ?: run { menuExpanded = true }
+                                            }
+                                        },
+                                        onLongPress = { offset ->
+                                            layoutResult.value?.let { result ->
+                                                val position = result.getOffsetForPosition(offset)
+                                                annotatedBody.getStringAnnotations(
+                                                    "URL",
+                                                    position,
+                                                    position,
+                                                )
+                                                    .firstOrNull()?.let { link ->
+                                                        scope.launch {
+                                                            clipboard.setClipEntry(
+                                                                ClipEntry(
+                                                                    ClipData.newPlainText(
+                                                                        "URL",
+                                                                        link.item,
+                                                                    ),
+                                                                ),
+                                                            )
+                                                            Toast.makeText(
+                                                                context,
+                                                                "Link copied",
+                                                                Toast.LENGTH_SHORT,
+                                                            ).show()
+                                                            focusManager.clearFocus()
+                                                        }
+                                                    }
+                                            }
+                                        },
+                                    )
+                                },
+                            )
+                        }
+                    }
+
+                    if (previews.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        LinkPreviewCarousel(previews = previews)
+                    }
+
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(
+                            text = note.name,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false),
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = timeString,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f),
                         )
                     }
                 }
+            }
+        }
 
-                if (previews.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    LinkPreviewCarousel(previews = previews)
-                }
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                Row(
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(
-                        text = name,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f, fill = false),
+        Box(modifier = Modifier.offset { IntOffset(touchX.roundToPx(), touchY.roundToPx()) }) {
+            MenuPopup(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) { gs ->
+                MenuPopupGroup(index = 0, count = 1, label = "Actions", interactionSource = gs) {
+                    MenuPopupItem(
+                        text = "Open", index = 0, count = 4,
+                        icon = Icons.AutoMirrored.Outlined.OpenInNew,
+                        onClick = { menuExpanded = false; onNoteSelected(note) },
                     )
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        text = timeString,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f),
+                    MenuPopupItem(
+                        text = "Copy", index = 1, count = 4,
+                        icon = Icons.Outlined.ContentCopy,
+                        onClick = {
+                            menuExpanded = false
+                            scope.launch {
+                                clipboard.setClipEntry(
+                                    ClipEntry(
+                                        ClipData.newPlainText(
+                                            "Note text",
+                                            bodyText,
+                                        ),
+                                    ),
+                                )
+                            }
+                        },
+                    )
+                    MenuPopupItem(
+                        text = "Edit", index = 2, count = 4,
+                        icon = Icons.Outlined.Edit,
+                        onClick = {
+                            menuExpanded = false; onEditNote(
+                            note,
+                            parsedBody.text,
+                            parsedBody.attachments,
+                        )
+                        },
+                    )
+                    MenuPopupItem(
+                        text = "Delete", index = 3, count = 4,
+                        supportingText = "Cannot be undone",
+                        icon = Icons.Outlined.Delete,
+                        tint = MaterialTheme.colorScheme.error,
+                        onClick = { menuExpanded = false; onDeleteNote(note) },
                     )
                 }
             }

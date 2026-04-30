@@ -422,6 +422,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             if (project != null) {
                 _uiState.update { it.copy(project = project) }
                 updateNoteLists()
+            } else {
+                _uiState.update { it.copy(messengerIsLoading = false) }
             }
         }
     }

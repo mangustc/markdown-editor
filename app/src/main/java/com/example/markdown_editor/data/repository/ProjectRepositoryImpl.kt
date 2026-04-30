@@ -5,6 +5,7 @@ import android.content.Intent
 import android.content.SharedPreferences
 import android.net.Uri
 import android.provider.DocumentsContract
+import androidx.core.content.edit
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import androidx.sqlite.db.SimpleSQLiteQuery
@@ -13,6 +14,8 @@ import com.example.markdown_editor.data.database.LinkPreviewDao
 import com.example.markdown_editor.data.database.LinkPreviewEntity
 import com.example.markdown_editor.data.database.NoteDao
 import com.example.markdown_editor.data.database.NoteEntity
+import com.example.markdown_editor.data.model.FrontMatter
+import com.example.markdown_editor.data.model.FrontMatterValue
 import com.example.markdown_editor.data.model.LinkPreview
 import com.example.markdown_editor.data.model.Note
 import com.example.markdown_editor.data.model.Project
@@ -67,16 +70,15 @@ class ProjectRepositoryImpl(
 
             if (cached == null || file.lastModified() > cached.lastModified) {
                 val fullText = readFullText(file.uri)
-                val (fmString, body) = splitFrontMatter(fullText)
-                val frontMatter = parseFrontMatter(fmString)
-                val tags = (frontMatter["tags"] as? List<*>)?.joinToString(" ") ?: ""
+                val (frontMatter, body) = FrontMatter.splitFromContent(fullText)
+                val tags = frontMatter.toTagString()
 
                 val entity = NoteEntity(
                     id = cached?.id ?: 0,
                     uri = uriStr,
                     name = file.name?.removeSuffix(".md") ?: "Untitled",
                     lastModified = file.lastModified(),
-                    createdAt = getCreatedAt(frontMatter),
+                    createdAt = frontMatter.toCreatedAtMillis(),
                     tags = tags,
                     body = body,
                 )
@@ -107,16 +109,36 @@ class ProjectRepositoryImpl(
             project.uri,
             Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
         )
-        prefs.edit()
-            .putString(KEY_PROJECT_URI, project.uri.toString())
-            .putString(KEY_PROJECT_NAME, project.name)
-            .apply()
+        prefs.edit {
+            putString(KEY_PROJECT_URI, project.uri.toString())
+                .putString(KEY_PROJECT_NAME, project.name)
+        }
     }
 
     override suspend fun loadSavedProject(): Project? = withContext(Dispatchers.IO) {
         val uriString = prefs.getString(KEY_PROJECT_URI, null) ?: return@withContext null
         val name = prefs.getString(KEY_PROJECT_NAME, null) ?: return@withContext null
         buildProject(uriString.toUri(), name)
+    }
+
+    override suspend fun toggleNotePin(note: Note): String = withContext(Dispatchers.IO) {
+        val fullText = readFullText(note.uri)
+        val (frontMatter, body) = FrontMatter.splitFromContent(fullText)
+
+        val currentTags = frontMatter.tags.toMutableList()
+        if ("pinned" in currentTags) currentTags.remove("pinned") else currentTags.add("pinned")
+
+        val updatedFields = frontMatter.fields.toMutableMap().apply {
+            put("tags", FrontMatterValue.StringList(currentTags))
+        }
+        val updatedFrontMatter = frontMatter.copy(fields = updatedFields)
+        val newFrontMatterString = updatedFrontMatter.toString()
+
+        context.contentResolver.openOutputStream(note.uri, "wt")
+            ?.bufferedWriter()
+            ?.use { it.write("$newFrontMatterString\n$body") }
+
+        newFrontMatterString
     }
 
     override suspend fun createNote(project: Project, name: String?, tags: List<String>?): Uri? =
@@ -142,11 +164,8 @@ class ProjectRepositoryImpl(
 
     override suspend fun getNoteText(note: Note, includeFrontMatter: Boolean): String =
         withContext(Dispatchers.IO) {
-            val fullText = context.contentResolver
-                .openInputStream(note.uri)
-                ?.bufferedReader()
-                ?.use { it.readText() } ?: ""
-            if (includeFrontMatter) fullText else splitFrontMatter(fullText).second
+            val fullText = readFullText(note.uri)
+            if (includeFrontMatter) fullText else FrontMatter.splitFromContent(fullText).first.toString()
         }
 
     override suspend fun saveNoteText(note: Note, text: String): Note =
@@ -158,28 +177,15 @@ class ProjectRepositoryImpl(
         }
 
     override suspend fun getNoteByUri(uri: Uri): Note = withContext(Dispatchers.IO) {
-        val content = try {
-            context.contentResolver.openInputStream(uri)
-                ?.bufferedReader()?.use { it.readText() } ?: ""
-        } catch (e: Exception) {
-            return@withContext Note(
-                name = "Error",
-                uri = uri,
-                lastModified = System.currentTimeMillis(),
-            )
-        }
-
-        val (frontMatterString, _) = splitFrontMatter(content)
-        val frontMatter = parseFrontMatter(frontMatterString)
-        val createdAtLong = getCreatedAt(frontMatter)
+        val (frontMatter, _) = FrontMatter.splitFromContent(readFullText(uri))
         val documentFile = DocumentFile.fromSingleUri(context, uri)
-            ?: return@withContext Note(name = "Unknown", uri = uri, lastModified = 0L)
+            ?: throw Exception()
 
         Note(
             name = documentFile.name?.removeSuffix(".md") ?: "Untitled",
             uri = uri,
             lastModified = documentFile.lastModified(),
-            createdAt = createdAtLong,
+            createdAt = frontMatter.toCreatedAtMillis(),
         )
     }
 
@@ -226,8 +232,6 @@ class ProjectRepositoryImpl(
     override suspend fun getCachedLinkPreview(url: String): LinkPreview? =
         withContext(Dispatchers.IO) {
             linkPreviewDao.getByUrl(url)?.let { entity ->
-                // All-null fields = previously attempted fetch that failed → return null
-                // so the caller can decide whether to retry
                 if (entity.title == null && entity.description == null && entity.imageUrl == null)
                     null
                 else
@@ -250,60 +254,6 @@ class ProjectRepositoryImpl(
             ),
         )
     }
-
-    // ── helpers ──────────────────────────────────────────────────────────────
-
-    private fun splitFrontMatter(content: String): Pair<String, String> {
-        if (!content.trimStart().startsWith("---")) return "" to content
-        val lines = content.lines()
-        val closeIdx = lines.drop(1).indexOfFirst { it.trim() == "---" }
-        if (closeIdx < 0) return "" to content
-        val fmLines = lines.drop(1).take(closeIdx)
-        val bodyLines = lines.drop(closeIdx + 2)
-        return fmLines.joinToString("\n") to bodyLines.joinToString("\n")
-    }
-
-    private fun parseFrontMatter(text: String): Map<String, Any> {
-        val result = mutableMapOf<String, Any>()
-        val lines = text.trim().lines()
-        var i = 0
-
-        while (i < lines.size) {
-            val line = lines[i].trim()
-            if (line.isEmpty() || line.startsWith("#")) {
-                i++; continue
-            }
-
-            val kv = line.split(":", limit = 2).map { it.trim() }
-            if (kv.size != 2) throw IllegalArgumentException("Invalid line format: $line")
-
-            val key = kv[0]
-            val valuePart = kv[1]
-
-            if (valuePart.isEmpty()) {
-                val list = mutableListOf<String>()
-                i++
-                while (i < lines.size && lines[i].trimStart().startsWith("-")) {
-                    list.add(lines[i].trim().removePrefix("-").trim())
-                    i++
-                }
-                result[key] = list.toList()
-            } else {
-                result[key] = valuePart
-                i++
-            }
-        }
-        return result
-    }
-
-    private fun getCreatedAt(frontMatter: Map<String, Any>): Long? =
-        frontMatter["createdAt"]?.let { value ->
-            try {
-                java.time.Instant.parse(value as String).toEpochMilli()
-            } catch (e: Exception) {
-                null
-            }
-        }
 
     private fun readFullText(uri: Uri): String =
         context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() } ?: ""

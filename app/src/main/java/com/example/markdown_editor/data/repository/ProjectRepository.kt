@@ -30,6 +30,7 @@ interface ProjectRepository {
     suspend fun copyToAssets(project: Project, assetUri: Uri): String
     suspend fun deleteNote(note: Note)
     suspend fun renameNote(note: Note, newName: String)
+    suspend fun toggleNotePin(note: Note): String
 
     suspend fun getCachedLinkPreview(url: String): LinkPreview?
     suspend fun saveLinkPreview(preview: LinkPreview)

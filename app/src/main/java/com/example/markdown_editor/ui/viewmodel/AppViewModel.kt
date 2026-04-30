@@ -470,6 +470,15 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun onPinNote(note: Note) {
+        viewModelScope.launch {
+            val project = _uiState.value.project ?: return@launch
+            repository.toggleNotePin(note)
+            repository.syncDatabase(project)
+            updateNoteLists()
+        }
+    }
+
     fun updateNoteLists(afterUpdateSearch: () -> Unit = {}, afterUpdateMessenger: () -> Unit = {}) {
         val project = _uiState.value.project ?: return
         onSearchQueryChanged(afterUpdate = afterUpdateSearch)

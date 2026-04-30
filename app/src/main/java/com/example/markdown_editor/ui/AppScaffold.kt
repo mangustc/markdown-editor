@@ -220,6 +220,7 @@ fun AppScaffold() {
                                             onDelete = { appViewModel.showNoteDeleteDialog(note) },
                                             onRename = { appViewModel.showNoteRenameDialog(note) },
                                             onShowInfo = { appViewModel.showNoteShowInfoDialog(note) },
+                                            onPin = { appViewModel.onPinNote(note) },
                                         )
                                     }
                                 }
@@ -358,6 +359,7 @@ fun NoteDrawerItem(
     isPinned: Boolean = false,
     selected: Boolean,
     onClick: () -> Unit,
+    onPin: () -> Unit,
     onOpen: () -> Unit,
     onDelete: () -> Unit,
     onShowInfo: () -> Unit,
@@ -448,6 +450,13 @@ fun NoteDrawerItem(
                             index = 1, count = 4,
                             icon = Icons.Outlined.DriveFileRenameOutline,
                             onClick = { menuExpanded = false; onRename() },
+                        )
+
+                        MenuPopupItem(
+                            text = if (isPinned) "Unpin" else "Pin",
+                            index = 1, count = 4,
+                            icon = Icons.Default.PushPin,
+                            onClick = { menuExpanded = false; onPin() },
                         )
 
                         MenuPopupItem(

@@ -118,8 +118,10 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         val project = _uiState.value.project ?: return
 
         val parsedInit = SearchQuery.parse(searchQuery.trim())
-        val parsed =
-            parsedInit.copy(negatedTagFilters = parsedInit.negatedTagFilters + "quick-note")
+        val parsed = parsedInit.copy(
+            negatedTagFilters = parsedInit.negatedTagFilters + "quick-note",
+            pinnedFirst = true,
+        )
 
         searchJob?.cancel()
         searchJob = viewModelScope.launch {

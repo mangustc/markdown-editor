@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.material.icons.Icons
@@ -90,6 +89,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
+import androidx.paging.compose.collectAsLazyPagingItems
+import androidx.paging.compose.itemKey
 import com.example.markdown_editor.data.model.Note
 import com.example.markdown_editor.ui.components.MenuPopup
 import com.example.markdown_editor.ui.components.MenuPopupGroup
@@ -130,6 +131,7 @@ fun AppScaffold() {
             }
         }
     }
+    val searchResults = appViewModel.searchResultsPaged.collectAsLazyPagingItems()
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -197,7 +199,7 @@ fun AppScaffold() {
                             onExpandedChange = {},
                             modifier = Modifier.fillMaxWidth(),
                         ) {
-                            if (uiState.searchResults.isEmpty()) {
+                            if (searchResults.itemCount == 0) {
                                 Text(
                                     "No matches",
                                     modifier = Modifier.padding(16.dp),
@@ -207,21 +209,31 @@ fun AppScaffold() {
                                 LazyColumn(
                                     verticalArrangement = Arrangement.spacedBy(2.dp),
                                 ) {
-                                    items(uiState.searchResults) { note ->
-                                        NoteDrawerItem(
-                                            name = note.name,
-                                            supportingText = if (!note.tags.isNullOrEmpty()) note.tags.joinToString(
-                                                ", ",
-                                            ) else null,
-                                            isPinned = note.tags?.contains("pinned") == true,
-                                            selected = note.uri == uiState.activeNote?.uri,
-                                            onClick = { appViewModel.onNoteSelected(note) },
-                                            onOpen = { appViewModel.onNoteSelected(note) },
-                                            onDelete = { appViewModel.showNoteDeleteDialog(note) },
-                                            onRename = { appViewModel.showNoteRenameDialog(note) },
-                                            onShowInfo = { appViewModel.showNoteShowInfoDialog(note) },
-                                            onPin = { appViewModel.onPinNote(note) },
-                                        )
+                                    items(
+                                        count = searchResults.itemCount,
+                                        key = searchResults.itemKey { it.uri.toString() },
+                                    ) { index ->
+                                        val note = searchResults[index]
+                                        if (note != null) {
+                                            NoteDrawerItem(
+                                                name = note.name,
+                                                supportingText = if (!note.tags.isNullOrEmpty()) note.tags.joinToString(
+                                                    ", ",
+                                                ) else null,
+                                                isPinned = note.tags?.contains("pinned") == true,
+                                                selected = note.uri == uiState.activeNote?.uri,
+                                                onClick = { appViewModel.onNoteSelected(note) },
+                                                onOpen = { appViewModel.onNoteSelected(note) },
+                                                onDelete = { appViewModel.showNoteDeleteDialog(note) },
+                                                onRename = { appViewModel.showNoteRenameDialog(note) },
+                                                onShowInfo = {
+                                                    appViewModel.showNoteShowInfoDialog(
+                                                        note,
+                                                    )
+                                                },
+                                                onPin = { appViewModel.onPinNote(note) },
+                                            )
+                                        }
                                     }
                                 }
                             }

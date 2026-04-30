@@ -8,6 +8,10 @@ import android.provider.DocumentsContract
 import androidx.core.content.edit
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import androidx.paging.PagingData
+import androidx.paging.map
 import androidx.sqlite.db.SimpleSQLiteQuery
 import androidx.sqlite.db.SupportSQLiteQuery
 import com.example.markdown_editor.data.database.LinkPreviewDao
@@ -22,6 +26,8 @@ import com.example.markdown_editor.data.model.Project
 import com.example.markdown_editor.data.model.SearchQuery
 import com.example.markdown_editor.data.model.SortBy
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 
 class ProjectRepositoryImpl(
@@ -33,25 +39,28 @@ class ProjectRepositoryImpl(
         Context.MODE_PRIVATE,
     ),
 ) : ProjectRepository {
-
-    override suspend fun getNotes(
+    override fun getNotesPaged(
         project: Project,
         query: SearchQuery,
         includeText: Boolean,
         includeFrontMatter: Boolean,
-    ): List<Note> = withContext(Dispatchers.IO) {
+    ): Flow<PagingData<Note>> {
         val sqlQuery = buildSQLiteQuery(query)
-        val entities = noteDao.searchNotes(sqlQuery)
-
-        entities.map { entity ->
-            Note(
-                name = entity.name,
-                uri = entity.uri.toUri(),
-                lastModified = entity.lastModified,
-                createdAt = entity.createdAt,
-                body = if (includeText) entity.body else null,
-                tags = if (entity.tags.isNotEmpty()) entity.tags.split(" ") else emptyList(),
-            )
+        return Pager(
+            config = PagingConfig(pageSize = 20, enablePlaceholders = false),
+        ) {
+            noteDao.searchNotesPaged(sqlQuery)
+        }.flow.map { pagingData ->
+            pagingData.map { entity ->
+                Note(
+                    name = entity.name,
+                    uri = entity.uri.toUri(),
+                    lastModified = entity.lastModified,
+                    createdAt = entity.createdAt,
+                    body = if (includeText) entity.body else null,
+                    tags = if (entity.tags.isNotEmpty()) entity.tags.split(" ") else emptyList(),
+                )
+            }
         }
     }
 

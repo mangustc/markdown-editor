@@ -23,13 +23,11 @@ data class AppUiState(
     val dialogNote: Note? = null,
 
     val searchQuery: String = "",
-    val searchResults: List<Note> = emptyList(),
 
     val editorTextFieldValue: TextFieldValue = TextFieldValue(),
     val editorAnnotatedString: AnnotatedString = AnnotatedString(""),
     val editorSpans: List<SpanInfo> = emptyList(),
 
-    val messengerNotesList: List<Note> = emptyList(),
     val messengerIsLoading: Boolean = true,
     val messengerNewNoteText: String = "",
     val messengerLinkPreviews: Map<String, LinkPreview?> = emptyMap(),

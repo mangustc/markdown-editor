@@ -1,10 +1,12 @@
 package com.example.markdown_editor.data.repository
 
 import android.net.Uri
+import androidx.paging.PagingData
 import com.example.markdown_editor.data.model.LinkPreview
 import com.example.markdown_editor.data.model.Note
 import com.example.markdown_editor.data.model.Project
 import com.example.markdown_editor.data.model.SearchQuery
+import kotlinx.coroutines.flow.Flow
 
 interface ProjectRepository {
     fun buildProject(rootUri: Uri, name: String): Project
@@ -16,12 +18,12 @@ interface ProjectRepository {
         tags: List<String>? = emptyList(),
     ): Uri?
 
-    suspend fun getNotes(
+    fun getNotesPaged(
         project: Project,
         query: SearchQuery = SearchQuery(),
         includeText: Boolean = false,
         includeFrontMatter: Boolean = true,
-    ): List<Note>
+    ): Flow<PagingData<Note>>
 
     suspend fun getNoteText(note: Note, includeFrontMatter: Boolean = true): String
     suspend fun saveNoteText(note: Note, text: String): Note

@@ -1,5 +1,6 @@
 package com.example.markdown_editor.data.database
 
+import androidx.paging.PagingSource
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
@@ -21,6 +22,6 @@ interface NoteDao {
     @RawQuery
     suspend fun searchNotes(query: SupportSQLiteQuery): List<NoteEntity>
 
-    @Query("SELECT * FROM notes ORDER BY lastModified DESC")
-    fun getAllNotesPaged(): androidx.paging.PagingSource<Int, NoteEntity>
+    @RawQuery(observedEntities = [NoteEntity::class, NoteEntityFts::class])
+    fun searchNotesPaged(query: SupportSQLiteQuery): PagingSource<Int, NoteEntity>
 }

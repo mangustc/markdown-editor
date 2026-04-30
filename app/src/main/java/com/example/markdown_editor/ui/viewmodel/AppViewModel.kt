@@ -7,6 +7,8 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.core.net.toUri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.paging.PagingData
+import androidx.paging.cachedIn
 import androidx.room.Room
 import com.example.markdown_editor.data.database.NoteDb
 import com.example.markdown_editor.data.model.Note
@@ -20,16 +22,22 @@ import com.example.markdown_editor.ui.editor.EditorEvent
 import com.example.markdown_editor.ui.editor.MarkdownAnnotator
 import com.example.markdown_editor.ui.messenger.Attachment
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class AppViewModel(application: Application) : AndroidViewModel(application) {
     private val db = Room.databaseBuilder(
         application,
@@ -60,6 +68,34 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _navigationEvents = Channel<NavigationEvent>(Channel.BUFFERED)
     val navigationEvents = _navigationEvents.receiveAsFlow()
+
+    val searchResultsPaged: Flow<PagingData<Note>> = _uiState
+        .map { it.project to it.searchQuery }
+        .distinctUntilChanged()
+        .flatMapLatest { (project, queryStr) ->
+            if (project == null) return@flatMapLatest emptyFlow()
+            val parsedInit = SearchQuery.parse(queryStr.trim())
+            val parsed = parsedInit.copy(
+                negatedTagFilters = parsedInit.negatedTagFilters + "quick-note",
+                pinnedFirst = true,
+            )
+            repository.getNotesPaged(project, parsed)
+        }
+        .cachedIn(viewModelScope)
+
+    val messengerNotesPaged: Flow<PagingData<Note>> = _uiState
+        .map { it.project }
+        .distinctUntilChanged()
+        .flatMapLatest { project ->
+            if (project == null) return@flatMapLatest emptyFlow()
+            repository.getNotesPaged(
+                project,
+                SearchQuery(tagFilters = listOf("quick-note"), sortBy = SortBy.CREATED_AT),
+                includeText = true,
+                includeFrontMatter = false,
+            )
+        }
+        .cachedIn(viewModelScope)
 
     fun openDrawer() {
         viewModelScope.launch { _navigationEvents.send(NavigationEvent.OpenDrawer) }
@@ -111,23 +147,11 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    private var searchJob: Job? = null
     fun onSearchQueryChanged(raw: String? = null, afterUpdate: () -> Unit = {}) {
         if (raw != null) _uiState.update { it.copy(searchQuery = raw) }
-        val searchQuery = _uiState.value.searchQuery
         val project = _uiState.value.project ?: return
-
-        val parsedInit = SearchQuery.parse(searchQuery.trim())
-        val parsed = parsedInit.copy(
-            negatedTagFilters = parsedInit.negatedTagFilters + "quick-note",
-            pinnedFirst = true,
-        )
-
-        searchJob?.cancel()
-        searchJob = viewModelScope.launch {
+        viewModelScope.launch {
             repository.syncDatabase(project)
-            val results = repository.getNotes(project, parsed)
-            _uiState.update { it.copy(searchResults = results) }
             afterUpdate()
         }
     }
@@ -221,19 +245,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     fun messengerOnMessengerOpened(project: Project, afterUpdate: () -> Unit = {}) {
         viewModelScope.launch {
             repository.syncDatabase(project)
-            val notes = repository.getNotes(
-                project,
-                SearchQuery(tagFilters = listOf("quick-note"), sortBy = SortBy.CREATED_AT),
-                includeText = true,
-                includeFrontMatter = false,
-            )
-            _uiState.update { it.copy(messengerNotesList = notes, messengerIsLoading = false) }
-
-            // Pre-warm in-memory cache from DB for all URLs in all notes
-            notes.forEach { note ->
-                LinkPreviewFetcher.extractAllUrls(note.body ?: "")
-                    .forEach { messengerEnsureLinkPreview(it) }
-            }
+            _uiState.update { it.copy(messengerIsLoading = false) }
             afterUpdate()
         }
     }

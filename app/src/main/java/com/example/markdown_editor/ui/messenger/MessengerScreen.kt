@@ -35,7 +35,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -364,21 +363,41 @@ fun MessengerScreen(viewModel: AppViewModel) {
                         ) { index ->
                             val note = pagedNotes[index]
                             if (note != null) {
-                                MessageBubble(
-                                    note = note,
-                                    project = uiState.project!!,
-                                    linkPreviews = uiState.messengerLinkPreviews,
-                                    onEnsurePreview = { viewModel.messenger.ensureLinkPreview(it) },
-                                    onNoteSelected = { viewModel.navigation.onNoteSelected(it) },
-                                    onDeleteNote = { viewModel.navigation.onDeleteNote(it) },
-                                    onEditNote = { n, text, attach ->
-                                        viewModel.messenger.startEditNote(n, text)
-                                        attachments.clear()
-                                        attachments.addAll(attach)
-                                        if (attachments.isNotEmpty()) carouselExpanded = true
-                                    },
-                                    onPhotoClick = { idx, uris -> photoPagerState = idx to uris },
-                                )
+                                val currentTimestamp = note.createdAt ?: note.lastModified
+                                val prevNote =
+                                    if (index + 1 < pagedNotes.itemCount) pagedNotes[index + 1] else null
+                                val prevTimestamp =
+                                    prevNote?.let { it.createdAt ?: it.lastModified }
+
+                                Column(
+                                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                                    modifier = Modifier.padding(top = 2.dp),
+                                ) {
+                                    if (prevTimestamp == null || !isSameDay(
+                                            currentTimestamp,
+                                            prevTimestamp,
+                                        )
+                                    ) {
+                                        DateHeader(currentTimestamp)
+                                    }
+                                    MessageBubble(
+                                        note = note,
+                                        project = uiState.project!!,
+                                        linkPreviews = uiState.messengerLinkPreviews,
+                                        onEnsurePreview = { viewModel.messenger.ensureLinkPreview(it) },
+                                        onNoteSelected = { viewModel.navigation.onNoteSelected(it) },
+                                        onDeleteNote = { viewModel.navigation.onDeleteNote(it) },
+                                        onEditNote = { n, text, attach ->
+                                            viewModel.messenger.startEditNote(n, text)
+                                            attachments.clear()
+                                            attachments.addAll(attach)
+                                            if (attachments.isNotEmpty()) carouselExpanded = true
+                                        },
+                                        onPhotoClick = { idx, uris ->
+                                            photoPagerState = idx to uris
+                                        },
+                                    )
+                                }
                             }
                         }
                     }
@@ -827,7 +846,7 @@ private fun MessageBubble(
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
             Surface(
                 modifier = Modifier
-                    .widthIn(min = 80.dp, max = 300.dp)
+                    .fillMaxWidth(fraction = 0.9f)
                     .clip(
                         RoundedCornerShape(
                             topStart = 16.dp,
@@ -1008,6 +1027,35 @@ private fun MessageBubble(
                     )
                 }
             }
+        }
+    }
+}
+
+private fun isSameDay(t1: Long, t2: Long): Boolean {
+    val fmt = SimpleDateFormat("yyyyMMdd", Locale.getDefault())
+    return fmt.format(Date(t1)) == fmt.format(Date(t2))
+}
+
+@Composable
+private fun DateHeader(timestamp: Long) {
+    val dateStr = remember(timestamp) {
+        SimpleDateFormat("MMM d", Locale.getDefault()).format(Date(timestamp))
+    }
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier
+            .fillMaxWidth(),
+    ) {
+        Surface(
+            color = MaterialTheme.colorScheme.secondaryContainer,
+            shape = CircleShape,
+        ) {
+            Text(
+                text = dateStr,
+                style = MaterialTheme.typography.labelMedium,
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
+            )
         }
     }
 }
@@ -1198,7 +1246,7 @@ private fun LinkPreviewCarousel(previews: List<LinkPreview>) {
                             contentDescription = preview.title,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(140.dp)
+                                .aspectRatio(16f / 9f)
                                 .clip(RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp)),
                             contentScale = ContentScale.Crop,
                         )

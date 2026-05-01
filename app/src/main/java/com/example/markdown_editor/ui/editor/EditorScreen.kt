@@ -80,7 +80,7 @@ fun EditorScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     LaunchedEffect(noteUriString) {
-        viewModel.editorOnNoteOpened(noteUriString)
+        viewModel.editor.editorOnNoteOpened(noteUriString)
     }
 
     var imageAspectRatios by remember { mutableStateOf(mapOf<String, Float>()) }
@@ -115,7 +115,7 @@ fun EditorScreen(
         contract = ActivityResultContracts.PickVisualMedia(),
     ) { uri ->
         if (uri != null) {
-            viewModel.editorOnEvent(EditorEvent.AttachPhoto(uri = uri))
+            viewModel.editor.editorOnEvent(EditorEvent.AttachPhoto(uri = uri))
         }
     }
 
@@ -123,7 +123,7 @@ fun EditorScreen(
         contract = ActivityResultContracts.OpenDocument(),
     ) { uri ->
         if (uri != null) {
-            viewModel.editorOnEvent(EditorEvent.AttachFile(uri = uri))
+            viewModel.editor.editorOnEvent(EditorEvent.AttachFile(uri = uri))
         }
     }
 
@@ -173,7 +173,7 @@ fun EditorScreen(
             ) {
                 IconButton(
                     onClick = {
-                        viewModel.editorOnEvent(
+                        viewModel.editor.editorOnEvent(
                             EditorEvent.InsertSyntax(
                                 "****",
                                 2,
@@ -192,7 +192,7 @@ fun EditorScreen(
             ) {
                 IconButton(
                     onClick = {
-                        viewModel.editorOnEvent(
+                        viewModel.editor.editorOnEvent(
                             EditorEvent.InsertSyntax(
                                 "**",
                                 1,
@@ -211,7 +211,7 @@ fun EditorScreen(
             ) {
                 IconButton(
                     onClick = {
-                        viewModel.editorOnEvent(
+                        viewModel.editor.editorOnEvent(
                             EditorEvent.InsertSyntax(
                                 "``",
                                 1,
@@ -228,7 +228,7 @@ fun EditorScreen(
                 tooltip = { PlainTooltip { Text("Save file") } },
                 state = rememberTooltipState(),
             ) {
-                IconButton(onClick = { viewModel.editorOnSave() }) {
+                IconButton(onClick = { viewModel.editor.editorOnSave() }) {
                     Icon(Icons.Default.Save, contentDescription = "Save file")
                 }
             }
@@ -246,7 +246,7 @@ fun EditorScreen(
             ) {
                 BasicTextField(
                     value = uiState.editorTextFieldValue,
-                    onValueChange = { viewModel.editorOnContentChanged(it) },
+                    onValueChange = { viewModel.editor.editorOnContentChanged(it) },
                     visualTransformation = visualTransformation,
                     textStyle = MaterialTheme.typography.bodyLarge.copy(
                         color = MaterialTheme.colorScheme.onSurface,

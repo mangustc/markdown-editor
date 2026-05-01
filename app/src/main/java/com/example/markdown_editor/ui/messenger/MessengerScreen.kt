@@ -211,7 +211,7 @@ fun MessengerScreen(viewModel: AppViewModel) {
     }
 
     LaunchedEffect(uiState.project) {
-        uiState.project?.let { viewModel.messengerOnMessengerOpened(it) }
+        uiState.project?.let { viewModel.messenger.onMessengerOpened(it) }
     }
 
     LaunchedEffect(Unit) {
@@ -219,7 +219,7 @@ fun MessengerScreen(viewModel: AppViewModel) {
         if (pending.isNotEmpty()) carouselExpanded = true
         attachments.addAll(pending)
     }
-    val pagedNotes = viewModel.messengerNotesPaged.collectAsLazyPagingItems()
+    val pagedNotes = viewModel.messenger.notesPaged.collectAsLazyPagingItems()
 
     val listState = rememberLazyListState()
     LocalClipboard.current
@@ -245,11 +245,11 @@ fun MessengerScreen(viewModel: AppViewModel) {
         ) {
             MessengerInputBar(
                 value = uiState.messengerNewNoteText,
-                onValueChange = { viewModel.messengerOnNewNoteTextChanged(it) },
+                onValueChange = { viewModel.messenger.onNewNoteTextChanged(it) },
                 attachments = attachments,
                 isEditing = uiState.messengerEditingNote != null,
                 onCancelEdit = {
-                    viewModel.messengerCancelEditNote()
+                    viewModel.messenger.cancelEditNote()
                     attachments.clear()
                     carouselExpanded = false
                 },
@@ -294,12 +294,12 @@ fun MessengerScreen(viewModel: AppViewModel) {
                     val snapshot = attachments.toList()
                     attachments.clear()
                     if (uiState.messengerEditingNote != null) {
-                        viewModel.messengerOnSaveEditedNote(
+                        viewModel.messenger.onSaveEditedNote(
                             attachments = snapshot,
                             afterUpdate = {},
                         )
                     } else {
-                        viewModel.messengerOnSendNote(
+                        viewModel.messenger.onSendNote(
                             attachments = snapshot,
                             afterUpdate = {
                                 scope.launch {
@@ -368,11 +368,11 @@ fun MessengerScreen(viewModel: AppViewModel) {
                                     note = note,
                                     project = uiState.project!!,
                                     linkPreviews = uiState.messengerLinkPreviews,
-                                    onEnsurePreview = { viewModel.messengerEnsureLinkPreview(it) },
-                                    onNoteSelected = { viewModel.onNoteSelected(it) },
-                                    onDeleteNote = { viewModel.onDeleteNote(it) },
+                                    onEnsurePreview = { viewModel.messenger.ensureLinkPreview(it) },
+                                    onNoteSelected = { viewModel.navigation.onNoteSelected(it) },
+                                    onDeleteNote = { viewModel.navigation.onDeleteNote(it) },
                                     onEditNote = { n, text, attach ->
-                                        viewModel.messengerStartEditNote(n, text)
+                                        viewModel.messenger.startEditNote(n, text)
                                         attachments.clear()
                                         attachments.addAll(attach)
                                         if (attachments.isNotEmpty()) carouselExpanded = true

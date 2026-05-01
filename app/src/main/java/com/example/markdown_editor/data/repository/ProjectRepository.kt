@@ -18,6 +18,13 @@ interface ProjectRepository {
         tags: List<String>? = emptyList(),
     ): Uri?
 
+    suspend fun getNotes(
+        project: Project,
+        query: SearchQuery = SearchQuery(),
+        includeText: Boolean = false,
+        includeFrontMatter: Boolean = true,
+    ): List<Note>
+
     fun getNotesPaged(
         project: Project,
         query: SearchQuery = SearchQuery(),

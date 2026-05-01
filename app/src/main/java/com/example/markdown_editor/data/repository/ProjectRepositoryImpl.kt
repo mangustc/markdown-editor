@@ -39,6 +39,27 @@ class ProjectRepositoryImpl(
         Context.MODE_PRIVATE,
     ),
 ) : ProjectRepository {
+    override suspend fun getNotes(
+        project: Project,
+        query: SearchQuery,
+        includeText: Boolean,
+        includeFrontMatter: Boolean,
+    ): List<Note> = withContext(Dispatchers.IO) {
+        val sqlQuery = buildSQLiteQuery(query)
+        val entities = noteDao.searchNotes(sqlQuery)
+
+        entities.map { entity ->
+            Note(
+                name = entity.name,
+                uri = entity.uri.toUri(),
+                lastModified = entity.lastModified,
+                createdAt = entity.createdAt,
+                body = if (includeText) entity.body else null,
+                tags = if (entity.tags.isNotEmpty()) entity.tags.split(" ") else emptyList(),
+            )
+        }
+    }
+
     override fun getNotesPaged(
         project: Project,
         query: SearchQuery,
@@ -47,7 +68,11 @@ class ProjectRepositoryImpl(
     ): Flow<PagingData<Note>> {
         val sqlQuery = buildSQLiteQuery(query)
         return Pager(
-            config = PagingConfig(pageSize = 20, enablePlaceholders = false),
+            config = PagingConfig(
+                pageSize = 50,
+                prefetchDistance = 20,
+                enablePlaceholders = false,
+            ),
         ) {
             noteDao.searchNotesPaged(sqlQuery)
         }.flow.map { pagingData ->

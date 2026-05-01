@@ -32,6 +32,7 @@ data class AppUiState(
     val messengerNewNoteText: String = "",
     val messengerLinkPreviews: Map<String, LinkPreview?> = emptyMap(),
     val messengerEditingNote: Note? = null,
+    val messengerPinnedNotes: List<Note> = emptyList(),
 
     val pendingIntentAttachments: List<Attachment> = emptyList(),
 )

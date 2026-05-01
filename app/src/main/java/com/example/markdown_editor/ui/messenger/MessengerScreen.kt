@@ -75,6 +75,7 @@ import androidx.compose.material3.carousel.rememberCarouselState
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateListOf
@@ -223,8 +224,28 @@ fun MessengerScreen(viewModel: AppViewModel) {
     val pagedNotes = viewModel.messenger.notesPaged.collectAsLazyPagingItems()
 
     val listState = rememberLazyListState()
-    LocalClipboard.current
+    val currentPinnedInfo by remember {
+        derivedStateOf {
+            val pinned = uiState.messengerPinnedNotes
+            if (pinned.isEmpty()) return@derivedStateOf null
+
+            val pinnedIndicesInList = pinned.map { pinnedNote ->
+                pagedNotes.itemSnapshotList.items.indexOfFirst { it.uri == pinnedNote.uri }
+            }
+
+            val firstVisible = listState.firstVisibleItemIndex
+            val targetIdx = pinnedIndicesInList.indexOfFirst { it >= firstVisible }
+
+            if (targetIdx == -1) {
+                pinned.size - 1
+            } else {
+                targetIdx
+            }
+        }
+    }
+
     val scope = rememberCoroutineScope()
+
     val context = LocalContext.current
     val density = LocalDensity.current
     var inputBarHeightDp by remember { mutableStateOf(0.dp) }
@@ -283,7 +304,7 @@ fun MessengerScreen(viewModel: AppViewModel) {
                         context.startActivity(
                             Intent.createChooser(intent, null),
                         )
-                    } catch (e: Exception) {
+                    } catch (_: Exception) {
                         Toast.makeText(
                             context, "No app found to open this file",
                             Toast.LENGTH_SHORT,
@@ -312,7 +333,6 @@ fun MessengerScreen(viewModel: AppViewModel) {
                         )
                     }
                 },
-                project = uiState.project,
                 carouselExpanded = carouselExpanded,
                 onCarouselExpandClick = { carouselExpanded = !carouselExpanded },
                 modifier = Modifier
@@ -347,10 +367,38 @@ fun MessengerScreen(viewModel: AppViewModel) {
                 }
 
                 else -> {
+                    var pinnedBannerHeightDp by remember { mutableStateOf(0.dp) }
+                    if (uiState.messengerPinnedNotes.isNotEmpty()) {
+                        PinnedMessageBanner(
+                            notes = uiState.messengerPinnedNotes,
+                            currentIndex = currentPinnedInfo ?: 0,
+                            onClick = { note ->
+                                scope.launch {
+                                    val indexInList =
+                                        pagedNotes.itemSnapshotList.items.indexOfFirst {
+                                            it.uri == note.uri
+                                        }
+                                    if (indexInList != -1) {
+                                        listState.animateScrollToItem(indexInList)
+                                    }
+                                }
+                            },
+                            modifier = Modifier
+                                .align(Alignment.TopCenter)
+                                .zIndex(2f)
+                                .fillMaxWidth()
+                                .onSizeChanged {
+                                    pinnedBannerHeightDp = with(density) { it.height.toDp() }
+                                },
+                        )
+                    }
                     LazyColumn(
                         state = listState,
                         verticalArrangement = Arrangement.spacedBy(6.dp),
-                        contentPadding = PaddingValues(top = 8.dp, bottom = 8.dp),
+                        contentPadding = PaddingValues(
+                            top = pinnedBannerHeightDp + 8.dp,
+                            bottom = 8.dp,
+                        ),
                         reverseLayout = true,
                         modifier = Modifier
                             .fillMaxWidth()
@@ -433,7 +481,6 @@ private fun MessengerInputBar(
     onFileClick: (Uri) -> Unit,
     onRemoveAttachment: (Int) -> Unit,
     onSend: () -> Unit,
-    project: Project?,
     carouselExpanded: Boolean,
     onCarouselExpandClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -501,7 +548,6 @@ private fun MessengerInputBar(
                 onPhotoClick = onPhotoClick,
                 onFileClick = onFileClick,
                 isViewing = false,
-                project = project,
             )
         }
         TextField(
@@ -569,7 +615,6 @@ private fun AttachmentCarouselStrip(
     onRemove: ((Int) -> Unit)? = null,
     onPhotoClick: (Uri) -> Unit,
     onFileClick: (Uri) -> Unit,
-    project: Project?,
     isViewing: Boolean,
 ) {
     val state = rememberCarouselState { if (isViewing) attachments.size else attachments.size + 2 }
@@ -868,7 +913,6 @@ private fun MessageBubble(
                     if (parsedBody.attachments.isNotEmpty()) {
                         AttachmentCarouselStrip(
                             attachments = parsedBody.attachments,
-                            project = project,
                             onPhotoClick = { clickedUri ->
                                 val photoUris = parsedBody.attachments.mapNotNull {
                                     when (it) {
@@ -887,7 +931,7 @@ private fun MessageBubble(
                                         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                                     }
                                     context.startActivity(Intent.createChooser(intent, null))
-                                } catch (e: Exception) {
+                                } catch (_: Exception) {
                                     Toast.makeText(
                                         context,
                                         "No app found to open this file",
@@ -1038,6 +1082,65 @@ private fun MessageBubble(
                         onClick = { menuExpanded = false; onDeleteNote(note) },
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PinnedMessageBanner(
+    notes: List<Note>,
+    currentIndex: Int,
+    onClick: (Note) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val currentNote = notes.getOrNull(currentIndex) ?: return
+
+    val displayPreview = remember(currentNote.body) {
+        val rawBody = currentNote.body ?: ""
+        val cleaned = rawBody
+            .replace(MarkdownParser.IMAGE_REGEX, "")
+            .replace(MarkdownParser.FILE_REGEX, "")
+            .trim()
+            .lines()
+            .firstOrNull { it.isNotBlank() } ?: "Attachment"
+        cleaned
+    }
+
+    Surface(
+        onClick = { onClick(currentNote) },
+        color = MaterialTheme.colorScheme.background,
+        shadowElevation = 4.dp,
+        shape = MaterialTheme.shapes.medium,
+        modifier = modifier
+            .padding(8.dp),
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(horizontal = 12.dp, vertical = 8.dp)
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = Icons.Default.PushPin,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(20.dp),
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Pinned message #${currentIndex + 1}",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                Text(
+                    text = displayPreview,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
         }
     }

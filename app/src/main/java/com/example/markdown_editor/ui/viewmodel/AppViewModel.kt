@@ -344,7 +344,21 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         fun onMessengerOpened(project: Project, afterUpdate: () -> Unit = {}) {
             viewModelScope.launch {
                 repository.syncDatabase(project)
-                _uiState.update { it.copy(messengerIsLoading = false) }
+                val pinnedNotes = repository.getNotes(
+                    project = project,
+                    SearchQuery(
+                        tagFilters = listOf("quick-note", "pinned"),
+                        sortBy = SortBy.CREATED_AT,
+                    ),
+                    includeText = true,
+                    includeFrontMatter = false,
+                )
+                _uiState.update {
+                    it.copy(
+                        messengerPinnedNotes = pinnedNotes,
+                        messengerIsLoading = false,
+                    )
+                }
                 afterUpdate()
             }
         }

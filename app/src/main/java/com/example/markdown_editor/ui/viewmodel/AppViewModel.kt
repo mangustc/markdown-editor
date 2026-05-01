@@ -21,6 +21,7 @@ import com.example.markdown_editor.domain.parser.MarkdownParser
 import com.example.markdown_editor.ui.editor.EditorEvent
 import com.example.markdown_editor.ui.editor.MarkdownAnnotator
 import com.example.markdown_editor.ui.messenger.Attachment
+import com.example.markdown_editor.ui.messenger.AttachmentType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
@@ -403,20 +404,20 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
                 val attachmentLines = buildString {
                     attachments.forEach { attachment ->
-                        when (attachment) {
-                            is Attachment.PendingPhoto -> {
+                        when (attachment.type) {
+                            AttachmentType.PENDING_IMAGE -> {
                                 val path = repository.copyToAssets(project, attachment.uri)
                                 append("\n![image](<$path>)")
                             }
 
-                            is Attachment.PendingAttachedFile -> {
+                            AttachmentType.PENDING_FILE -> {
                                 val path = repository.copyToAssets(project, attachment.uri)
                                 val label = attachment.displayName ?: path.substringAfterLast("/")
                                 append("\n[$label](<$path>)")
                             }
 
-                            is Attachment.Photo -> append("\n![image](<${attachment.path}>)")
-                            is Attachment.AttachedFile -> append("\n[${attachment.displayName}](<${attachment.path}>)")
+                            AttachmentType.IMAGE -> append("\n![image](<${attachment.path}>)")
+                            AttachmentType.FILE -> append("\n[${attachment.displayName}](<${attachment.path}>)")
                         }
                     }
                 }
@@ -469,13 +470,13 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
                     val attachmentLines = buildString {
                         attachments.forEach { attachment ->
-                            when (attachment) {
-                                is Attachment.PendingPhoto -> {
+                            when (attachment.type) {
+                                AttachmentType.PENDING_IMAGE -> {
                                     val path = repository.copyToAssets(project, attachment.uri)
                                     append("\n![image](<$path>)")
                                 }
 
-                                is Attachment.PendingAttachedFile -> {
+                                AttachmentType.PENDING_FILE -> {
                                     val path = repository.copyToAssets(project, attachment.uri)
                                     val label =
                                         attachment.displayName ?: path.substringAfterLast("/")

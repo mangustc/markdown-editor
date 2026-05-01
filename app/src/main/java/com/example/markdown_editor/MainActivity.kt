@@ -13,6 +13,7 @@ import androidx.lifecycle.ViewModelProvider
 import com.example.markdown_editor.ui.AppScaffold
 import com.example.markdown_editor.ui.MarkdowneditorTheme
 import com.example.markdown_editor.ui.messenger.Attachment
+import com.example.markdown_editor.ui.messenger.AttachmentType
 import com.example.markdown_editor.ui.viewmodel.AppViewModel
 
 class MainActivity : ComponentActivity() {
@@ -70,12 +71,12 @@ class MainActivity : ComponentActivity() {
 
         val attachments = uris.map { uri ->
             val resolvedMime = contentResolver.getType(uri) ?: mimeType
-            if (resolvedMime.startsWith("image/")) {
-                Attachment.PendingPhoto(uri)
-            } else {
-                val displayName = DocumentFile.fromSingleUri(this, uri)?.name
-                Attachment.PendingAttachedFile(uri, displayName)
-            }
+            val displayName = DocumentFile.fromSingleUri(this, uri)?.name ?: "File"
+            Attachment(
+                uri = uri,
+                displayName = displayName,
+                type = if (resolvedMime.startsWith("image/")) AttachmentType.PENDING_IMAGE else AttachmentType.PENDING_FILE,
+            )
         }
 
         if (text != null || attachments.isNotEmpty()) {

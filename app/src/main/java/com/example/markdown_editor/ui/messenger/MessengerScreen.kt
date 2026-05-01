@@ -87,9 +87,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
@@ -155,11 +157,16 @@ private fun extractLinkLabel(matched: String): String =
     matched.substringAfter("[").substringBefore("]")
 
 private fun parseNoteBody(body: String, project: Project): ParsedNoteBody {
-    val photoAttachments = MarkdownParser.IMAGE_REGEX.findAll(body)
+    val imageAttachments = MarkdownParser.IMAGE_REGEX.findAll(body)
         .map { match ->
             val path = extractLinkPath(match.value)
             val uri = project.getFileUri(path)
-            Attachment.Photo(uri = uri, path = path)
+            Attachment(
+                uri = uri,
+                displayName = path,
+                path = path,
+                type = AttachmentType.IMAGE,
+            )
         }
         .toList()
 
@@ -168,7 +175,12 @@ private fun parseNoteBody(body: String, project: Project): ParsedNoteBody {
             val label = extractLinkLabel(match.value)
             val path = extractLinkPath(match.value)
             val uri = project.getFileUri(path)
-            Attachment.AttachedFile(uri = uri, displayName = label, path = path)
+            Attachment(
+                uri = uri,
+                displayName = label,
+                path = path,
+                type = AttachmentType.FILE,
+            )
         }
         .toList()
 
@@ -184,7 +196,7 @@ private fun parseNoteBody(body: String, project: Project): ParsedNoteBody {
 
     return ParsedNoteBody(
         text = text.trim(),
-        attachments = photoAttachments + fileAttachments,
+        attachments = imageAttachments + fileAttachments,
     )
 }
 
@@ -194,21 +206,36 @@ fun MessengerScreen(viewModel: AppViewModel) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     val attachments = remember { mutableStateListOf<Attachment>() }
-    var photoPagerState by remember { mutableStateOf<Pair<Int, List<Uri>>?>(null) }
+    var imagePagerState by remember { mutableStateOf<Pair<Int, List<Uri>>?>(null) }
     var carouselExpanded by rememberSaveable { mutableStateOf(false) }
+    val context = LocalContext.current
 
-    val photoPickerLauncher = rememberLauncherForActivityResult(
+    val imagePickerLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.PickMultipleVisualMedia(),
     ) { uris ->
         uris.forEach { uri ->
-            attachments.add(Attachment.PendingPhoto(uri))
+            val displayName = DocumentFile.fromSingleUri(context, uri)?.name ?: "Image"
+            attachments.add(
+                Attachment(
+                    uri = uri,
+                    displayName = displayName,
+                    type = AttachmentType.PENDING_IMAGE,
+                ),
+            )
         }
     }
     val filePickerLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenMultipleDocuments(),
     ) { uris ->
         uris.forEach { uri ->
-            attachments.add(Attachment.PendingAttachedFile(uri, null))
+            val displayName = DocumentFile.fromSingleUri(context, uri)?.name ?: "File"
+            attachments.add(
+                Attachment(
+                    uri = uri,
+                    displayName = displayName,
+                    type = AttachmentType.PENDING_FILE,
+                ),
+            )
         }
     }
 
@@ -246,7 +273,6 @@ fun MessengerScreen(viewModel: AppViewModel) {
 
     val scope = rememberCoroutineScope()
 
-    val context = LocalContext.current
     val density = LocalDensity.current
     var inputBarHeightDp by remember { mutableStateOf(0.dp) }
 
@@ -275,22 +301,21 @@ fun MessengerScreen(viewModel: AppViewModel) {
                     attachments.clear()
                     carouselExpanded = false
                 },
-                onAddPhoto = {
-                    photoPickerLauncher.launch(
+                onAddImage = {
+                    imagePickerLauncher.launch(
                         PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
                     )
                 },
                 onAddFile = { filePickerLauncher.launch(arrayOf("*/*")) },
-                onPhotoClick = { clickedUri ->
-                    val photoUris = attachments.mapNotNull {
-                        when (it) {
-                            is Attachment.Photo -> it.uri
-                            is Attachment.PendingPhoto -> it.uri
+                onImageClick = { clickedUri ->
+                    val imageUris = attachments.mapNotNull {
+                        when (it.type) {
+                            AttachmentType.IMAGE, AttachmentType.PENDING_IMAGE -> it.uri
                             else -> null
                         }
                     }
-                    val index = photoUris.indexOf(clickedUri)
-                    photoPagerState = index to photoUris
+                    val index = imageUris.indexOf(clickedUri)
+                    imagePagerState = index to imageUris
                 },
                 onFileClick = { uri ->
                     try {
@@ -443,8 +468,8 @@ fun MessengerScreen(viewModel: AppViewModel) {
                                             attachments.addAll(attach)
                                             if (attachments.isNotEmpty()) carouselExpanded = true
                                         },
-                                        onPhotoClick = { idx, uris ->
-                                            photoPagerState = idx to uris
+                                        onImageClick = { idx, uris ->
+                                            imagePagerState = idx to uris
                                         },
                                         onPinNote = { viewModel.navigation.onPinNote(it) },
                                         isPinned = note.tags?.contains("pinned") ?: false,
@@ -458,11 +483,11 @@ fun MessengerScreen(viewModel: AppViewModel) {
         }
     }
 
-    photoPagerState?.let { (index, uris) ->
-        FullScreenPhotoCarouselDialog(
+    imagePagerState?.let { (index, uris) ->
+        FullScreenImageCarouselDialog(
             initialIndex = index,
             uris = uris,
-            onDismiss = { photoPagerState = null },
+            onDismiss = { imagePagerState = null },
         )
     }
 }
@@ -475,9 +500,9 @@ private fun MessengerInputBar(
     attachments: List<Attachment>,
     isEditing: Boolean,
     onCancelEdit: () -> Unit,
-    onAddPhoto: () -> Unit,
+    onAddImage: () -> Unit,
     onAddFile: () -> Unit,
-    onPhotoClick: (Uri) -> Unit,
+    onImageClick: (Uri) -> Unit,
     onFileClick: (Uri) -> Unit,
     onRemoveAttachment: (Int) -> Unit,
     onSend: () -> Unit,
@@ -489,7 +514,7 @@ private fun MessengerInputBar(
         verticalArrangement = Arrangement.spacedBy(8.dp),
         modifier = modifier
             .background(
-                color = if (carouselExpanded || isEditing) MaterialTheme.colorScheme.surfaceContainerLow else Color.Transparent,
+                color = if (carouselExpanded || isEditing) MaterialTheme.colorScheme.surfaceContainerHigh else Color.Transparent,
             )
             .padding(8.dp),
     ) {
@@ -542,10 +567,10 @@ private fun MessengerInputBar(
         ) {
             AttachmentCarouselStrip(
                 attachments = attachments,
-                onAddPhoto = onAddPhoto,
+                onAddImage = onAddImage,
                 onAddFile = onAddFile,
                 onRemove = onRemoveAttachment,
-                onPhotoClick = onPhotoClick,
+                onImageClick = onImageClick,
                 onFileClick = onFileClick,
                 isViewing = false,
             )
@@ -560,8 +585,10 @@ private fun MessengerInputBar(
                 capitalization = KeyboardCapitalization.Sentences,
             ),
             colors = TextFieldDefaults.colors(
-                focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                focusedContainerColor = MaterialTheme.colorScheme.surface,
+                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
                 focusedIndicatorColor = Color.Transparent,
                 unfocusedIndicatorColor = Color.Transparent,
             ),
@@ -602,7 +629,11 @@ private fun MessengerInputBar(
                 }
             },
             modifier = Modifier
-                .fillMaxWidth(),
+                .fillMaxWidth()
+                .shadow(
+                    elevation = 8.dp,
+                    shape = MaterialTheme.shapes.extraLargeIncreased,
+                ),
         )
     }
 }
@@ -610,10 +641,10 @@ private fun MessengerInputBar(
 @Composable
 private fun AttachmentCarouselStrip(
     attachments: List<Attachment>,
-    onAddPhoto: (() -> Unit)? = null,
+    onAddImage: (() -> Unit)? = null,
     onAddFile: (() -> Unit)? = null,
     onRemove: ((Int) -> Unit)? = null,
-    onPhotoClick: (Uri) -> Unit,
+    onImageClick: (Uri) -> Unit,
     onFileClick: (Uri) -> Unit,
     isViewing: Boolean,
 ) {
@@ -632,194 +663,133 @@ private fun AttachmentCarouselStrip(
                 .aspectRatio(1f),
         ) {
             if (!isViewing && page == 0) {
-                TooltipBox(
-                    positionProvider =
-                        TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
-                    tooltip = { PlainTooltip { Text("Attach photos") } },
-                    state = rememberTooltipState(),
-                ) {
-                    IconButton(
-                        onClick = onAddPhoto ?: {},
-                        shape = IconButtonDefaults.smallSquareShape,
-                        colors = IconButtonDefaults.iconButtonColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                        ),
-                        modifier = Modifier.fillMaxSize(),
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(4.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center,
-                        ) {
-                            Icon(
-                                Icons.Default.Image,
-                                contentDescription = "Image",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                            Text(
-                                text = "Add photos",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 2,
-                                overflow = TextOverflow.Ellipsis,
-                                textAlign = TextAlign.Center,
-                            )
-                        }
-                    }
-                }
+                AttachmentIconButton(
+                    attachment = Attachment(
+                        uri = Uri.EMPTY,
+                        displayName = "Attach images",
+                        type = AttachmentType.FILE,
+                    ),
+                    icon = Icons.Default.Image,
+                    onClick = onAddImage ?: {},
+                )
             } else if (!isViewing && page == 1) {
-                TooltipBox(
-                    positionProvider =
-                        TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
-                    tooltip = { PlainTooltip { Text("Attach files") } },
-                    state = rememberTooltipState(),
-                ) {
-                    IconButton(
-                        onClick = onAddFile ?: {},
-                        shape = IconButtonDefaults.smallSquareShape,
-                        colors = IconButtonDefaults.iconButtonColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                        ),
-                        modifier = Modifier.fillMaxSize(),
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(4.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center,
-                        ) {
-                            Icon(
-                                Icons.Default.AttachFile,
-                                contentDescription = "File",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                            Text(
-                                text = "Add files",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 2,
-                                overflow = TextOverflow.Ellipsis,
-                                textAlign = TextAlign.Center,
-                            )
-                        }
-                    }
-                }
+                AttachmentIconButton(
+                    attachment = Attachment(
+                        uri = Uri.EMPTY,
+                        displayName = "Attach files",
+                        type = AttachmentType.FILE,
+                    ),
+                    icon = Icons.Default.AttachFile,
+                    onClick = onAddFile ?: {},
+                )
             } else {
-                when (val attachment = attachments[if (isViewing) page else page - 2]) {
-                    is Attachment.Photo -> {
-                        Surface(
-                            shape = MaterialTheme.shapes.medium,
-                            tonalElevation = 2.dp,
-                            onClick = { onPhotoClick(attachment.uri) },
-                        ) {
-                            AsyncImage(
-                                model = attachment.uri,
-                                contentDescription = null,
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier.fillMaxSize(),
-                            )
+                val attachment = attachments[if (isViewing) page else page - 2]
+                AttachmentIconButton(
+                    attachment = attachment,
+                    onClick = when (attachment.type) {
+                        AttachmentType.IMAGE, AttachmentType.PENDING_IMAGE -> {
+                            { onImageClick(attachment.uri) }
                         }
-                    }
 
-                    is Attachment.PendingPhoto -> {
-                        Surface(
-                            shape = MaterialTheme.shapes.medium,
-                            onClick = { attachment.uri.let(onPhotoClick) },
-                            tonalElevation = 2.dp,
-                        ) {
-                            AsyncImage(
-                                model = attachment.uri,
-                                contentDescription = null,
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier.fillMaxSize(),
-                            )
+                        AttachmentType.FILE, AttachmentType.PENDING_FILE -> {
+                            { onFileClick(attachment.uri) }
                         }
-                    }
+                    },
+                )
 
-                    is Attachment.AttachedFile -> {
-                        Surface(
-                            color = MaterialTheme.colorScheme.surfaceVariant,
-                            shape = MaterialTheme.shapes.medium,
-                            tonalElevation = 2.dp,
-                            onClick = { onFileClick(attachment.uri) },
-                            modifier = Modifier
-                                .fillMaxSize(),
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(4.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center,
-                            ) {
-                                Icon(
-                                    Icons.Default.AttachFile,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                                Text(
-                                    text = attachment.displayName,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    maxLines = 2,
-                                    overflow = TextOverflow.Ellipsis,
-                                    textAlign = TextAlign.Center,
-                                )
-                            }
-                        }
-                    }
-
-                    is Attachment.PendingAttachedFile -> {
-                        val context = LocalContext.current
-                        val displayName = remember(attachment.uri) {
-                            DocumentFile.fromSingleUri(context, attachment.uri)?.name ?: "File"
-                        }
-                        Surface(
-                            color = MaterialTheme.colorScheme.surfaceVariant,
-                            tonalElevation = 2.dp,
-                            shape = MaterialTheme.shapes.medium,
-                            onClick = { onFileClick(attachment.uri) },
-                            modifier = Modifier
-                                .fillMaxSize(),
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(4.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center,
-                            ) {
-                                Icon(
-                                    Icons.Default.AttachFile,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                                Text(
-                                    text = displayName,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    maxLines = 2,
-                                    overflow = TextOverflow.Ellipsis,
-                                    textAlign = TextAlign.Center,
-                                )
-                            }
-                        }
-                    }
-                }
                 if (onRemove != null) {
                     Box(
+                        contentAlignment = Alignment.TopEnd,
                         modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .size(18.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.errorContainer)
-                            .clickable { onRemove(page - 2) },
-                        contentAlignment = Alignment.Center,
+                            .padding(4.dp)
+                            .fillMaxSize(),
                     ) {
-                        Icon(
-                            Icons.Default.Close,
-                            contentDescription = "Remove",
-                            modifier = Modifier.size(12.dp),
-                            tint = MaterialTheme.colorScheme.onErrorContainer,
-                        )
+                        TooltipBox(
+                            positionProvider =
+                                TooltipDefaults.rememberTooltipPositionProvider(
+                                    TooltipAnchorPosition.Above,
+                                ),
+                            tooltip = { PlainTooltip { Text("Remove attachment") } },
+                            state = rememberTooltipState(),
+                        ) {
+                            IconButton(
+                                onClick = { onRemove(page - 2) },
+                                shapes = IconButtonDefaults.shapes(
+                                    shape = IconButtonDefaults.extraSmallRoundShape,
+                                ),
+                                colors = IconButtonDefaults.iconButtonColors(
+                                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                                ),
+                                modifier = Modifier
+                                    .size(IconButtonDefaults.extraSmallIconSize),
+                            ) {
+                                Icon(
+                                    Icons.Default.Close,
+                                    contentDescription = "Remove",
+                                    tint = MaterialTheme.colorScheme.onErrorContainer,
+                                )
+                            }
+                        }
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun AttachmentIconButton(
+    attachment: Attachment,
+    icon: ImageVector = Icons.Default.AttachFile,
+    onClick: () -> Unit,
+) {
+    TooltipBox(
+        positionProvider =
+            TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
+        tooltip = { PlainTooltip { Text(attachment.displayName) } },
+        state = rememberTooltipState(),
+    ) {
+        IconButton(
+            onClick = onClick,
+            colors = IconButtonDefaults.iconButtonColors(
+                containerColor = MaterialTheme.colorScheme.surface,
+            ),
+            shapes = IconButtonDefaults.shapes(
+                shape = IconButtonDefaults.smallSquareShape,
+            ),
+            modifier = Modifier
+                .fillMaxSize(),
+        ) {
+            when (attachment.type) {
+                AttachmentType.IMAGE, AttachmentType.PENDING_IMAGE ->
+                    AsyncImage(
+                        model = attachment.uri,
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+
+                AttachmentType.FILE, AttachmentType.PENDING_FILE -> Column(
+                    modifier = Modifier.padding(4.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                ) {
+                    Icon(
+                        icon,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Text(
+                        text = attachment.displayName,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        textAlign = TextAlign.Center,
+                    )
+                }
+            }
+
         }
     }
 }
@@ -833,7 +803,7 @@ private fun MessageBubble(
     onNoteSelected: (Note) -> Unit,
     onDeleteNote: (Note) -> Unit,
     onEditNote: (Note, String, List<Attachment>) -> Unit,
-    onPhotoClick: (Int, List<Uri>) -> Unit,
+    onImageClick: (Int, List<Uri>) -> Unit,
     onPinNote: (Note) -> Unit,
     isPinned: Boolean = false,
 ) {
@@ -913,15 +883,14 @@ private fun MessageBubble(
                     if (parsedBody.attachments.isNotEmpty()) {
                         AttachmentCarouselStrip(
                             attachments = parsedBody.attachments,
-                            onPhotoClick = { clickedUri ->
-                                val photoUris = parsedBody.attachments.mapNotNull {
-                                    when (it) {
-                                        is Attachment.Photo -> it.uri
-                                        is Attachment.PendingPhoto -> it.uri
+                            onImageClick = { clickedUri ->
+                                val imageUris = parsedBody.attachments.mapNotNull {
+                                    when (it.type) {
+                                        AttachmentType.IMAGE, AttachmentType.PENDING_IMAGE -> it.uri
                                         else -> null
                                     }
                                 }
-                                onPhotoClick(photoUris.indexOf(clickedUri), photoUris)
+                                onImageClick(imageUris.indexOf(clickedUri), imageUris)
                             },
                             onFileClick = { uri ->
                                 try {
@@ -1177,7 +1146,7 @@ private fun DateHeader(timestamp: Long) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun FullScreenPhotoCarouselDialog(
+private fun FullScreenImageCarouselDialog(
     initialIndex: Int,
     uris: List<Uri>,
     onDismiss: () -> Unit,

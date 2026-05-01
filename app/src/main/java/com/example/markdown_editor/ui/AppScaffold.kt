@@ -35,6 +35,7 @@ import androidx.compose.material.icons.filled.Tag
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.DriveFileRenameOutline
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -495,7 +496,7 @@ fun NoteDrawerItem(
                         MenuPopupItem(
                             text = if (isPinned) "Unpin" else "Pin",
                             index = 1, count = 4,
-                            icon = Icons.Default.PushPin,
+                            icon = if (isPinned) Icons.Filled.PushPin else Icons.Outlined.PushPin,
                             onClick = { menuExpanded = false; onPin() },
                         )
 

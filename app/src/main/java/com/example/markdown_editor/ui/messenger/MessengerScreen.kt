@@ -49,9 +49,11 @@ import androidx.compose.material.icons.automirrored.outlined.OpenInNew
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
@@ -396,6 +398,8 @@ fun MessengerScreen(viewModel: AppViewModel) {
                                         onPhotoClick = { idx, uris ->
                                             photoPagerState = idx to uris
                                         },
+                                        onPinNote = { viewModel.navigation.onPinNote(it) },
+                                        isPinned = note.tags?.contains("pinned") ?: false,
                                     )
                                 }
                             }
@@ -785,6 +789,8 @@ private fun MessageBubble(
     onDeleteNote: (Note) -> Unit,
     onEditNote: (Note, String, List<Attachment>) -> Unit,
     onPhotoClick: (Int, List<Uri>) -> Unit,
+    onPinNote: (Note) -> Unit,
+    isPinned: Boolean = false,
 ) {
     val context = LocalContext.current
     val density = LocalDensity.current
@@ -986,12 +992,12 @@ private fun MessageBubble(
             MenuPopup(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) { gs ->
                 MenuPopupGroup(index = 0, count = 1, label = "Actions", interactionSource = gs) {
                     MenuPopupItem(
-                        text = "Open", index = 0, count = 4,
+                        text = "Open", index = 0, count = 5,
                         icon = Icons.AutoMirrored.Outlined.OpenInNew,
                         onClick = { menuExpanded = false; onNoteSelected(note) },
                     )
                     MenuPopupItem(
-                        text = "Copy", index = 1, count = 4,
+                        text = "Copy", index = 1, count = 5,
                         icon = Icons.Outlined.ContentCopy,
                         onClick = {
                             menuExpanded = false
@@ -1008,18 +1014,24 @@ private fun MessageBubble(
                         },
                     )
                     MenuPopupItem(
-                        text = "Edit", index = 2, count = 4,
+                        text = if (isPinned) "Unpin" else "Pin", index = 2, count = 5,
+                        icon = if (isPinned) Icons.Filled.PushPin else Icons.Outlined.PushPin,
+                        onClick = { menuExpanded = false; onPinNote(note) },
+                    )
+                    MenuPopupItem(
+                        text = "Edit", index = 3, count = 5,
                         icon = Icons.Outlined.Edit,
                         onClick = {
-                            menuExpanded = false; onEditNote(
-                            note,
-                            parsedBody.text,
-                            parsedBody.attachments,
-                        )
+                            menuExpanded = false
+                            onEditNote(
+                                note,
+                                parsedBody.text,
+                                parsedBody.attachments,
+                            )
                         },
                     )
                     MenuPopupItem(
-                        text = "Delete", index = 3, count = 4,
+                        text = "Delete", index = 4, count = 5,
                         supportingText = "Cannot be undone",
                         icon = Icons.Outlined.Delete,
                         tint = MaterialTheme.colorScheme.error,

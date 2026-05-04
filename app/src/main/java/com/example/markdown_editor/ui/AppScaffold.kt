@@ -76,6 +76,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.PlaceholderVerticalAlign
 import androidx.compose.ui.text.buildAnnotatedString
@@ -93,6 +94,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
+import com.example.markdown_editor.R
 import com.example.markdown_editor.data.model.Note
 import com.example.markdown_editor.ui.components.MenuPopup
 import com.example.markdown_editor.ui.components.MenuPopupGroup
@@ -153,7 +155,9 @@ fun AppScaffold() {
                     ) {
                         Icon(Icons.Default.FolderOpen, contentDescription = null)
                         Spacer(Modifier.width(8.dp))
-                        Text(uiState.project?.name ?: "Select project folder")
+                        Text(
+                            uiState.project?.name ?: stringResource(R.string.select_project_folder),
+                        )
                     }
 
                     HorizontalDivider()
@@ -162,7 +166,7 @@ fun AppScaffold() {
                         onClick = { appViewModel.navigation.showCreateNoteDialog() },
                         modifier = Modifier.fillMaxWidth(),
                     ) {
-                        Text("Create New Note")
+                        Text(stringResource(R.string.create_new_note))
                     }
 
                     if (uiState.project != null) {
@@ -178,7 +182,7 @@ fun AppScaffold() {
                                     onSearch = {},
                                     expanded = true,
                                     onExpandedChange = {},
-                                    placeholder = { Text("Search notes…") },
+                                    placeholder = { Text(stringResource(R.string.search_notes)) },
                                     leadingIcon = { Icon(Icons.Default.Search, null) },
                                     trailingIcon = {
                                         if (uiState.searchQuery.isNotEmpty()) {
@@ -187,7 +191,7 @@ fun AppScaffold() {
                                                     TooltipDefaults.rememberTooltipPositionProvider(
                                                         TooltipAnchorPosition.Above,
                                                     ),
-                                                tooltip = { PlainTooltip { Text("Clear search") } },
+                                                tooltip = { PlainTooltip { Text(stringResource(R.string.clear_search)) } },
                                                 state = rememberTooltipState(),
                                             ) {
                                                 IconButton(
@@ -197,7 +201,10 @@ fun AppScaffold() {
                                                         )
                                                     },
                                                 ) {
-                                                    Icon(Icons.Default.Close, "Clear search")
+                                                    Icon(
+                                                        Icons.Default.Close,
+                                                        stringResource(R.string.clear_search),
+                                                    )
                                                 }
                                             }
                                         }
@@ -210,7 +217,7 @@ fun AppScaffold() {
                         ) {
                             if (searchResults.itemCount == 0) {
                                 Text(
-                                    "No matches",
+                                    stringResource(R.string.no_matches),
                                     modifier = Modifier.padding(16.dp),
                                     style = MaterialTheme.typography.bodyMedium,
                                 )
@@ -269,7 +276,7 @@ fun AppScaffold() {
                         }
                     } else {
                         Text(
-                            "Open project folder to see notes",
+                            stringResource(R.string.open_a_project_folder_to_see_notes),
                             style = MaterialTheme.typography.bodyMedium,
                         )
                     }
@@ -282,8 +289,10 @@ fun AppScaffold() {
                 TopAppBar(
                     title = {
                         Text(
-                            if (navBackStackEntry?.destination?.route == MessengerDestination::class.qualifiedName) "Quick Notes" else uiState.activeNote?.name
-                                ?: "Markdown Editor",
+                            if (navBackStackEntry?.destination?.route == MessengerDestination::class.qualifiedName) stringResource(
+                                R.string.quick_notes,
+                            ) else uiState.activeNote?.name
+                                ?: stringResource(R.string.app_name),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
@@ -295,7 +304,7 @@ fun AppScaffold() {
                                     TooltipDefaults.rememberTooltipPositionProvider(
                                         TooltipAnchorPosition.Above,
                                     ),
-                                tooltip = { PlainTooltip { Text("Go back") } },
+                                tooltip = { PlainTooltip { Text(stringResource(R.string.go_back)) } },
                                 state = rememberTooltipState(),
                             ) {
                                 IconButton(
@@ -304,7 +313,7 @@ fun AppScaffold() {
                                 ) {
                                     Icon(
                                         Icons.AutoMirrored.Filled.ArrowBack,
-                                        contentDescription = "Go back",
+                                        contentDescription = stringResource(R.string.go_back),
                                     )
                                 }
                             }
@@ -314,7 +323,7 @@ fun AppScaffold() {
                                     TooltipDefaults.rememberTooltipPositionProvider(
                                         TooltipAnchorPosition.Above,
                                     ),
-                                tooltip = { PlainTooltip { Text("Open menu") } },
+                                tooltip = { PlainTooltip { Text(stringResource(R.string.open_menu)) } },
                                 state = rememberTooltipState(),
                             ) {
                                 IconButton(
@@ -323,7 +332,7 @@ fun AppScaffold() {
                                 ) {
                                     Icon(
                                         Icons.Default.Menu,
-                                        contentDescription = "Open menu",
+                                        contentDescription = stringResource(R.string.open_menu),
                                     )
                                 }
                             }
@@ -456,7 +465,7 @@ fun NoteDrawerItem(
                 TooltipBox(
                     positionProvider =
                         TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
-                    tooltip = { PlainTooltip { Text("Note actions") } },
+                    tooltip = { PlainTooltip { Text(stringResource(R.string.note_actions)) } },
                     state = rememberTooltipState(),
                 ) {
                     IconButton(
@@ -465,7 +474,7 @@ fun NoteDrawerItem(
                     ) {
                         Icon(
                             Icons.Default.MoreVert,
-                            contentDescription = "Note actions",
+                            contentDescription = stringResource(R.string.note_actions),
                         )
                     }
                 }
@@ -476,34 +485,36 @@ fun NoteDrawerItem(
                     MenuPopupGroup(
                         index = 0,
                         count = 2,
-                        label = "Actions",
+                        label = stringResource(R.string.actions),
                         interactionSource = groupInteractionSource,
                     ) {
                         MenuPopupItem(
-                            text = "Open",
+                            text = stringResource(R.string.open),
                             index = 0, count = 4,
                             icon = Icons.AutoMirrored.Outlined.OpenInNew,
                             onClick = { menuExpanded = false; onOpen() },
                         )
 
                         MenuPopupItem(
-                            text = "Rename",
+                            text = stringResource(R.string.rename),
                             index = 1, count = 4,
                             icon = Icons.Outlined.DriveFileRenameOutline,
                             onClick = { menuExpanded = false; onRename() },
                         )
 
                         MenuPopupItem(
-                            text = if (isPinned) "Unpin" else "Pin",
+                            text = if (isPinned) stringResource(R.string.unpin) else stringResource(
+                                R.string.pin,
+                            ),
                             index = 1, count = 4,
                             icon = if (isPinned) Icons.Filled.PushPin else Icons.Outlined.PushPin,
                             onClick = { menuExpanded = false; onPin() },
                         )
 
                         MenuPopupItem(
-                            text = "Delete",
+                            text = stringResource(R.string.delete),
                             index = 2, count = 4,
-                            supportingText = "Cannot be undone",
+                            supportingText = stringResource(R.string.cannot_be_undone),
                             icon = Icons.Outlined.Delete,
                             tint = MaterialTheme.colorScheme.error,
                             onClick = { menuExpanded = false; onDelete() },
@@ -515,11 +526,11 @@ fun NoteDrawerItem(
                     MenuPopupGroup(
                         index = 1,
                         count = 2,
-                        label = "More",
+                        label = stringResource(R.string.more),
                         interactionSource = groupInteractionSource,
                     ) {
                         MenuPopupItem(
-                            text = "Show details",
+                            text = stringResource(R.string.show_details),
                             index = 3, count = 4,
                             icon = Icons.Outlined.Info,
                             onClick = { menuExpanded = false; onShowInfo() },
@@ -541,15 +552,15 @@ fun CreateNoteDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismissRequest,
-        title = { Text("New Note") },
+        title = { Text(stringResource(R.string.new_note)) },
         text = {
             Column {
-                Text("Enter a name for your new note:")
+                Text(stringResource(R.string.enter_a_name_for_your_new_note))
                 Spacer(Modifier.height(8.dp))
                 OutlinedTextField(
                     value = initialName,
                     onValueChange = { onNameChange(it) },
-                    label = { Text("Note Name") },
+                    label = { Text(stringResource(R.string.note_name)) },
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
@@ -557,10 +568,10 @@ fun CreateNoteDialog(
         confirmButton = {
             Button(
                 onClick = { if (initialName.isNotBlank()) onConfirmCreate() },
-            ) { Text("Create") }
+            ) { Text(stringResource(R.string.create)) }
         },
         dismissButton = {
-            OutlinedButton(onClick = onDismissRequest) { Text("Cancel") }
+            OutlinedButton(onClick = onDismissRequest) { Text(stringResource(R.string.cancel)) }
         },
     )
 }
@@ -574,24 +585,24 @@ fun RenameNoteDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismissRequest,
-        title = { Text("Rename note") },
+        title = { Text(stringResource(R.string.rename_note)) },
         text = {
             Column {
-                Text("Enter a new name for your note:")
+                Text(stringResource(R.string.enter_a_new_name_for_your_note))
                 Spacer(Modifier.height(8.dp))
                 OutlinedTextField(
                     value = name,
                     onValueChange = { onNameChange(it) },
-                    label = { Text("Note Name") },
+                    label = { Text(stringResource(R.string.note_name)) },
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
         },
         confirmButton = {
-            Button(onClick = onConfirmRename) { Text("Rename") }
+            Button(onClick = onConfirmRename) { Text(stringResource(R.string.rename)) }
         },
         dismissButton = {
-            OutlinedButton(onClick = onDismissRequest) { Text("Cancel") }
+            OutlinedButton(onClick = onDismissRequest) { Text(stringResource(R.string.cancel)) }
         },
     )
 }
@@ -604,17 +615,17 @@ fun DeleteNoteDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismissRequest,
-        title = { Text("Delete note") },
+        title = { Text(stringResource(R.string.delete_note)) },
         text = {
             Column {
-                Text("Are you sure you want to delete this note?")
+                Text(stringResource(R.string.are_you_sure_you_want_to_delete_this_note))
                 Text(
                     text = noteName,
                     fontWeight = FontWeight.Bold,
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    text = "This action cannot be undone",
+                    text = stringResource(R.string.this_action_cannot_be_undone),
                     color = MaterialTheme.colorScheme.error,
                 )
             }
@@ -623,10 +634,10 @@ fun DeleteNoteDialog(
             Button(
                 onClick = onConfirmDelete,
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-            ) { Text("Delete") }
+            ) { Text(stringResource(R.string.delete)) }
         },
         dismissButton = {
-            OutlinedButton(onClick = onDismissRequest) { Text("Cancel") }
+            OutlinedButton(onClick = onDismissRequest) { Text(stringResource(R.string.cancel)) }
         },
     )
 }
@@ -638,18 +649,18 @@ fun ShowInfoDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismissRequest,
-        title = { Text("Note Details") },
+        title = { Text(stringResource(R.string.note_details)) },
         text = {
             Column {
                 ListItem(
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                    headlineContent = { Text("Name") },
+                    headlineContent = { Text(stringResource(R.string.name)) },
                     supportingContent = { Text(note.name) },
                     leadingContent = { Icon(Icons.Default.Abc, contentDescription = null) },
                 )
                 ListItem(
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                    headlineContent = { Text("Last Modified") },
+                    headlineContent = { Text(stringResource(R.string.last_modified)) },
                     supportingContent = {
                         val timeString = DateUtils.getRelativeTimeSpanString(
                             note.lastModified,
@@ -657,14 +668,15 @@ fun ShowInfoDialog(
                             DateUtils.SECOND_IN_MILLIS,
                             DateUtils.FORMAT_ABBREV_RELATIVE,
                         )
-                        val result = if (!timeString.isNullOrBlank()) timeString else "N/A"
+                        val result =
+                            if (!timeString.isNullOrBlank()) timeString else stringResource(R.string.n_a)
                         Text(result.toString())
                     },
                     leadingContent = { Icon(Icons.Default.History, contentDescription = null) },
                 )
                 ListItem(
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                    headlineContent = { Text("Created At") },
+                    headlineContent = { Text(stringResource(R.string.created_at)) },
                     supportingContent = {
                         val timeString =
                             if (note.createdAt != null) DateUtils.getRelativeTimeSpanString(
@@ -673,7 +685,10 @@ fun ShowInfoDialog(
                                 DateUtils.SECOND_IN_MILLIS,
                                 DateUtils.FORMAT_ABBREV_RELATIVE,
                             ) else null
-                        val result = if (!timeString.isNullOrBlank()) timeString else "N/A"
+                        val result =
+                            if (!timeString.isNullOrBlank()) timeString else stringResource(
+                                R.string.n_a,
+                            )
                         Text(result.toString())
                     },
                     leadingContent = {
@@ -685,16 +700,20 @@ fun ShowInfoDialog(
                 )
                 ListItem(
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                    headlineContent = { Text("Tags") },
+                    headlineContent = { Text(stringResource(R.string.tags)) },
                     supportingContent = {
-                        Text(if (!note.tags.isNullOrEmpty()) note.tags.joinToString(", ") else "None")
+                        Text(
+                            if (!note.tags.isNullOrEmpty()) note.tags.joinToString(", ") else stringResource(
+                                R.string.none,
+                            ),
+                        )
                     },
                     leadingContent = { Icon(Icons.Default.Tag, contentDescription = null) },
                 )
             }
         },
         confirmButton = {
-            OutlinedButton(onClick = onDismissRequest) { Text("Close") }
+            OutlinedButton(onClick = onDismissRequest) { Text(stringResource(R.string.close)) }
         },
     )
 }

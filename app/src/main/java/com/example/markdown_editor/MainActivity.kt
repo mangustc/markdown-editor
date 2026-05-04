@@ -1,6 +1,8 @@
 package com.example.markdown_editor
 
+import android.content.Context
 import android.content.Intent
+import android.content.res.Configuration
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -15,8 +17,16 @@ import com.example.markdown_editor.ui.MarkdowneditorTheme
 import com.example.markdown_editor.ui.messenger.Attachment
 import com.example.markdown_editor.ui.messenger.AttachmentType
 import com.example.markdown_editor.ui.viewmodel.AppViewModel
+import java.util.Locale
 
 class MainActivity : ComponentActivity() {
+    override fun attachBaseContext(newBase: Context) {
+        val config = Configuration(newBase.resources.configuration).apply {
+            setLocale(Locale.forLanguageTag("ru"))
+        }
+        super.attachBaseContext(newBase.createConfigurationContext(config))
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()

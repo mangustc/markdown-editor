@@ -3,6 +3,7 @@ package com.example.markdown_editor.ui.messenger
 import android.content.ClipData
 import android.content.Intent
 import android.net.Uri
+import android.text.format.DateFormat
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -21,6 +22,7 @@ import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -35,6 +37,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -100,6 +103,7 @@ import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLayoutResult
@@ -122,6 +126,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
 import coil3.compose.AsyncImage
+import com.example.markdown_editor.R
 import com.example.markdown_editor.data.model.LinkPreview
 import com.example.markdown_editor.data.model.Note
 import com.example.markdown_editor.data.model.Project
@@ -208,13 +213,16 @@ fun MessengerScreen(viewModel: AppViewModel) {
     val attachments = remember { mutableStateListOf<Attachment>() }
     var imagePagerState by remember { mutableStateOf<Pair<Int, List<Uri>>?>(null) }
     var carouselExpanded by rememberSaveable { mutableStateOf(false) }
+    val resources = LocalResources.current
     val context = LocalContext.current
 
     val imagePickerLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.PickMultipleVisualMedia(),
     ) { uris ->
         uris.forEach { uri ->
-            val displayName = DocumentFile.fromSingleUri(context, uri)?.name ?: "Image"
+            val displayName = DocumentFile.fromSingleUri(context, uri)?.name ?: resources.getString(
+                R.string.image,
+            )
             attachments.add(
                 Attachment(
                     uri = uri,
@@ -228,7 +236,8 @@ fun MessengerScreen(viewModel: AppViewModel) {
         ActivityResultContracts.OpenMultipleDocuments(),
     ) { uris ->
         uris.forEach { uri ->
-            val displayName = DocumentFile.fromSingleUri(context, uri)?.name ?: "File"
+            val displayName =
+                DocumentFile.fromSingleUri(context, uri)?.name ?: resources.getString(R.string.file)
             attachments.add(
                 Attachment(
                     uri = uri,
@@ -279,7 +288,7 @@ fun MessengerScreen(viewModel: AppViewModel) {
     if (!uiState.messengerIsLoading && uiState.project == null) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text(
-                text = "Open a project folder to see notes",
+                text = resources.getString(R.string.open_a_project_folder_to_see_notes),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(16.dp),
@@ -331,7 +340,7 @@ fun MessengerScreen(viewModel: AppViewModel) {
                         )
                     } catch (_: Exception) {
                         Toast.makeText(
-                            context, "No app found to open this file",
+                            context, resources.getString(R.string.no_app_found_to_open_this_file),
                             Toast.LENGTH_SHORT,
                         ).show()
                     }
@@ -382,7 +391,7 @@ fun MessengerScreen(viewModel: AppViewModel) {
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
-                            text = "No quick notes yet.\nType something below to get started.",
+                            text = resources.getString(R.string.no_quick_notes_yet_type_something_below_to_get_started),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center,
@@ -510,6 +519,7 @@ private fun MessengerInputBar(
     onCarouselExpandClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val resources = LocalResources.current
     Column(
         verticalArrangement = Arrangement.spacedBy(8.dp),
         modifier = modifier
@@ -543,7 +553,7 @@ private fun MessengerInputBar(
                         modifier = Modifier.size(16.dp),
                     )
                     Text(
-                        text = "Editing note",
+                        text = resources.getString(R.string.editing_note),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.primary,
                     )
@@ -551,7 +561,7 @@ private fun MessengerInputBar(
                 IconButton(onClick = onCancelEdit, modifier = Modifier.size(32.dp)) {
                     Icon(
                         Icons.Default.Close,
-                        contentDescription = "Cancel editing",
+                        contentDescription = resources.getString(R.string.cancel_editing),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(16.dp),
                     )
@@ -578,7 +588,13 @@ private fun MessengerInputBar(
         TextField(
             value = value,
             onValueChange = onValueChange,
-            placeholder = { Text(if (isEditing) "Edit note…" else "New quick note…") },
+            placeholder = {
+                Text(
+                    if (isEditing) resources.getString(R.string.edit_note) else resources.getString(
+                        R.string.new_quick_note,
+                    ),
+                )
+            },
             shape = MaterialTheme.shapes.extraLargeIncreased,
             maxLines = 6,
             keyboardOptions = KeyboardOptions(
@@ -596,13 +612,16 @@ private fun MessengerInputBar(
                 TooltipBox(
                     positionProvider =
                         TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
-                    tooltip = { PlainTooltip { Text("Attach content") } },
+                    tooltip = { PlainTooltip { Text(resources.getString(R.string.attach_content)) } },
                     state = rememberTooltipState(),
                 ) {
                     IconButton(
                         onClick = onCarouselExpandClick,
                     ) {
-                        Icon(Icons.Default.AttachFile, contentDescription = "Attach content")
+                        Icon(
+                            Icons.Default.AttachFile,
+                            contentDescription = resources.getString(R.string.attach_content),
+                        )
                     }
                 }
             },
@@ -610,7 +629,15 @@ private fun MessengerInputBar(
                 TooltipBox(
                     positionProvider =
                         TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
-                    tooltip = { PlainTooltip { Text(if (isEditing) "Save changes" else "Create note") } },
+                    tooltip = {
+                        PlainTooltip {
+                            Text(
+                                if (isEditing) resources.getString(R.string.save_changes) else resources.getString(
+                                    R.string.create_note,
+                                ),
+                            )
+                        }
+                    },
                     state = rememberTooltipState(),
                 ) {
                     IconButton(
@@ -623,7 +650,9 @@ private fun MessengerInputBar(
                     ) {
                         Icon(
                             Icons.AutoMirrored.Filled.Send,
-                            contentDescription = if (isEditing) "Save changes" else "Create note",
+                            contentDescription = if (isEditing) resources.getString(R.string.save_changes) else resources.getString(
+                                R.string.create_note,
+                            ),
                         )
                     }
                 }
@@ -640,6 +669,7 @@ private fun MessengerInputBar(
 
 @Composable
 private fun AttachmentCarouselStrip(
+    modifier: Modifier = Modifier,
     attachments: List<Attachment>,
     onAddImage: (() -> Unit)? = null,
     onAddFile: (() -> Unit)? = null,
@@ -649,12 +679,12 @@ private fun AttachmentCarouselStrip(
     isViewing: Boolean,
 ) {
     val state = rememberCarouselState { if (isViewing) attachments.size else attachments.size + 2 }
+    val resources = LocalResources.current
     HorizontalUncontainedCarousel(
         state = state,
         itemWidth = 80.dp,
         itemSpacing = 4.dp,
-        modifier = Modifier
-            .fillMaxWidth()
+        modifier = modifier
             .wrapContentHeight(),
     ) { page ->
         Box(
@@ -666,7 +696,7 @@ private fun AttachmentCarouselStrip(
                 AttachmentIconButton(
                     attachment = Attachment(
                         uri = Uri.EMPTY,
-                        displayName = "Attach images",
+                        displayName = resources.getString(R.string.attach_images),
                         type = AttachmentType.FILE,
                     ),
                     icon = Icons.Default.Image,
@@ -676,7 +706,7 @@ private fun AttachmentCarouselStrip(
                 AttachmentIconButton(
                     attachment = Attachment(
                         uri = Uri.EMPTY,
-                        displayName = "Attach files",
+                        displayName = resources.getString(R.string.attach_files),
                         type = AttachmentType.FILE,
                     ),
                     icon = Icons.Default.AttachFile,
@@ -709,7 +739,7 @@ private fun AttachmentCarouselStrip(
                                 TooltipDefaults.rememberTooltipPositionProvider(
                                     TooltipAnchorPosition.Above,
                                 ),
-                            tooltip = { PlainTooltip { Text("Remove attachment") } },
+                            tooltip = { PlainTooltip { Text(resources.getString(R.string.remove_attachment)) } },
                             state = rememberTooltipState(),
                         ) {
                             IconButton(
@@ -725,7 +755,7 @@ private fun AttachmentCarouselStrip(
                             ) {
                                 Icon(
                                     Icons.Default.Close,
-                                    contentDescription = "Remove",
+                                    contentDescription = resources.getString(R.string.remove_attachment),
                                     tint = MaterialTheme.colorScheme.onErrorContainer,
                                 )
                             }
@@ -813,6 +843,7 @@ private fun MessageBubble(
     val clipboard = LocalClipboard.current
     val uriHandler = LocalUriHandler.current
     val focusManager = LocalFocusManager.current
+    val resources = LocalResources.current
 
     val urls = remember(note.body) { LinkPreviewFetcher.extractAllUrls(note.body ?: "") }
     LaunchedEffect(urls) { urls.forEach { onEnsurePreview(it) } }
@@ -821,10 +852,9 @@ private fun MessageBubble(
     val parsedBody = remember(note.body) { parseNoteBody(note.body ?: "", project) }
     val bodyText = parsedBody.text.ifBlank { "" }
     val timeString = remember(note.createdAt, note.lastModified) {
-        SimpleDateFormat("MMM d, HH:mm", Locale.getDefault()).format(
-            Date(
-                note.createdAt ?: note.lastModified,
-            ),
+        val pattern = DateFormat.getBestDateTimePattern(Locale.getDefault(), "MMMdHHmm")
+        SimpleDateFormat(pattern, Locale.getDefault()).format(
+            Date(note.createdAt ?: note.lastModified),
         )
     }
 
@@ -849,9 +879,14 @@ private fun MessageBubble(
         }
     }
 
+    val style = MaterialTheme.typography.labelSmall
+    val iconSize = with(LocalDensity.current) { style.fontSize.toDp() }
+    val timeColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f)
+
     val layoutResult = remember { mutableStateOf<TextLayoutResult?>(null) }
 
-    Box(
+    BoxWithConstraints(
+        contentAlignment = Alignment.TopEnd,
         modifier = Modifier
             .fillMaxWidth()
             .pointerInput(Unit) {
@@ -864,10 +899,11 @@ private fun MessageBubble(
             .clickable(onClick = { menuExpanded = true })
             .padding(horizontal = 12.dp),
     ) {
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+        val bubbleMaxWidth = maxWidth * 0.9f
+        Row(horizontalArrangement = Arrangement.End) {
             Surface(
                 modifier = Modifier
-                    .fillMaxWidth(fraction = 0.9f)
+                    .widthIn(max = bubbleMaxWidth)
                     .clip(
                         RoundedCornerShape(
                             topStart = 16.dp,
@@ -903,7 +939,7 @@ private fun MessageBubble(
                                 } catch (_: Exception) {
                                     Toast.makeText(
                                         context,
-                                        "No app found to open this file",
+                                        resources.getString(R.string.no_app_found_to_open_this_file),
                                         Toast.LENGTH_SHORT,
                                     ).show()
                                 }
@@ -958,7 +994,7 @@ private fun MessageBubble(
                                                             )
                                                             Toast.makeText(
                                                                 context,
-                                                                "Link copied",
+                                                                resources.getString(R.string.link_copied),
                                                                 Toast.LENGTH_SHORT,
                                                             ).show()
                                                             focusManager.clearFocus()
@@ -979,22 +1015,22 @@ private fun MessageBubble(
 
                     Spacer(modifier = Modifier.height(4.dp))
                     Row(
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.align(Alignment.End),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
-                        Text(
-                            text = note.name,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f, fill = false),
-                        )
-                        Spacer(Modifier.width(8.dp))
+                        if (isPinned) {
+                            Icon(
+                                imageVector = Icons.Filled.PushPin,
+                                contentDescription = null,
+                                tint = timeColor,
+                                modifier = Modifier.size(iconSize),
+                            )
+                        }
                         Text(
                             text = timeString,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f),
+                            style = style,
+                            color = timeColor,
                         )
                     }
                 }
@@ -1003,14 +1039,19 @@ private fun MessageBubble(
 
         Box(modifier = Modifier.offset { IntOffset(touchX.roundToPx(), touchY.roundToPx()) }) {
             MenuPopup(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) { gs ->
-                MenuPopupGroup(index = 0, count = 1, label = "Actions", interactionSource = gs) {
+                MenuPopupGroup(
+                    index = 0,
+                    count = 1,
+                    label = resources.getString(R.string.actions),
+                    interactionSource = gs,
+                ) {
                     MenuPopupItem(
-                        text = "Open", index = 0, count = 5,
+                        text = resources.getString(R.string.open), index = 0, count = 5,
                         icon = Icons.AutoMirrored.Outlined.OpenInNew,
                         onClick = { menuExpanded = false; onNoteSelected(note) },
                     )
                     MenuPopupItem(
-                        text = "Copy", index = 1, count = 5,
+                        text = resources.getString(R.string.copy), index = 1, count = 5,
                         icon = Icons.Outlined.ContentCopy,
                         onClick = {
                             menuExpanded = false
@@ -1027,12 +1068,14 @@ private fun MessageBubble(
                         },
                     )
                     MenuPopupItem(
-                        text = if (isPinned) "Unpin" else "Pin", index = 2, count = 5,
+                        text = if (isPinned) resources.getString(R.string.unpin) else resources.getString(
+                            R.string.pin,
+                        ), index = 2, count = 5,
                         icon = if (isPinned) Icons.Filled.PushPin else Icons.Outlined.PushPin,
                         onClick = { menuExpanded = false; onPinNote(note) },
                     )
                     MenuPopupItem(
-                        text = "Edit", index = 3, count = 5,
+                        text = resources.getString(R.string.edit), index = 3, count = 5,
                         icon = Icons.Outlined.Edit,
                         onClick = {
                             menuExpanded = false
@@ -1044,8 +1087,8 @@ private fun MessageBubble(
                         },
                     )
                     MenuPopupItem(
-                        text = "Delete", index = 4, count = 5,
-                        supportingText = "Cannot be undone",
+                        text = resources.getString(R.string.delete), index = 4, count = 5,
+                        supportingText = resources.getString(R.string.cannot_be_undone),
                         icon = Icons.Outlined.Delete,
                         tint = MaterialTheme.colorScheme.error,
                         onClick = { menuExpanded = false; onDeleteNote(note) },
@@ -1064,6 +1107,7 @@ private fun PinnedMessageBanner(
     modifier: Modifier = Modifier,
 ) {
     val currentNote = notes.getOrNull(currentIndex) ?: return
+    val resources = LocalResources.current
 
     val displayPreview = remember(currentNote.body) {
         val rawBody = currentNote.body ?: ""
@@ -1072,7 +1116,7 @@ private fun PinnedMessageBanner(
             .replace(MarkdownParser.FILE_REGEX, "")
             .trim()
             .lines()
-            .firstOrNull { it.isNotBlank() } ?: "Attachment"
+            .firstOrNull { it.isNotBlank() } ?: resources.getString(R.string.attachment)
         cleaned
     }
 
@@ -1099,7 +1143,7 @@ private fun PinnedMessageBanner(
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Pinned message #${currentIndex + 1}",
+                    text = resources.getString(R.string.pinned_message, currentIndex + 1),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.primary,
                 )
@@ -1123,7 +1167,8 @@ private fun isSameDay(t1: Long, t2: Long): Boolean {
 @Composable
 private fun DateHeader(timestamp: Long) {
     val dateStr = remember(timestamp) {
-        SimpleDateFormat("MMM d", Locale.getDefault()).format(Date(timestamp))
+        val pattern = DateFormat.getBestDateTimePattern(Locale.getDefault(), "MMMMd")
+        SimpleDateFormat(pattern, Locale.getDefault()).format(Date(timestamp))
     }
     Box(
         contentAlignment = Alignment.Center,
@@ -1153,6 +1198,7 @@ private fun FullScreenImageCarouselDialog(
 ) {
     val state = rememberCarouselState(initialItem = initialIndex) { uris.size }
     var showTopPanel by remember { mutableStateOf(true) }
+    val resources = LocalResources.current
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -1195,7 +1241,7 @@ private fun FullScreenImageCarouselDialog(
                     TooltipBox(
                         positionProvider =
                             TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
-                        tooltip = { PlainTooltip { Text("Go back") } },
+                        tooltip = { PlainTooltip { Text(resources.getString(R.string.go_back)) } },
                         state = rememberTooltipState(),
                         modifier = Modifier
                             .align(Alignment.CenterStart),
@@ -1203,7 +1249,7 @@ private fun FullScreenImageCarouselDialog(
                         IconButton(onClick = onDismiss) {
                             Icon(
                                 Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Back",
+                                contentDescription = resources.getString(R.string.go_back),
                                 tint = Color.White,
                             )
                         }

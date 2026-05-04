@@ -879,10 +879,6 @@ private fun MessageBubble(
         }
     }
 
-    val style = MaterialTheme.typography.labelSmall
-    val iconSize = with(LocalDensity.current) { style.fontSize.toDp() }
-    val timeColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f)
-
     val layoutResult = remember { mutableStateOf<TextLayoutResult?>(null) }
 
     BoxWithConstraints(
@@ -916,6 +912,10 @@ private fun MessageBubble(
                 tonalElevation = 2.dp,
             ) {
                 Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
+                    val style = MaterialTheme.typography.labelSmall
+                    val iconSize = with(LocalDensity.current) { style.fontSize.toDp() }
+                    val timeColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f)
+
                     if (parsedBody.attachments.isNotEmpty()) {
                         AttachmentCarouselStrip(
                             attachments = parsedBody.attachments,
@@ -1070,7 +1070,8 @@ private fun MessageBubble(
                     MenuPopupItem(
                         text = if (isPinned) resources.getString(R.string.unpin) else resources.getString(
                             R.string.pin,
-                        ), index = 2, count = 5,
+                        ),
+                        index = 2, count = 5,
                         icon = if (isPinned) Icons.Filled.PushPin else Icons.Outlined.PushPin,
                         onClick = { menuExpanded = false; onPinNote(note) },
                     )

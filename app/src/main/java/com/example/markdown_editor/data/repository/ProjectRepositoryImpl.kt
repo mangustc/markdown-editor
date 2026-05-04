@@ -199,7 +199,7 @@ class ProjectRepositoryImpl(
     override suspend fun getNoteText(note: Note, includeFrontMatter: Boolean): String =
         withContext(Dispatchers.IO) {
             val fullText = readFullText(note.uri)
-            if (includeFrontMatter) fullText else FrontMatter.splitFromContent(fullText).first.toString()
+            if (includeFrontMatter) fullText else FrontMatter.splitFromContent(fullText).second
         }
 
     override suspend fun saveNoteText(note: Note, text: String): Note =

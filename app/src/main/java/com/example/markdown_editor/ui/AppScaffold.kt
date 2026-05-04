@@ -1,5 +1,6 @@
 package com.example.markdown_editor.ui
 
+import android.content.ClipData
 import android.text.format.DateUtils
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -32,6 +33,7 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Tag
+import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.DriveFileRenameOutline
 import androidx.compose.material.icons.outlined.Info
@@ -76,6 +78,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.ClipEntry
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.PlaceholderVerticalAlign
@@ -137,6 +141,9 @@ fun AppScaffold() {
         }
     }
     val searchResults = appViewModel.navigation.searchResultsPaged.collectAsLazyPagingItems()
+
+    val clipboard = LocalClipboard.current
+    val isSelectionMode = uiState.messengerSelectedNotes.isNotEmpty()
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -288,21 +295,44 @@ fun AppScaffold() {
             topBar = {
                 TopAppBar(
                     title = {
-                        Text(
-                            if (navBackStackEntry?.destination?.route == MessengerDestination::class.qualifiedName) stringResource(
-                                R.string.quick_notes,
-                            ) else uiState.activeNote?.name
-                                ?: stringResource(R.string.app_name),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
+                        if (isSelectionMode) {
+                            Text("${uiState.messengerSelectedNotes.size}")
+                        } else {
+                            Text(
+                                if (navBackStackEntry?.destination?.route == MessengerDestination::class.qualifiedName) stringResource(
+                                    R.string.quick_notes,
+                                ) else uiState.activeNote?.name
+                                    ?: stringResource(R.string.app_name),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
                     },
                     navigationIcon = {
-                        if (navBackStackEntry?.destination?.route != MessengerDestination::class.qualifiedName) {
+                        if (isSelectionMode) {
                             TooltipBox(
                                 positionProvider =
                                     TooltipDefaults.rememberTooltipPositionProvider(
-                                        TooltipAnchorPosition.Above,
+                                        TooltipAnchorPosition.Below,
+                                    ),
+                                tooltip = { PlainTooltip { Text(stringResource(R.string.clear_selection)) } },
+                                state = rememberTooltipState(),
+                            ) {
+                                IconButton(
+                                    onClick = { appViewModel.messenger.clearSelection() },
+                                    shapes = IconButtonDefaults.shapes(),
+                                ) {
+                                    Icon(
+                                        Icons.Default.Close,
+                                        contentDescription = stringResource(R.string.clear_selection),
+                                    )
+                                }
+                            }
+                        } else if (navBackStackEntry?.destination?.route != MessengerDestination::class.qualifiedName) {
+                            TooltipBox(
+                                positionProvider =
+                                    TooltipDefaults.rememberTooltipPositionProvider(
+                                        TooltipAnchorPosition.Below,
                                     ),
                                 tooltip = { PlainTooltip { Text(stringResource(R.string.go_back)) } },
                                 state = rememberTooltipState(),
@@ -321,7 +351,7 @@ fun AppScaffold() {
                             TooltipBox(
                                 positionProvider =
                                     TooltipDefaults.rememberTooltipPositionProvider(
-                                        TooltipAnchorPosition.Above,
+                                        TooltipAnchorPosition.Below,
                                     ),
                                 tooltip = { PlainTooltip { Text(stringResource(R.string.open_menu)) } },
                                 state = rememberTooltipState(),
@@ -333,6 +363,60 @@ fun AppScaffold() {
                                     Icon(
                                         Icons.Default.Menu,
                                         contentDescription = stringResource(R.string.open_menu),
+                                    )
+                                }
+                            }
+                        }
+                    },
+                    actions = {
+                        if (isSelectionMode) {
+                            TooltipBox(
+                                positionProvider =
+                                    TooltipDefaults.rememberTooltipPositionProvider(
+                                        TooltipAnchorPosition.Below,
+                                    ),
+                                tooltip = { PlainTooltip { Text(stringResource(R.string.copy_selected)) } },
+                                state = rememberTooltipState(),
+                            ) {
+                                IconButton(
+                                    onClick = {
+                                        scope.launch {
+                                            val text = appViewModel.messenger.getSelectedNotesText()
+                                            clipboard.setClipEntry(
+                                                ClipEntry(
+                                                    ClipData.newPlainText(
+                                                        "Notes text",
+                                                        text,
+                                                    ),
+                                                ),
+                                            )
+                                            appViewModel.messenger.clearSelection()
+                                        }
+                                    },
+                                    shapes = IconButtonDefaults.shapes(),
+                                ) {
+                                    Icon(
+                                        Icons.Outlined.ContentCopy,
+                                        contentDescription = stringResource(R.string.copy_selected),
+                                    )
+                                }
+                            }
+                            TooltipBox(
+                                positionProvider =
+                                    TooltipDefaults.rememberTooltipPositionProvider(
+                                        TooltipAnchorPosition.Below,
+                                    ),
+                                tooltip = { PlainTooltip { Text(stringResource(R.string.delete_selected)) } },
+                                state = rememberTooltipState(),
+                            ) {
+                                IconButton(
+                                    onClick = { appViewModel.messenger.deleteSelectedNotes() },
+                                    shapes = IconButtonDefaults.shapes(),
+                                ) {
+                                    Icon(
+                                        Icons.Outlined.Delete,
+                                        contentDescription = stringResource(R.string.delete_selected),
+                                        tint = MaterialTheme.colorScheme.error,
                                     )
                                 }
                             }

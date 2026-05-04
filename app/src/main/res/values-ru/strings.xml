@@ -64,4 +64,7 @@
     <string name="save_file">Сохранить файл</string>
     <string name="create_new_note">Создать новую заметку</string>
     <string name="edited_date">Изменено %1$s</string>
+    <string name="clear_selection">Сбросить выбор</string>
+    <string name="copy_selected">Скопировать выбранное</string>
+    <string name="delete_selected">Удалить выбранное</string>
 </resources>

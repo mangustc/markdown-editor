@@ -530,6 +530,50 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 }
             }
         }
+
+        fun toggleNoteSelection(uriString: String) {
+            _uiState.update {
+                val sel = it.messengerSelectedNotes
+                it.copy(messengerSelectedNotes = if (sel.contains(uriString)) sel - uriString else sel + uriString)
+            }
+        }
+
+        fun clearSelection() {
+            _uiState.update { it.copy(messengerSelectedNotes = emptySet()) }
+        }
+
+        fun deleteSelectedNotes() {
+            val uris = _uiState.value.messengerSelectedNotes
+            val project = _uiState.value.project ?: return
+            viewModelScope.launch(Dispatchers.IO) {
+                uris.forEach { u ->
+                    runCatching { repository.deleteNote(repository.getNoteByUri(u.toUri())) }
+                }
+                repository.syncDatabase(project)
+                withContext(Dispatchers.Main) {
+                    clearSelection()
+                    updateNoteLists()
+                }
+            }
+        }
+
+        suspend fun getSelectedNotesText(): String = withContext(Dispatchers.IO) {
+            _uiState.value.messengerSelectedNotes.mapNotNull { u ->
+                runCatching {
+                    val note = repository.getNoteByUri(u.toUri())
+                    var text = repository.getNoteText(note, includeFrontMatter = false)
+
+                    MarkdownParser.IMAGE_REGEX.findAll(text).forEach { match ->
+                        text = text.replace(match.value, "")
+                    }
+                    MarkdownParser.FILE_REGEX.findAll(text).forEach { match ->
+                        text = text.replace(match.value, "")
+                    }
+
+                    text.trim()
+                }.getOrNull()?.takeIf { it.isNotBlank() }
+            }.joinToString("\n\n")
+        }
     }
 
 

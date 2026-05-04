@@ -5,6 +5,7 @@ import android.content.Intent
 import android.net.Uri
 import android.text.format.DateFormat
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -13,8 +14,10 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.calculatePan
@@ -90,6 +93,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -284,6 +288,10 @@ fun MessengerScreen(viewModel: AppViewModel) {
 
     val density = LocalDensity.current
     var inputBarHeightDp by remember { mutableStateOf(0.dp) }
+
+    if (uiState.messengerSelectedNotes.isNotEmpty()) {
+        BackHandler { viewModel.messenger.clearSelection() }
+    }
 
     if (!uiState.messengerIsLoading && uiState.project == null) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -482,6 +490,13 @@ fun MessengerScreen(viewModel: AppViewModel) {
                                         },
                                         onPinNote = { viewModel.navigation.onPinNote(it) },
                                         isPinned = note.tags?.contains("pinned") ?: false,
+                                        isSelected = uiState.messengerSelectedNotes.contains(note.uri.toString()),
+                                        isSelectionMode = uiState.messengerSelectedNotes.isNotEmpty(),
+                                        onToggleSelect = {
+                                            viewModel.messenger.toggleNoteSelection(
+                                                it.uri.toString(),
+                                            )
+                                        },
                                     )
                                 }
                             }
@@ -824,6 +839,7 @@ private fun AttachmentIconButton(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun MessageBubble(
     note: Note,
@@ -836,6 +852,9 @@ private fun MessageBubble(
     onImageClick: (Int, List<Uri>) -> Unit,
     onPinNote: (Note) -> Unit,
     isPinned: Boolean = false,
+    isSelected: Boolean = false,
+    isSelectionMode: Boolean = false,
+    onToggleSelect: (Note) -> Unit,
 ) {
     val context = LocalContext.current
     val density = LocalDensity.current
@@ -875,10 +894,15 @@ private fun MessageBubble(
 
     val layoutResult = remember { mutableStateOf<TextLayoutResult?>(null) }
 
+    val overlayColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.14f)
     BoxWithConstraints(
         contentAlignment = Alignment.TopEnd,
         modifier = Modifier
             .fillMaxWidth()
+            .drawWithContent {
+                drawContent()
+                if (isSelected) drawRect(overlayColor)
+            }
             .pointerInput(Unit) {
                 awaitEachGesture {
                     val event = awaitFirstDown(requireUnconsumed = false)
@@ -886,8 +910,11 @@ private fun MessageBubble(
                     touchY = with(density) { event.position.y.toDp() }
                 }
             }
-            .clickable(onClick = { menuExpanded = true })
-            .padding(horizontal = 12.dp),
+            .combinedClickable(
+                onClick = { if (isSelectionMode) onToggleSelect(note) else menuExpanded = true },
+                onLongClick = { onToggleSelect(note) },
+            )
+            .padding(horizontal = 12.dp, vertical = 4.dp),
     ) {
         val bubbleMaxWidth = maxWidth * 0.9f
         Row(horizontalArrangement = Arrangement.End) {
@@ -988,6 +1015,10 @@ private fun MessageBubble(
                                     modifier = Modifier.pointerInput(Unit) {
                                         detectTapGestures(
                                             onTap = { offset ->
+                                                if (isSelectionMode) {
+                                                    onToggleSelect(note)
+                                                    return@detectTapGestures
+                                                }
                                                 layoutResult.value?.let { result ->
                                                     val position =
                                                         result.getOffsetForPosition(offset)
@@ -1002,6 +1033,7 @@ private fun MessageBubble(
                                                 }
                                             },
                                             onLongPress = { offset ->
+                                                if (isSelectionMode) return@detectTapGestures
                                                 layoutResult.value?.let { result ->
                                                     val position =
                                                         result.getOffsetForPosition(offset)

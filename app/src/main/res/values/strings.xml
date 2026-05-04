@@ -63,4 +63,7 @@
     <string name="save_file">Save file</string>
     <string name="create_new_note">Create new note</string>
     <string name="edited_date">Edited %1$s</string>
+    <string name="clear_selection">Clear selection</string>
+    <string name="copy_selected">Copy selected</string>
+    <string name="delete_selected">Delete selected</string>
 </resources>

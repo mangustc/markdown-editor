@@ -913,7 +913,8 @@ private fun MessageBubble(
                     val iconSize = with(density) { style.fontSize.toDp() }
                     val timeColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f)
 
-                    val isEdited = note.createdAt != null && note.lastModified != note.createdAt
+                    val isEdited =
+                        note.createdAt != null && (note.lastModified - note.createdAt) > 500
                     val editString = remember(isEdited, note.lastModified) {
                         if (isEdited) {
                             val pattern =
@@ -1045,7 +1046,7 @@ private fun MessageBubble(
 
                     Row(
                         modifier = Modifier.widthIn(min = contentWidth),
-                        horizontalArrangement = Arrangement.SpaceBetween,
+                        horizontalArrangement = if (isEdited) Arrangement.SpaceBetween else Arrangement.End,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         if (editString != null) {

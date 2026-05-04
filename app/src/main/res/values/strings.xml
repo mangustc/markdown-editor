@@ -62,4 +62,5 @@
     <string name="inline_code">Inline code</string>
     <string name="save_file">Save file</string>
     <string name="create_new_note">Create new note</string>
+    <string name="edited_date">Edited %1$s</string>
 </resources>

@@ -851,12 +851,6 @@ private fun MessageBubble(
     val previews = remember(urls, linkPreviews) { urls.mapNotNull { linkPreviews[it] } }
     val parsedBody = remember(note.body) { parseNoteBody(note.body ?: "", project) }
     val bodyText = parsedBody.text.ifBlank { "" }
-    val timeString = remember(note.createdAt, note.lastModified) {
-        val pattern = DateFormat.getBestDateTimePattern(Locale.getDefault(), "MMMdHHmm")
-        SimpleDateFormat(pattern, Locale.getDefault()).format(
-            Date(note.createdAt ?: note.lastModified),
-        )
-    }
 
     var menuExpanded by remember { mutableStateOf(false) }
     var touchX by remember { mutableStateOf(0.dp) }
@@ -912,126 +906,167 @@ private fun MessageBubble(
                 tonalElevation = 2.dp,
             ) {
                 Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
+                    val density = LocalDensity.current
+                    var contentWidth by remember { mutableStateOf(0.dp) }
+
                     val style = MaterialTheme.typography.labelSmall
-                    val iconSize = with(LocalDensity.current) { style.fontSize.toDp() }
+                    val iconSize = with(density) { style.fontSize.toDp() }
                     val timeColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f)
 
-                    if (parsedBody.attachments.isNotEmpty()) {
-                        AttachmentCarouselStrip(
-                            attachments = parsedBody.attachments,
-                            onImageClick = { clickedUri ->
-                                val imageUris = parsedBody.attachments.mapNotNull {
-                                    when (it.type) {
-                                        AttachmentType.IMAGE, AttachmentType.PENDING_IMAGE -> it.uri
-                                        else -> null
-                                    }
-                                }
-                                onImageClick(imageUris.indexOf(clickedUri), imageUris)
-                            },
-                            onFileClick = { uri ->
-                                try {
-                                    val mime = context.contentResolver.getType(uri) ?: "*/*"
-                                    val intent = Intent(Intent.ACTION_VIEW).apply {
-                                        setDataAndType(uri, mime)
-                                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                    }
-                                    context.startActivity(Intent.createChooser(intent, null))
-                                } catch (_: Exception) {
-                                    Toast.makeText(
-                                        context,
-                                        resources.getString(R.string.no_app_found_to_open_this_file),
-                                        Toast.LENGTH_SHORT,
-                                    ).show()
-                                }
-                            },
-                            isViewing = true,
-                        )
-                        if (bodyText.isNotBlank()) Spacer(modifier = Modifier.height(8.dp))
-                    }
-
-                    if (bodyText.isNotBlank()) {
-                        SelectionContainer {
-                            Text(
-                                text = annotatedBody,
-                                style = TextStyle(
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                    fontSize = MaterialTheme.typography.bodyMedium.fontSize,
-                                    lineHeight = MaterialTheme.typography.bodyMedium.lineHeight,
+                    val isEdited = note.createdAt != null && note.lastModified != note.createdAt
+                    val editString = remember(isEdited, note.lastModified) {
+                        if (isEdited) {
+                            val pattern =
+                                DateFormat.getBestDateTimePattern(Locale.getDefault(), "MMMdHHmm")
+                            resources.getString(
+                                R.string.edited_date,
+                                SimpleDateFormat(pattern, Locale.getDefault()).format(
+                                    Date(
+                                        note.lastModified,
+                                    ),
                                 ),
-                                onTextLayout = { layoutResult.value = it },
-                                modifier = Modifier.pointerInput(Unit) {
-                                    detectTapGestures(
-                                        onTap = { offset ->
-                                            layoutResult.value?.let { result ->
-                                                val position = result.getOffsetForPosition(offset)
-                                                annotatedBody.getStringAnnotations(
-                                                    "URL",
-                                                    position,
-                                                    position,
-                                                )
-                                                    .firstOrNull()
-                                                    ?.let { uriHandler.openUri(it.item) }
-                                                    ?: run { menuExpanded = true }
-                                            }
-                                        },
-                                        onLongPress = { offset ->
-                                            layoutResult.value?.let { result ->
-                                                val position = result.getOffsetForPosition(offset)
-                                                annotatedBody.getStringAnnotations(
-                                                    "URL",
-                                                    position,
-                                                    position,
-                                                )
-                                                    .firstOrNull()?.let { link ->
-                                                        scope.launch {
-                                                            clipboard.setClipEntry(
-                                                                ClipEntry(
-                                                                    ClipData.newPlainText(
-                                                                        "URL",
-                                                                        link.item,
-                                                                    ),
-                                                                ),
-                                                            )
-                                                            Toast.makeText(
-                                                                context,
-                                                                resources.getString(R.string.link_copied),
-                                                                Toast.LENGTH_SHORT,
-                                                            ).show()
-                                                            focusManager.clearFocus()
-                                                        }
-                                                    }
-                                            }
-                                        },
-                                    )
-                                },
                             )
-                        }
+                        } else null
+                    }
+                    val timeString = remember(note.createdAt, note.lastModified) {
+                        val pattern =
+                            DateFormat.getBestDateTimePattern(Locale.getDefault(), "MMMdHHmm")
+                        SimpleDateFormat(pattern, Locale.getDefault()).format(
+                            Date(note.createdAt ?: note.lastModified),
+                        )
                     }
 
-                    if (previews.isNotEmpty()) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        LinkPreviewCarousel(previews = previews)
+                    Column(
+                        modifier = Modifier.onSizeChanged {
+                            contentWidth = with(density) { it.width.toDp() }
+                        },
+                    ) {
+                        if (parsedBody.attachments.isNotEmpty()) {
+                            AttachmentCarouselStrip(
+                                attachments = parsedBody.attachments,
+                                onImageClick = { clickedUri ->
+                                    val imageUris = parsedBody.attachments.mapNotNull {
+                                        when (it.type) {
+                                            AttachmentType.IMAGE, AttachmentType.PENDING_IMAGE -> it.uri
+                                            else -> null
+                                        }
+                                    }
+                                    onImageClick(imageUris.indexOf(clickedUri), imageUris)
+                                },
+                                onFileClick = { uri ->
+                                    try {
+                                        val mime = context.contentResolver.getType(uri) ?: "*/*"
+                                        val intent = Intent(Intent.ACTION_VIEW).apply {
+                                            setDataAndType(uri, mime)
+                                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                        }
+                                        context.startActivity(Intent.createChooser(intent, null))
+                                    } catch (_: Exception) {
+                                        Toast.makeText(
+                                            context,
+                                            resources.getString(R.string.no_app_found_to_open_this_file),
+                                            Toast.LENGTH_SHORT,
+                                        ).show()
+                                    }
+                                },
+                                isViewing = true,
+                            )
+                            if (bodyText.isNotBlank()) Spacer(modifier = Modifier.height(8.dp))
+                        }
+
+                        if (bodyText.isNotBlank()) {
+                            SelectionContainer {
+                                Text(
+                                    text = annotatedBody,
+                                    style = TextStyle(
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                        fontSize = MaterialTheme.typography.bodyMedium.fontSize,
+                                        lineHeight = MaterialTheme.typography.bodyMedium.lineHeight,
+                                    ),
+                                    onTextLayout = { layoutResult.value = it },
+                                    modifier = Modifier.pointerInput(Unit) {
+                                        detectTapGestures(
+                                            onTap = { offset ->
+                                                layoutResult.value?.let { result ->
+                                                    val position =
+                                                        result.getOffsetForPosition(offset)
+                                                    annotatedBody.getStringAnnotations(
+                                                        "URL",
+                                                        position,
+                                                        position,
+                                                    )
+                                                        .firstOrNull()
+                                                        ?.let { uriHandler.openUri(it.item) }
+                                                        ?: run { menuExpanded = true }
+                                                }
+                                            },
+                                            onLongPress = { offset ->
+                                                layoutResult.value?.let { result ->
+                                                    val position =
+                                                        result.getOffsetForPosition(offset)
+                                                    annotatedBody.getStringAnnotations(
+                                                        "URL",
+                                                        position,
+                                                        position,
+                                                    )
+                                                        .firstOrNull()?.let { link ->
+                                                            scope.launch {
+                                                                clipboard.setClipEntry(
+                                                                    ClipEntry(
+                                                                        ClipData.newPlainText(
+                                                                            "URL",
+                                                                            link.item,
+                                                                        ),
+                                                                    ),
+                                                                )
+                                                                Toast.makeText(
+                                                                    context,
+                                                                    resources.getString(R.string.link_copied),
+                                                                    Toast.LENGTH_SHORT,
+                                                                ).show()
+                                                                focusManager.clearFocus()
+                                                            }
+                                                        }
+                                                }
+                                            },
+                                        )
+                                    },
+                                )
+                            }
+                        }
+
+                        if (previews.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            LinkPreviewCarousel(previews = previews)
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(4.dp))
+
                     Row(
-                        modifier = Modifier.align(Alignment.End),
+                        modifier = Modifier.widthIn(min = contentWidth),
+                        horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
-                        if (isPinned) {
-                            Icon(
-                                imageVector = Icons.Filled.PushPin,
-                                contentDescription = null,
-                                tint = timeColor,
-                                modifier = Modifier.size(iconSize),
-                            )
+                        if (editString != null) {
+                            Text(text = editString, style = style, color = timeColor)
+                            Spacer(modifier = Modifier.width(12.dp))
                         }
-                        Text(
-                            text = timeString,
-                            style = style,
-                            color = timeColor,
-                        )
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
+                            if (isPinned) {
+                                Icon(
+                                    imageVector = Icons.Filled.PushPin,
+                                    contentDescription = null,
+                                    tint = timeColor,
+                                    modifier = Modifier.size(iconSize),
+                                )
+                            }
+                            Text(text = timeString, style = style, color = timeColor)
+                        }
                     }
                 }
             }

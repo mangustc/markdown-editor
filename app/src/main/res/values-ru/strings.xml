@@ -63,4 +63,5 @@
     <string name="inline_code">Код</string>
     <string name="save_file">Сохранить файл</string>
     <string name="create_new_note">Создать новую заметку</string>
+    <string name="edited_date">Изменено %1$s</string>
 </resources>

@@ -1,4 +1,4 @@
-package com.example.markdown_editor.domain.parser
+package com.example.markdown_editor.domain.markdown
 
 import com.example.markdown_editor.domain.model.SpanInfo
 import com.example.markdown_editor.domain.model.TokenType

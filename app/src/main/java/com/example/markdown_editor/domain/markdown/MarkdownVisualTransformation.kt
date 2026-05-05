@@ -1,4 +1,4 @@
-package com.example.markdown_editor.ui.editor
+package com.example.markdown_editor.domain.markdown
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
@@ -12,6 +12,7 @@ import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.unit.Density
 import com.example.markdown_editor.domain.model.SpanInfo
 import com.example.markdown_editor.domain.model.TokenType
+import com.example.markdown_editor.ui.editor.extractImagePath
 
 class MarkdownVisualTransformation(
     private val annotated: AnnotatedString,

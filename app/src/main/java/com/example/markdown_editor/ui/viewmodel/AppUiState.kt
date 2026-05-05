@@ -5,8 +5,9 @@ import androidx.compose.ui.text.input.TextFieldValue
 import com.example.markdown_editor.data.model.LinkPreview
 import com.example.markdown_editor.data.model.Note
 import com.example.markdown_editor.data.model.Project
+import com.example.markdown_editor.domain.editor.EditorRope
+import com.example.markdown_editor.domain.messenger.Attachment
 import com.example.markdown_editor.domain.model.SpanInfo
-import com.example.markdown_editor.ui.messenger.Attachment
 
 data class AppUiState(
     val project: Project? = null,
@@ -27,6 +28,11 @@ data class AppUiState(
     val editorTextFieldValue: TextFieldValue = TextFieldValue(),
     val editorAnnotatedString: AnnotatedString = AnnotatedString(""),
     val editorSpans: List<SpanInfo> = emptyList(),
+    val editorRope: EditorRope = EditorRope.of(""),
+    val editorCanUndo: Boolean = false,
+    val editorCanRedo: Boolean = false,
+    val editorVersion: Int = 0,
+    val editorSavedVersion: Int = 0,
 
     val messengerIsLoading: Boolean = true,
     val messengerNewNoteText: String = "",

@@ -135,7 +135,9 @@ import com.example.markdown_editor.data.model.LinkPreview
 import com.example.markdown_editor.data.model.Note
 import com.example.markdown_editor.data.model.Project
 import com.example.markdown_editor.data.util.LinkPreviewFetcher
-import com.example.markdown_editor.domain.parser.MarkdownParser
+import com.example.markdown_editor.domain.markdown.MarkdownParser
+import com.example.markdown_editor.domain.messenger.Attachment
+import com.example.markdown_editor.domain.messenger.AttachmentType
 import com.example.markdown_editor.ui.components.MenuPopup
 import com.example.markdown_editor.ui.components.MenuPopupGroup
 import com.example.markdown_editor.ui.components.MenuPopupItem

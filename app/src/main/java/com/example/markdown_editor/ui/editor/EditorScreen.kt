@@ -21,6 +21,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Redo
+import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.FormatBold
@@ -34,6 +36,8 @@ import androidx.compose.material3.FloatingToolbarDefaults.ScreenOffset
 import androidx.compose.material3.HorizontalFloatingToolbar
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Text
@@ -65,6 +69,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.example.markdown_editor.R
 import com.example.markdown_editor.data.model.Project
+import com.example.markdown_editor.domain.editor.EditorEvent
+import com.example.markdown_editor.domain.markdown.MarkdownVisualTransformation
 import com.example.markdown_editor.domain.model.TokenType
 import com.example.markdown_editor.ui.viewmodel.AppViewModel
 import kotlinx.coroutines.delay
@@ -146,6 +152,44 @@ fun EditorScreen(
             TooltipBox(
                 positionProvider =
                     TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
+                tooltip = { PlainTooltip { Text("Undo") } },
+                state = rememberTooltipState(),
+            ) {
+                IconButton(
+                    onClick = {
+                        viewModel.editor.editorOnEvent(EditorEvent.Undo)
+                    },
+                    enabled = uiState.editorCanUndo,
+                    shapes = IconButtonDefaults.shapes(),
+                ) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.Undo,
+                        contentDescription = "Undo",
+                    )
+                }
+            }
+            TooltipBox(
+                positionProvider =
+                    TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
+                tooltip = { PlainTooltip { Text("Redo") } },
+                state = rememberTooltipState(),
+            ) {
+                IconButton(
+                    onClick = {
+                        viewModel.editor.editorOnEvent(EditorEvent.Redo)
+                    },
+                    enabled = uiState.editorCanRedo,
+                    shapes = IconButtonDefaults.shapes(),
+                ) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.Redo,
+                        contentDescription = "Redo",
+                    )
+                }
+            }
+            TooltipBox(
+                positionProvider =
+                    TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
                 tooltip = { PlainTooltip { Text(stringResource(R.string.attach_photo)) } },
                 state = rememberTooltipState(),
             ) {
@@ -153,6 +197,7 @@ fun EditorScreen(
                     onClick = {
                         photoPickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
                     },
+                    shapes = IconButtonDefaults.shapes(),
                 ) {
                     Icon(
                         Icons.Default.Image,
@@ -166,7 +211,10 @@ fun EditorScreen(
                 tooltip = { PlainTooltip { Text(stringResource(R.string.attach_file)) } },
                 state = rememberTooltipState(),
             ) {
-                IconButton(onClick = { filePickerLauncher.launch(arrayOf("*/*")) }) {
+                IconButton(
+                    onClick = { filePickerLauncher.launch(arrayOf("*/*")) },
+                    shapes = IconButtonDefaults.shapes(),
+                ) {
                     Icon(
                         Icons.Default.AttachFile,
                         contentDescription = stringResource(R.string.attach_file),
@@ -188,6 +236,7 @@ fun EditorScreen(
                             ),
                         )
                     },
+                    shapes = IconButtonDefaults.shapes(),
                 ) {
                     Icon(
                         Icons.Default.FormatBold,
@@ -210,6 +259,7 @@ fun EditorScreen(
                             ),
                         )
                     },
+                    shapes = IconButtonDefaults.shapes(),
                 ) {
                     Icon(
                         Icons.Default.FormatItalic,
@@ -232,6 +282,7 @@ fun EditorScreen(
                             ),
                         )
                     },
+                    shapes = IconButtonDefaults.shapes(),
                 ) {
                     Icon(
                         Icons.Default.Code,
@@ -239,16 +290,22 @@ fun EditorScreen(
                     )
                 }
             }
+
+            val isDirty = uiState.editorVersion != uiState.editorSavedVersion
             TooltipBox(
                 positionProvider =
                     TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
                 tooltip = { PlainTooltip { Text(stringResource(R.string.save_file)) } },
                 state = rememberTooltipState(),
             ) {
-                IconButton(onClick = { viewModel.editor.editorOnSave() }) {
+                IconButton(
+                    onClick = { viewModel.editor.editorOnSave() },
+                    shapes = IconButtonDefaults.shapes(),
+                ) {
                     Icon(
                         Icons.Default.Save,
                         contentDescription = stringResource(R.string.save_file),
+                        tint = if (isDirty) MaterialTheme.colorScheme.error else LocalContentColor.current,
                     )
                 }
             }

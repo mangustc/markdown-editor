@@ -1,4 +1,4 @@
-package com.example.markdown_editor.ui.messenger
+package com.example.markdown_editor.domain.messenger
 
 import android.net.Uri
 

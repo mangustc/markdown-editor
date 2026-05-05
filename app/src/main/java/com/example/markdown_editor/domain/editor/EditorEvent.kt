@@ -1,4 +1,4 @@
-package com.example.markdown_editor.ui.editor
+package com.example.markdown_editor.domain.editor
 
 import android.net.Uri
 
@@ -9,4 +9,7 @@ sealed class EditorEvent {
         val uri: Uri,
         val displayName: String? = null,
     ) : EditorEvent()
+
+    object Undo : EditorEvent()
+    object Redo : EditorEvent()
 }

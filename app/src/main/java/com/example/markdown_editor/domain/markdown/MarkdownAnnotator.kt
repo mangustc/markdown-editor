@@ -1,4 +1,4 @@
-package com.example.markdown_editor.ui.editor
+package com.example.markdown_editor.domain.markdown
 
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle

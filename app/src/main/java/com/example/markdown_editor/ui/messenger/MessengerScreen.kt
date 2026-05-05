@@ -1076,7 +1076,11 @@ private fun MessageBubble(
             }
         }
 
-        Box(modifier = Modifier.offset { IntOffset(touchX.roundToPx(), touchY.roundToPx()) }) {
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .offset { IntOffset(touchX.roundToPx(), touchY.roundToPx()) },
+        ) {
             MenuPopup(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) { gs ->
                 MenuPopupGroup(
                     index = 0,

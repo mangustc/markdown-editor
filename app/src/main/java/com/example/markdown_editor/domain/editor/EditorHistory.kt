@@ -47,7 +47,6 @@ class EditorHistory(private val maxSize: Int = 100) {
         val n = new.text
         if (o == n) return null
 
-        // Find common prefix and suffix
         var start = 0
         while (start < o.length && start < n.length && o[start] == n[start]) start++
         var endO = o.length
@@ -58,8 +57,8 @@ class EditorHistory(private val maxSize: Int = 100) {
 
         return EditDelta(
             position = start,
-            deleted = o.substring(start, endO),   // only the changed slice
-            inserted = n.substring(start, endN),  // only the changed slice
+            deleted = o.substring(start, endO),
+            inserted = n.substring(start, endN),
             cursorBefore = old.selection.start,
             cursorAfter = new.selection.start,
         )

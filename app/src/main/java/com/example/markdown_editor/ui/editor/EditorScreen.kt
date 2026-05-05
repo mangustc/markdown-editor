@@ -28,7 +28,6 @@ import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.FormatBold
 import androidx.compose.material.icons.filled.FormatItalic
 import androidx.compose.material.icons.filled.Image
-import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -37,7 +36,6 @@ import androidx.compose.material3.HorizontalFloatingToolbar
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
-import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Text
@@ -287,25 +285,6 @@ fun EditorScreen(
                     Icon(
                         Icons.Default.Code,
                         contentDescription = stringResource(R.string.inline_code),
-                    )
-                }
-            }
-
-            val isDirty = uiState.editorVersion != uiState.editorSavedVersion
-            TooltipBox(
-                positionProvider =
-                    TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
-                tooltip = { PlainTooltip { Text(stringResource(R.string.save_file)) } },
-                state = rememberTooltipState(),
-            ) {
-                IconButton(
-                    onClick = { viewModel.editor.editorOnSave() },
-                    shapes = IconButtonDefaults.shapes(),
-                ) {
-                    Icon(
-                        Icons.Default.Save,
-                        contentDescription = stringResource(R.string.save_file),
-                        tint = if (isDirty) MaterialTheme.colorScheme.error else LocalContentColor.current,
                     )
                 }
             }

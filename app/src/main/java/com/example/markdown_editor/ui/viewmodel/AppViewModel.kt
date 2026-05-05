@@ -349,7 +349,12 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 delay(500)
                 pendingOldValue?.let { burstStart ->
                     history.push(burstStart, _uiState.value.editorTextFieldValue)
-                    _uiState.update { it.copy(editorCanUndo = history.canUndo) }
+                    _uiState.update {
+                        it.copy(
+                            editorCanUndo = history.canUndo,
+                            editorCanRedo = history.canRedo,
+                        )
+                    }
                 }
                 pendingOldValue = null
             }

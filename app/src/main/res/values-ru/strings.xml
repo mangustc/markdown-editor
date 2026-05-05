@@ -67,4 +67,6 @@
     <string name="clear_selection">Сбросить выбор</string>
     <string name="copy_selected">Скопировать выбранное</string>
     <string name="delete_selected">Удалить выбранное</string>
+    <string name="undo">Отменить</string>
+    <string name="redo">Повторить</string>
 </resources>

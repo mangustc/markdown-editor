@@ -66,4 +66,6 @@
     <string name="clear_selection">Clear selection</string>
     <string name="copy_selected">Copy selected</string>
     <string name="delete_selected">Delete selected</string>
+    <string name="undo">Undo</string>
+    <string name="redo">Redo</string>
 </resources>

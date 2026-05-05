@@ -143,13 +143,13 @@ fun EditorScreen(
             TooltipIconButton(
                 onClick = { viewModel.editor.editorOnEvent(EditorEvent.Undo) },
                 icon = Icons.AutoMirrored.Filled.Undo,
-                tooltip = "Undo",
+                tooltip = stringResource(R.string.undo),
                 enabled = uiState.editorCanUndo,
             )
             TooltipIconButton(
                 onClick = { viewModel.editor.editorOnEvent(EditorEvent.Redo) },
                 icon = Icons.AutoMirrored.Filled.Redo,
-                tooltip = "Redo",
+                tooltip = stringResource(R.string.redo),
                 enabled = uiState.editorCanRedo,
             )
             TooltipIconButton(

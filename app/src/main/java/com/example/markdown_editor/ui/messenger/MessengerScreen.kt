@@ -141,6 +141,7 @@ import com.example.markdown_editor.domain.messenger.AttachmentType
 import com.example.markdown_editor.ui.components.MenuPopup
 import com.example.markdown_editor.ui.components.MenuPopupGroup
 import com.example.markdown_editor.ui.components.MenuPopupItem
+import com.example.markdown_editor.ui.components.TooltipIconButton
 import com.example.markdown_editor.ui.util.scrollbar
 import com.example.markdown_editor.ui.viewmodel.AppViewModel
 import kotlinx.coroutines.launch
@@ -626,53 +627,33 @@ private fun MessengerInputBar(
                 unfocusedIndicatorColor = Color.Transparent,
             ),
             leadingIcon = {
-                TooltipBox(
-                    positionProvider =
-                        TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
-                    tooltip = { PlainTooltip { Text(resources.getString(R.string.attach_content)) } },
-                    state = rememberTooltipState(),
-                ) {
-                    IconButton(
-                        onClick = onCarouselExpandClick,
-                    ) {
-                        Icon(
-                            Icons.Default.AttachFile,
-                            contentDescription = resources.getString(R.string.attach_content),
-                        )
-                    }
-                }
+                TooltipIconButton(
+                    onClick = onCarouselExpandClick,
+                    icon = Icons.Default.AttachFile,
+                    tooltip = resources.getString(R.string.attach_content),
+                    shapes = IconButtonDefaults.shapes(
+                        shape = IconButtonDefaults.standardShape,
+                        pressedShape = IconButtonDefaults.standardShape,
+                    ),
+                )
             },
             trailingIcon = {
-                TooltipBox(
-                    positionProvider =
-                        TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
-                    tooltip = {
-                        PlainTooltip {
-                            Text(
-                                if (isEditing) resources.getString(R.string.save_changes) else resources.getString(
-                                    R.string.create_note,
-                                ),
-                            )
-                        }
-                    },
-                    state = rememberTooltipState(),
-                ) {
-                    IconButton(
-                        onClick = onSend,
-                        colors = IconButtonDefaults.iconButtonColors(
-                            disabledContentColor = Color.Unspecified,
-                            contentColor = MaterialTheme.colorScheme.primary,
-                        ),
-                        enabled = value.isNotBlank() || attachments.isNotEmpty(),
-                    ) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.Send,
-                            contentDescription = if (isEditing) resources.getString(R.string.save_changes) else resources.getString(
-                                R.string.create_note,
-                            ),
-                        )
-                    }
-                }
+                TooltipIconButton(
+                    onClick = onSend,
+                    icon = Icons.AutoMirrored.Filled.Send,
+                    tooltip = if (isEditing) resources.getString(R.string.save_changes) else resources.getString(
+                        R.string.create_note,
+                    ),
+                    colors = IconButtonDefaults.iconButtonColors(
+                        disabledContentColor = Color.Unspecified,
+                        contentColor = MaterialTheme.colorScheme.primary,
+                    ),
+                    shapes = IconButtonDefaults.shapes(
+                        shape = IconButtonDefaults.standardShape,
+                        pressedShape = IconButtonDefaults.standardShape,
+                    ),
+                    enabled = value.isNotBlank() || attachments.isNotEmpty(),
+                )
             },
             modifier = Modifier
                 .fillMaxWidth()
@@ -751,32 +732,20 @@ private fun AttachmentCarouselStrip(
                             .padding(4.dp)
                             .fillMaxSize(),
                     ) {
-                        TooltipBox(
-                            positionProvider =
-                                TooltipDefaults.rememberTooltipPositionProvider(
-                                    TooltipAnchorPosition.Above,
-                                ),
-                            tooltip = { PlainTooltip { Text(resources.getString(R.string.remove_attachment)) } },
-                            state = rememberTooltipState(),
-                        ) {
-                            IconButton(
-                                onClick = { onRemove(page - 2) },
-                                shapes = IconButtonDefaults.shapes(
-                                    shape = IconButtonDefaults.extraSmallRoundShape,
-                                ),
-                                colors = IconButtonDefaults.iconButtonColors(
-                                    containerColor = MaterialTheme.colorScheme.errorContainer,
-                                ),
-                                modifier = Modifier
-                                    .size(IconButtonDefaults.extraSmallIconSize),
-                            ) {
-                                Icon(
-                                    Icons.Default.Close,
-                                    contentDescription = resources.getString(R.string.remove_attachment),
-                                    tint = MaterialTheme.colorScheme.onErrorContainer,
-                                )
-                            }
-                        }
+                        TooltipIconButton(
+                            onClick = { onRemove(page - 2) },
+                            icon = Icons.Default.Close,
+                            tooltip = resources.getString(R.string.remove_attachment),
+                            colors = IconButtonDefaults.iconButtonColors(
+                                containerColor = MaterialTheme.colorScheme.errorContainer,
+                                contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                            ),
+                            shapes = IconButtonDefaults.shapes(
+                                shape = IconButtonDefaults.extraSmallRoundShape,
+                            ),
+                            modifier = Modifier
+                                .size(IconButtonDefaults.extraSmallIconSize),
+                        )
                     }
                 }
             }
@@ -1309,22 +1278,17 @@ private fun FullScreenImageCarouselDialog(
                         .statusBarsPadding()
                         .padding(8.dp),
                 ) {
-                    TooltipBox(
-                        positionProvider =
-                            TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
-                        tooltip = { PlainTooltip { Text(resources.getString(R.string.go_back)) } },
-                        state = rememberTooltipState(),
+                    TooltipIconButton(
+                        onClick = onDismiss,
+                        icon = Icons.AutoMirrored.Filled.ArrowBack,
+                        tooltip = resources.getString(R.string.go_back),
+                        tooltipAnchorPosition = TooltipAnchorPosition.Below,
+                        colors = IconButtonDefaults.iconButtonColors(
+                            contentColor = Color.White,
+                        ),
                         modifier = Modifier
                             .align(Alignment.CenterStart),
-                    ) {
-                        IconButton(onClick = onDismiss) {
-                            Icon(
-                                Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = resources.getString(R.string.go_back),
-                                tint = Color.White,
-                            )
-                        }
-                    }
+                    )
 
                     Text(
                         text = "${state.currentItem + 1} of ${uris.size}",

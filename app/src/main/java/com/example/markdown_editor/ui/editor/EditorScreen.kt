@@ -33,16 +33,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FloatingToolbarDefaults.ScreenOffset
 import androidx.compose.material3.HorizontalFloatingToolbar
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.PlainTooltip
-import androidx.compose.material3.Text
-import androidx.compose.material3.TooltipAnchorPosition
-import androidx.compose.material3.TooltipBox
-import androidx.compose.material3.TooltipDefaults
-import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -70,6 +61,7 @@ import com.example.markdown_editor.data.model.Project
 import com.example.markdown_editor.domain.editor.EditorEvent
 import com.example.markdown_editor.domain.markdown.MarkdownVisualTransformation
 import com.example.markdown_editor.domain.model.TokenType
+import com.example.markdown_editor.ui.components.TooltipIconButton
 import com.example.markdown_editor.ui.viewmodel.AppViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -139,6 +131,7 @@ fun EditorScreen(
     ) {
         HorizontalFloatingToolbar(
             expanded = true,
+            expandedShadowElevation = 8.dp,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .offset(y = -ScreenOffset)
@@ -147,147 +140,70 @@ fun EditorScreen(
                     toolbarHeightDp = with(density) { it.height.toDp() + ScreenOffset * 3 }
                 },
         ) {
-            TooltipBox(
-                positionProvider =
-                    TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
-                tooltip = { PlainTooltip { Text("Undo") } },
-                state = rememberTooltipState(),
-            ) {
-                IconButton(
-                    onClick = {
-                        viewModel.editor.editorOnEvent(EditorEvent.Undo)
-                    },
-                    enabled = uiState.editorCanUndo,
-                    shapes = IconButtonDefaults.shapes(),
-                ) {
-                    Icon(
-                        Icons.AutoMirrored.Filled.Undo,
-                        contentDescription = "Undo",
+            TooltipIconButton(
+                onClick = { viewModel.editor.editorOnEvent(EditorEvent.Undo) },
+                icon = Icons.AutoMirrored.Filled.Undo,
+                tooltip = "Undo",
+                enabled = uiState.editorCanUndo,
+            )
+            TooltipIconButton(
+                onClick = { viewModel.editor.editorOnEvent(EditorEvent.Redo) },
+                icon = Icons.AutoMirrored.Filled.Redo,
+                tooltip = "Redo",
+                enabled = uiState.editorCanRedo,
+            )
+            TooltipIconButton(
+                onClick = {
+                    photoPickerLauncher.launch(
+                        PickVisualMediaRequest(
+                            ActivityResultContracts.PickVisualMedia.ImageOnly,
+                        ),
                     )
-                }
-            }
-            TooltipBox(
-                positionProvider =
-                    TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
-                tooltip = { PlainTooltip { Text("Redo") } },
-                state = rememberTooltipState(),
-            ) {
-                IconButton(
-                    onClick = {
-                        viewModel.editor.editorOnEvent(EditorEvent.Redo)
-                    },
-                    enabled = uiState.editorCanRedo,
-                    shapes = IconButtonDefaults.shapes(),
-                ) {
-                    Icon(
-                        Icons.AutoMirrored.Filled.Redo,
-                        contentDescription = "Redo",
+                },
+                icon = Icons.Default.Image,
+                tooltip = stringResource(R.string.attach_photo),
+            )
+            TooltipIconButton(
+                onClick = { filePickerLauncher.launch(arrayOf("*/*")) },
+                icon = Icons.Default.AttachFile,
+                tooltip = stringResource(R.string.attach_file),
+            )
+            TooltipIconButton(
+                onClick = {
+                    viewModel.editor.editorOnEvent(
+                        EditorEvent.InsertSyntax(
+                            "****",
+                            2,
+                        ),
                     )
-                }
-            }
-            TooltipBox(
-                positionProvider =
-                    TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
-                tooltip = { PlainTooltip { Text(stringResource(R.string.attach_photo)) } },
-                state = rememberTooltipState(),
-            ) {
-                IconButton(
-                    onClick = {
-                        photoPickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
-                    },
-                    shapes = IconButtonDefaults.shapes(),
-                ) {
-                    Icon(
-                        Icons.Default.Image,
-                        contentDescription = stringResource(R.string.attach_photo),
+                },
+                icon = Icons.Default.FormatBold,
+                tooltip = stringResource(R.string.bold),
+            )
+            TooltipIconButton(
+                onClick = {
+                    viewModel.editor.editorOnEvent(
+                        EditorEvent.InsertSyntax(
+                            "**",
+                            1,
+                        ),
                     )
-                }
-            }
-            TooltipBox(
-                positionProvider =
-                    TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
-                tooltip = { PlainTooltip { Text(stringResource(R.string.attach_file)) } },
-                state = rememberTooltipState(),
-            ) {
-                IconButton(
-                    onClick = { filePickerLauncher.launch(arrayOf("*/*")) },
-                    shapes = IconButtonDefaults.shapes(),
-                ) {
-                    Icon(
-                        Icons.Default.AttachFile,
-                        contentDescription = stringResource(R.string.attach_file),
+                },
+                icon = Icons.Default.FormatItalic,
+                tooltip = stringResource(R.string.italic),
+            )
+            TooltipIconButton(
+                onClick = {
+                    viewModel.editor.editorOnEvent(
+                        EditorEvent.InsertSyntax(
+                            "``",
+                            1,
+                        ),
                     )
-                }
-            }
-            TooltipBox(
-                positionProvider =
-                    TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
-                tooltip = { PlainTooltip { Text(stringResource(R.string.bold)) } },
-                state = rememberTooltipState(),
-            ) {
-                IconButton(
-                    onClick = {
-                        viewModel.editor.editorOnEvent(
-                            EditorEvent.InsertSyntax(
-                                "****",
-                                2,
-                            ),
-                        )
-                    },
-                    shapes = IconButtonDefaults.shapes(),
-                ) {
-                    Icon(
-                        Icons.Default.FormatBold,
-                        contentDescription = stringResource(R.string.bold),
-                    )
-                }
-            }
-            TooltipBox(
-                positionProvider =
-                    TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
-                tooltip = { PlainTooltip { Text(stringResource(R.string.italic)) } },
-                state = rememberTooltipState(),
-            ) {
-                IconButton(
-                    onClick = {
-                        viewModel.editor.editorOnEvent(
-                            EditorEvent.InsertSyntax(
-                                "**",
-                                1,
-                            ),
-                        )
-                    },
-                    shapes = IconButtonDefaults.shapes(),
-                ) {
-                    Icon(
-                        Icons.Default.FormatItalic,
-                        contentDescription = stringResource(R.string.italic),
-                    )
-                }
-            }
-            TooltipBox(
-                positionProvider =
-                    TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
-                tooltip = { PlainTooltip { Text(stringResource(R.string.inline_code)) } },
-                state = rememberTooltipState(),
-            ) {
-                IconButton(
-                    onClick = {
-                        viewModel.editor.editorOnEvent(
-                            EditorEvent.InsertSyntax(
-                                "``",
-                                1,
-                            ),
-                        )
-                    },
-                    shapes = IconButtonDefaults.shapes(),
-                ) {
-                    Icon(
-                        Icons.Default.Code,
-                        contentDescription = stringResource(R.string.inline_code),
-                    )
-                }
-            }
+                },
+                icon = Icons.Default.Code,
+                tooltip = stringResource(R.string.inline_code),
+            )
         }
         Column(
             modifier = Modifier

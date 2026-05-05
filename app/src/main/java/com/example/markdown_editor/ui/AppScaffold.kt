@@ -47,8 +47,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.LocalTextStyle
@@ -58,16 +56,12 @@ import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SearchBarDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TooltipAnchorPosition
-import androidx.compose.material3.TooltipBox
-import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberDrawerState
-import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -103,6 +97,7 @@ import com.example.markdown_editor.data.model.Note
 import com.example.markdown_editor.ui.components.MenuPopup
 import com.example.markdown_editor.ui.components.MenuPopupGroup
 import com.example.markdown_editor.ui.components.MenuPopupItem
+import com.example.markdown_editor.ui.components.TooltipIconButton
 import com.example.markdown_editor.ui.editor.EditorScreen
 import com.example.markdown_editor.ui.messenger.MessengerScreen
 import com.example.markdown_editor.ui.navigation.EditorDestination
@@ -193,27 +188,15 @@ fun AppScaffold() {
                                     leadingIcon = { Icon(Icons.Default.Search, null) },
                                     trailingIcon = {
                                         if (uiState.searchQuery.isNotEmpty()) {
-                                            TooltipBox(
-                                                positionProvider =
-                                                    TooltipDefaults.rememberTooltipPositionProvider(
-                                                        TooltipAnchorPosition.Above,
-                                                    ),
-                                                tooltip = { PlainTooltip { Text(stringResource(R.string.clear_search)) } },
-                                                state = rememberTooltipState(),
-                                            ) {
-                                                IconButton(
-                                                    onClick = {
-                                                        appViewModel.navigation.onSearchQueryChanged(
-                                                            "",
-                                                        )
-                                                    },
-                                                ) {
-                                                    Icon(
-                                                        Icons.Default.Close,
-                                                        stringResource(R.string.clear_search),
+                                            TooltipIconButton(
+                                                onClick = {
+                                                    appViewModel.navigation.onSearchQueryChanged(
+                                                        "",
                                                     )
-                                                }
-                                            }
+                                                },
+                                                icon = Icons.Default.Close,
+                                                tooltip = stringResource(R.string.clear_search),
+                                            )
                                         }
                                     },
                                 )
@@ -310,116 +293,55 @@ fun AppScaffold() {
                     },
                     navigationIcon = {
                         if (isSelectionMode) {
-                            TooltipBox(
-                                positionProvider =
-                                    TooltipDefaults.rememberTooltipPositionProvider(
-                                        TooltipAnchorPosition.Below,
-                                    ),
-                                tooltip = { PlainTooltip { Text(stringResource(R.string.clear_selection)) } },
-                                state = rememberTooltipState(),
-                            ) {
-                                IconButton(
-                                    onClick = { appViewModel.messenger.clearSelection() },
-                                    shapes = IconButtonDefaults.shapes(),
-                                ) {
-                                    Icon(
-                                        Icons.Default.Close,
-                                        contentDescription = stringResource(R.string.clear_selection),
-                                    )
-                                }
-                            }
+                            TooltipIconButton(
+                                onClick = { appViewModel.messenger.clearSelection() },
+                                icon = Icons.Default.Close,
+                                tooltip = stringResource(R.string.clear_selection),
+                                tooltipAnchorPosition = TooltipAnchorPosition.Below,
+                            )
                         } else if (navBackStackEntry?.destination?.route != MessengerDestination::class.qualifiedName) {
-                            TooltipBox(
-                                positionProvider =
-                                    TooltipDefaults.rememberTooltipPositionProvider(
-                                        TooltipAnchorPosition.Below,
-                                    ),
-                                tooltip = { PlainTooltip { Text(stringResource(R.string.go_back)) } },
-                                state = rememberTooltipState(),
-                            ) {
-                                IconButton(
-                                    onClick = { scope.launch { appViewModel.navigation.goBack() } },
-                                    shapes = IconButtonDefaults.shapes(),
-                                ) {
-                                    Icon(
-                                        Icons.AutoMirrored.Filled.ArrowBack,
-                                        contentDescription = stringResource(R.string.go_back),
-                                    )
-                                }
-                            }
+                            TooltipIconButton(
+                                onClick = { scope.launch { appViewModel.navigation.goBack() } },
+                                icon = Icons.AutoMirrored.Filled.ArrowBack,
+                                tooltip = stringResource(R.string.go_back),
+                                tooltipAnchorPosition = TooltipAnchorPosition.Below,
+                            )
                         } else {
-                            TooltipBox(
-                                positionProvider =
-                                    TooltipDefaults.rememberTooltipPositionProvider(
-                                        TooltipAnchorPosition.Below,
-                                    ),
-                                tooltip = { PlainTooltip { Text(stringResource(R.string.open_menu)) } },
-                                state = rememberTooltipState(),
-                            ) {
-                                IconButton(
-                                    onClick = { scope.launch { appViewModel.navigation.openDrawer() } },
-                                    shapes = IconButtonDefaults.shapes(),
-                                ) {
-                                    Icon(
-                                        Icons.Default.Menu,
-                                        contentDescription = stringResource(R.string.open_menu),
-                                    )
-                                }
-                            }
+                            TooltipIconButton(
+                                onClick = { scope.launch { appViewModel.navigation.openDrawer() } },
+                                icon = Icons.Default.Menu,
+                                tooltip = stringResource(R.string.open_menu),
+                                tooltipAnchorPosition = TooltipAnchorPosition.Below,
+                            )
                         }
                     },
                     actions = {
                         if (isSelectionMode) {
-                            TooltipBox(
-                                positionProvider =
-                                    TooltipDefaults.rememberTooltipPositionProvider(
-                                        TooltipAnchorPosition.Below,
-                                    ),
-                                tooltip = { PlainTooltip { Text(stringResource(R.string.copy_selected)) } },
-                                state = rememberTooltipState(),
-                            ) {
-                                IconButton(
-                                    onClick = {
-                                        scope.launch {
-                                            val text = appViewModel.messenger.getSelectedNotesText()
-                                            clipboard.setClipEntry(
-                                                ClipEntry(
-                                                    ClipData.newPlainText(
-                                                        "Notes text",
-                                                        text,
-                                                    ),
+                            TooltipIconButton(
+                                onClick = {
+                                    scope.launch {
+                                        val text = appViewModel.messenger.getSelectedNotesText()
+                                        clipboard.setClipEntry(
+                                            ClipEntry(
+                                                ClipData.newPlainText(
+                                                    "Notes text",
+                                                    text,
                                                 ),
-                                            )
-                                            appViewModel.messenger.clearSelection()
-                                        }
-                                    },
-                                    shapes = IconButtonDefaults.shapes(),
-                                ) {
-                                    Icon(
-                                        Icons.Outlined.ContentCopy,
-                                        contentDescription = stringResource(R.string.copy_selected),
-                                    )
-                                }
-                            }
-                            TooltipBox(
-                                positionProvider =
-                                    TooltipDefaults.rememberTooltipPositionProvider(
-                                        TooltipAnchorPosition.Below,
-                                    ),
-                                tooltip = { PlainTooltip { Text(stringResource(R.string.delete_selected)) } },
-                                state = rememberTooltipState(),
-                            ) {
-                                IconButton(
-                                    onClick = { appViewModel.messenger.deleteSelectedNotes() },
-                                    shapes = IconButtonDefaults.shapes(),
-                                ) {
-                                    Icon(
-                                        Icons.Outlined.Delete,
-                                        contentDescription = stringResource(R.string.delete_selected),
-                                        tint = MaterialTheme.colorScheme.error,
-                                    )
-                                }
-                            }
+                                            ),
+                                        )
+                                        appViewModel.messenger.clearSelection()
+                                    }
+                                },
+                                icon = Icons.Outlined.ContentCopy,
+                                tooltip = stringResource(R.string.copy_selected),
+                                tooltipAnchorPosition = TooltipAnchorPosition.Below,
+                            )
+                            TooltipIconButton(
+                                onClick = { appViewModel.messenger.deleteSelectedNotes() },
+                                icon = Icons.Outlined.Delete,
+                                tooltip = stringResource(R.string.delete_selected),
+                                tooltipAnchorPosition = TooltipAnchorPosition.Below,
+                            )
                         }
                     },
                 )
@@ -546,22 +468,11 @@ fun NoteDrawerItem(
             },
             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
             trailingContent = {
-                TooltipBox(
-                    positionProvider =
-                        TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
-                    tooltip = { PlainTooltip { Text(stringResource(R.string.note_actions)) } },
-                    state = rememberTooltipState(),
-                ) {
-                    IconButton(
-                        onClick = { menuExpanded = true },
-                        shapes = IconButtonDefaults.shapes(),
-                    ) {
-                        Icon(
-                            Icons.Default.MoreVert,
-                            contentDescription = stringResource(R.string.note_actions),
-                        )
-                    }
-                }
+                TooltipIconButton(
+                    onClick = { menuExpanded = true },
+                    icon = Icons.Default.MoreVert,
+                    tooltip = stringResource(R.string.note_actions),
+                )
                 MenuPopup(
                     expanded = menuExpanded,
                     onDismissRequest = { menuExpanded = false },

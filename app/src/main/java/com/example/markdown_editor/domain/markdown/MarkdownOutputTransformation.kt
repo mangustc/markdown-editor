@@ -1,16 +1,14 @@
 package com.example.markdown_editor.domain.markdown
 
+import androidx.compose.foundation.text.input.OutputTransformation
+import androidx.compose.foundation.text.input.TextFieldBuffer
+import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.ParagraphStyle
 import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.OffsetMapping
-import androidx.compose.ui.text.input.TransformedText
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.Density
@@ -18,16 +16,19 @@ import androidx.compose.ui.unit.em
 import com.example.markdown_editor.domain.model.SpanInfo
 import com.example.markdown_editor.domain.model.TokenType
 
-class MarkdownVisualTransformation(
-    private val spans: List<SpanInfo>,
-    private val selection: TextRange,
-    private val imageAspectRatios: Map<String, Float>,
-    private val editorWidth: Int,
+class MarkdownOutputTransformation(
+    private val state: TextFieldState,
     private val density: Density,
-) : VisualTransformation {
-    override fun filter(text: AnnotatedString): TransformedText {
-        val builder = AnnotatedString.Builder(text)
-        val textLength = text.length
+    private val widthProvider: () -> Int,
+    private val spansProvider: () -> List<SpanInfo>,
+    private val ratiosProvider: () -> Map<String, Float>,
+) : OutputTransformation {
+    override fun TextFieldBuffer.transformOutput() {
+        val textLength = this.length
+        val currentSelection = state.selection
+        val currentWidth = widthProvider()
+        val spans = spansProvider()
+        val ratios = ratiosProvider()
 
         for (span in spans) {
             val start = span.start.coerceIn(0, textLength)
@@ -35,7 +36,7 @@ class MarkdownVisualTransformation(
             if (start >= end) continue
 
             when (span.type) {
-                TokenType.H1 -> builder.addStyle(
+                TokenType.H1 -> addStyle(
                     SpanStyle(
                         fontSize = 2.em,
                         fontWeight = FontWeight.Bold,
@@ -43,7 +44,7 @@ class MarkdownVisualTransformation(
                     start, end,
                 )
 
-                TokenType.H2 -> builder.addStyle(
+                TokenType.H2 -> addStyle(
                     SpanStyle(
                         fontSize = 1.5.em,
                         fontWeight = FontWeight.Bold,
@@ -51,7 +52,7 @@ class MarkdownVisualTransformation(
                     start, end,
                 )
 
-                TokenType.H3 -> builder.addStyle(
+                TokenType.H3 -> addStyle(
                     SpanStyle(
                         fontSize = 1.2.em,
                         fontWeight = FontWeight.Bold,
@@ -59,19 +60,19 @@ class MarkdownVisualTransformation(
                     start, end,
                 )
 
-                TokenType.BOLD -> builder.addStyle(
+                TokenType.BOLD -> addStyle(
                     SpanStyle(fontWeight = FontWeight.Bold),
                     start,
                     end,
                 )
 
-                TokenType.ITALIC -> builder.addStyle(
+                TokenType.ITALIC -> addStyle(
                     SpanStyle(fontStyle = FontStyle.Italic),
                     start,
                     end,
                 )
 
-                TokenType.CODE_INLINE, TokenType.CODE_BLOCK -> builder.addStyle(
+                TokenType.CODE_INLINE, TokenType.CODE_BLOCK -> addStyle(
                     SpanStyle(
                         fontFamily = FontFamily.Monospace,
                         background = Color.Gray.copy(alpha = 0.2f),
@@ -79,13 +80,13 @@ class MarkdownVisualTransformation(
                     start, end,
                 )
 
-                TokenType.LINK -> builder.addStyle(
+                TokenType.LINK -> addStyle(
                     SpanStyle(color = Color(0xFF0055CC), textDecoration = TextDecoration.Underline),
                     start,
                     end,
                 )
 
-                TokenType.BLOCKQUOTE -> builder.addStyle(
+                TokenType.BLOCKQUOTE -> addStyle(
                     SpanStyle(
                         color = Color.Gray,
                         fontStyle = FontStyle.Italic,
@@ -94,14 +95,14 @@ class MarkdownVisualTransformation(
                     start, end,
                 )
 
-                TokenType.FILE -> builder.addStyle(
+                TokenType.FILE -> addStyle(
                     SpanStyle(fontWeight = FontWeight.Bold),
                     start,
                     end,
                 )
 
                 TokenType.LIST_ITEM -> {
-//                    builder.addStyle(
+//                    addStyle(
 //                        ParagraphStyle(
 //                            textIndent = TextIndent(
 //                                firstLine = 0.sp,
@@ -113,9 +114,9 @@ class MarkdownVisualTransformation(
                 }
 
                 TokenType.IMAGE -> {
-                    val isSelected = selection.start <= end && selection.end >= start
+                    val isSelected = currentSelection.start <= end && currentSelection.end >= start
                     if (isSelected) {
-                        builder.addStyle(
+                        addStyle(
                             SpanStyle(
                                 fontWeight = FontWeight.Bold,
                                 fontStyle = FontStyle.Italic,
@@ -126,12 +127,12 @@ class MarkdownVisualTransformation(
                     }
 
                     val path = span.payload ?: continue
-                    val ratio = imageAspectRatios[path] ?: 1.777f
-                    val heightPx = if (editorWidth > 0) editorWidth / ratio else 400f
+                    val ratio = ratios[path] ?: 1.777f
+                    val heightPx = if (currentWidth > 0) currentWidth / ratio else 400f
                     val heightSp = with(density) { heightPx.toSp() }
 
-                    builder.addStyle(
-                        style = ParagraphStyle(
+                    addStyle(
+                        ParagraphStyle(
                             lineHeight = heightSp,
                             lineHeightStyle = LineHeightStyle(
                                 alignment = LineHeightStyle.Alignment.Proportional,
@@ -140,11 +141,9 @@ class MarkdownVisualTransformation(
                         ),
                         start, end,
                     )
-                    builder.addStyle(SpanStyle(color = Color.Transparent), start, end)
+                    addStyle(SpanStyle(color = Color.Transparent), start, end)
                 }
             }
         }
-
-        return TransformedText(builder.toAnnotatedString(), OffsetMapping.Identity)
     }
 }

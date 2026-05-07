@@ -65,7 +65,12 @@ data class FrontMatter(
             if (closeIdx < 0) return Empty to content
             val fmText = lines.drop(1).take(closeIdx).joinToString("\n")
             val body = lines.drop(closeIdx + 2).joinToString("\n")
-            return parse(fmText) to body
+            val frontMatter = try {
+                parse(fmText)
+            } catch (e: IllegalArgumentException) {
+                Empty
+            }
+            return frontMatter to body
         }
     }
 

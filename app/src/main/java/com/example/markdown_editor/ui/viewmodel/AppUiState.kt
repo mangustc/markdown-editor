@@ -1,11 +1,9 @@
 package com.example.markdown_editor.ui.viewmodel
 
-import androidx.compose.ui.text.input.TextFieldValue
 import com.example.markdown_editor.data.model.LinkPreview
 import com.example.markdown_editor.data.model.Note
 import com.example.markdown_editor.data.model.Project
 import com.example.markdown_editor.domain.messenger.Attachment
-import com.example.markdown_editor.domain.model.SpanInfo
 
 data class AppUiState(
     val project: Project? = null,
@@ -23,8 +21,6 @@ data class AppUiState(
 
     val searchQuery: String = "",
 
-    val editorTextFieldValue: TextFieldValue = TextFieldValue(),
-    val editorSpans: List<SpanInfo> = emptyList(),
     val editorCanUndo: Boolean = false,
     val editorCanRedo: Boolean = false,
     val editorVersion: Int = 0,

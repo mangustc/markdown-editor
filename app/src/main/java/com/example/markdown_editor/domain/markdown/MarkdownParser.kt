@@ -26,6 +26,17 @@ object MarkdownParser {
     fun parse(text: String): List<SpanInfo> {
         if (text.isEmpty()) return emptyList()
 
+        var frontMatterEnd = 0
+        if (text.startsWith("---")) {
+            val firstLineEnd = text.indexOf('\n')
+            if (firstLineEnd != -1) {
+                val secondDash = text.indexOf("---", firstLineEnd + 1)
+                if (secondDash != -1) {
+                    frontMatterEnd = secondDash + 3
+                }
+            }
+        }
+
         val lineOffsets = buildLineOffsets(text)
         val document = parser.parse(text)
         val spans = mutableListOf<SpanInfo>()
@@ -90,7 +101,7 @@ object MarkdownParser {
                 }
             },
         )
-        return spans
+        return spans.filter { it.start >= frontMatterEnd }
     }
 
     fun stripAttachments(text: String, spans: List<SpanInfo>): String {

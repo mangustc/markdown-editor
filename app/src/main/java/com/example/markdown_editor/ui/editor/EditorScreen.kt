@@ -4,6 +4,7 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -19,6 +20,8 @@ import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.input.OutputTransformation
+import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Redo
@@ -36,6 +39,7 @@ import androidx.compose.material3.HorizontalFloatingToolbar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
@@ -51,6 +55,8 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.style.LineBreak
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
@@ -59,16 +65,23 @@ import coil3.compose.AsyncImage
 import com.example.markdown_editor.R
 import com.example.markdown_editor.data.model.Project
 import com.example.markdown_editor.domain.editor.EditorEvent
-import com.example.markdown_editor.domain.markdown.MarkdownVisualTransformation
+import com.example.markdown_editor.domain.markdown.MarkdownOutputTransformation
+import com.example.markdown_editor.domain.markdown.MarkdownParser
+import com.example.markdown_editor.domain.model.SpanInfo
 import com.example.markdown_editor.domain.model.TokenType
 import com.example.markdown_editor.ui.components.TooltipIconButton
 import com.example.markdown_editor.ui.viewmodel.AppViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+data class EditorLayoutState(
+    val layout: TextLayoutResult,
+    val imageSpans: List<SpanInfo>,
+)
+
 @OptIn(
     ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class,
-    ExperimentalMaterial3ExpressiveApi::class,
+    ExperimentalMaterial3ExpressiveApi::class, ExperimentalFoundationApi::class,
 )
 @Composable
 fun EditorScreen(
@@ -76,36 +89,45 @@ fun EditorScreen(
     noteUriString: String,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val density = LocalDensity.current
+    val scope = rememberCoroutineScope()
+    val scrollState = rememberScrollState()
 
     LaunchedEffect(noteUriString) {
         viewModel.editor.editorOnNoteOpened(noteUriString)
     }
 
-    var imageAspectRatios by remember { mutableStateOf(mapOf<String, Float>()) }
-    var editorWidth by remember { mutableIntStateOf(0) }
-    val density = LocalDensity.current
+    val bringIntoViewRequester = remember { BringIntoViewRequester() }
+    var toolbarHeightDp by remember { mutableStateOf(0.dp) }
 
-    val visualTransformation = remember(
-        uiState.editorSpans,
-        uiState.editorTextFieldValue.selection,
-        imageAspectRatios,
-        editorWidth,
-        density,
-    ) {
-        MarkdownVisualTransformation(
-            spans = uiState.editorSpans,
-            selection = uiState.editorTextFieldValue.selection,
-            imageAspectRatios = imageAspectRatios,
-            editorWidth = editorWidth,
+    val editorSpans by remember {
+        derivedStateOf {
+            MarkdownParser.parse(viewModel.editor.state.text.toString())
+        }
+    }
+    var layoutState by remember { mutableStateOf<EditorLayoutState?>(null) }
+    var editorWidth by remember { mutableIntStateOf(0) }
+    var imageAspectRatios by remember { mutableStateOf(mapOf<String, Float>()) }
+    val onLayoutChange = remember(editorSpans) {
+        { layoutResult: TextLayoutResult? ->
+            if (layoutResult != null) {
+                val images = editorSpans.filter { it.type == TokenType.IMAGE }
+                layoutState = EditorLayoutState(layoutResult, images)
+                if (editorWidth != layoutResult.size.width) {
+                    editorWidth = layoutResult.size.width
+                }
+            }
+        }
+    }
+    val outputTransformation = remember {
+        MarkdownOutputTransformation(
+            state = viewModel.editor.state,
             density = density,
+            widthProvider = { editorWidth },
+            spansProvider = { editorSpans },
+            ratiosProvider = { imageAspectRatios },
         )
     }
-
-    val scrollState = rememberScrollState()
-    val bringIntoViewRequester = remember { BringIntoViewRequester() }
-    val scope = rememberCoroutineScope()
-    var textLayoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
-    var toolbarHeightDp by remember { mutableStateOf(0.dp) }
 
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia(),
@@ -142,13 +164,13 @@ fun EditorScreen(
                 onClick = { viewModel.editor.editorOnEvent(EditorEvent.Undo) },
                 icon = Icons.AutoMirrored.Filled.Undo,
                 tooltip = stringResource(R.string.undo),
-                enabled = uiState.editorCanUndo,
+                enabled = viewModel.editor.state.undoState.canUndo,
             )
             TooltipIconButton(
                 onClick = { viewModel.editor.editorOnEvent(EditorEvent.Redo) },
                 icon = Icons.AutoMirrored.Filled.Redo,
                 tooltip = stringResource(R.string.redo),
-                enabled = uiState.editorCanRedo,
+                enabled = viewModel.editor.state.undoState.canRedo,
             )
             TooltipIconButton(
                 onClick = {
@@ -214,20 +236,10 @@ fun EditorScreen(
                     .imeNestedScroll()
                     .verticalScroll(scrollState),
             ) {
-                BasicTextField(
-                    value = uiState.editorTextFieldValue,
-                    onValueChange = { viewModel.editor.editorOnContentChanged(it) },
-                    visualTransformation = visualTransformation,
-                    textStyle = MaterialTheme.typography.bodyLarge.copy(
-                        color = MaterialTheme.colorScheme.onSurface,
-                        lineHeight = androidx.compose.ui.unit.TextUnit.Unspecified,
-                    ),
-                    onTextLayout = {
-                        textLayoutResult = it
-                        if (editorWidth != it.size.width) {
-                            editorWidth = it.size.width
-                        }
-                    },
+                MarkdownEditorField(
+                    state = viewModel.editor.state,
+                    transformation = outputTransformation,
+                    onTextLayout = onLayoutChange,
                     modifier = Modifier
                         .fillMaxWidth()
                         .bringIntoViewRequester(bringIntoViewRequester)
@@ -242,62 +254,95 @@ fun EditorScreen(
                         },
                 )
 
-                textLayoutResult?.let { layoutResult ->
-                    val imageSpans = uiState.editorSpans.filter { it.type == TokenType.IMAGE }
-
-                    if (imageSpans.isNotEmpty() && uiState.project != null) {
-                        imageSpans.forEachIndexed { index, span ->
-                            val selection = uiState.editorTextFieldValue.selection
-                            val isSelected =
-                                selection.start <= span.end && selection.end >= span.start
-
-                            if (!isSelected) {
-                                val path = span.payload ?: ""
-
-                                val ratio = imageAspectRatios[path] ?: 1.777f
-                                val exactHeightPx =
-                                    if (editorWidth > 0) editorWidth / ratio else 400f
-
-                                val layoutTextLength = layoutResult.layoutInput.text.length
-                                val offsetToUse =
-                                    span.start.coerceIn(0, (layoutTextLength - 1).coerceAtLeast(0))
-
-                                var topPx = 0f
-                                if (layoutTextLength > 0) {
-                                    val lineIndex = layoutResult.getLineForOffset(offsetToUse)
-                                    topPx = layoutResult.getLineTop(lineIndex)
-                                }
-
-                                if (path.isNotEmpty()) {
-                                    val topOffset = topPx + with(density) { 16.dp.toPx() }
-                                    val leftOffset = with(density) { 16.dp.roundToPx() }
-
-                                    key(path, ratio) {
-                                        Box(
-                                            modifier = Modifier
-                                                .offset { IntOffset(leftOffset, topOffset.toInt()) }
-                                                .width(with(density) { editorWidth.toDp() })
-                                                .height(with(density) { exactHeightPx.toDp() }),
-                                        ) {
-                                            AsyncMarkdownImage(
-                                                path = path,
-                                                project = uiState.project!!,
-                                                onRatioMeasured = { newRatio ->
-                                                    if (imageAspectRatios[path] != newRatio) {
-                                                        imageAspectRatios =
-                                                            imageAspectRatios + (path to newRatio)
-                                                    }
-                                                },
-                                            )
-                                        }
-                                    }
-                                }
+                layoutState?.let { state ->
+                    if (state.imageSpans.isNotEmpty() && uiState.project != null) {
+                        state.imageSpans.forEach { span ->
+                            key(span.payload ?: span.start) {
+                                MarkdownImageOverlay(
+                                    span = span,
+                                    state = viewModel.editor.state,
+                                    layoutResult = state.layout,
+                                    project = uiState.project!!,
+                                    density = density,
+                                    editorWidth = editorWidth,
+                                    imageAspectRatios = imageAspectRatios,
+                                    onRatioMeasured = { path, ratio ->
+                                        imageAspectRatios = imageAspectRatios + (path to ratio)
+                                    },
+                                )
                             }
                         }
                     }
                 }
             }
         }
+    }
+}
+
+@Composable
+fun MarkdownEditorField(
+    state: TextFieldState,
+    transformation: OutputTransformation,
+    onTextLayout: (TextLayoutResult?) -> Unit,
+    modifier: Modifier = Modifier,
+    textStyle: androidx.compose.ui.text.TextStyle = MaterialTheme.typography.bodyLarge,
+) {
+    BasicTextField(
+        state = state,
+        textStyle = textStyle.copy(
+            color = MaterialTheme.colorScheme.onSurface,
+            lineHeight = androidx.compose.ui.unit.TextUnit.Unspecified,
+            lineBreak = LineBreak.Paragraph,
+        ),
+        outputTransformation = transformation,
+        onTextLayout = { layoutProvider ->
+            onTextLayout(layoutProvider())
+        },
+        modifier = modifier,
+    )
+}
+
+@Composable
+fun MarkdownImageOverlay(
+    span: SpanInfo,
+    state: TextFieldState,
+    layoutResult: TextLayoutResult,
+    project: Project,
+    density: Density,
+    editorWidth: Int,
+    imageAspectRatios: Map<String, Float>,
+    onRatioMeasured: (String, Float) -> Unit,
+) {
+    val selection = state.selection
+    val isSelected = selection.start <= span.end && selection.end >= span.start
+
+    if (isSelected) return
+
+    val path = span.payload ?: return
+    val ratio = imageAspectRatios[path] ?: 1.777f
+    val exactHeightPx = if (editorWidth > 0) editorWidth / ratio else 400f
+
+    val layoutTextLength = layoutResult.layoutInput.text.length
+    val offsetToUse = span.start.coerceIn(0, (layoutTextLength - 1).coerceAtLeast(0))
+
+    val topPx = if (layoutTextLength > 0) {
+        val lineIndex = layoutResult.getLineForOffset(offsetToUse)
+        layoutResult.getLineTop(lineIndex)
+    } else 0f
+
+    val leftOffset = with(density) { 16.dp.roundToPx() }
+
+    Box(
+        modifier = Modifier
+            .offset { IntOffset(leftOffset, topPx.toInt()) }
+            .width(with(density) { editorWidth.toDp() })
+            .height(with(density) { exactHeightPx.toDp() }),
+    ) {
+        AsyncMarkdownImage(
+            path = path,
+            project = project,
+            onRatioMeasured = { newRatio -> onRatioMeasured(path, newRatio) },
+        )
     }
 }
 

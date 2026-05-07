@@ -2,8 +2,9 @@ package com.example.markdown_editor.ui.viewmodel
 
 import android.app.Application
 import android.net.Uri
-import androidx.compose.ui.text.TextRange
-import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.runtime.snapshotFlow
 import androidx.core.net.toUri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -18,16 +19,13 @@ import com.example.markdown_editor.data.model.SortBy
 import com.example.markdown_editor.data.repository.ProjectRepositoryImpl
 import com.example.markdown_editor.data.util.LinkPreviewFetcher
 import com.example.markdown_editor.domain.editor.EditorEvent
-import com.example.markdown_editor.domain.editor.EditorHistory
 import com.example.markdown_editor.domain.markdown.MarkdownParser
 import com.example.markdown_editor.domain.messenger.Attachment
 import com.example.markdown_editor.domain.messenger.AttachmentType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -238,28 +236,54 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     @OptIn(FlowPreview::class)
     inner class EditorActions {
-        private val history = EditorHistory()
-
-        private var pendingHistoryJob: Job? = null
-        private var pendingOldValue: TextFieldValue? = null
+        val state = TextFieldState()
 
         init {
             viewModelScope.launch {
-                _uiState
-                    .map { it.editorTextFieldValue.text }
-                    .distinctUntilChanged()
+                snapshotFlow { state.text }
                     .debounce(2_000)
                     .collect { editorOnSave() }
             }
         }
 
+        @OptIn(ExperimentalFoundationApi::class)
         fun editorOnEvent(event: EditorEvent) {
             when (event) {
                 is EditorEvent.InsertSyntax -> editorInsertSyntax(event.syntax, event.cursorOffset)
                 is EditorEvent.AttachPhoto -> editorHandleAttachPhoto(event)
                 is EditorEvent.AttachFile -> editorHandleAttachFile(event)
-                is EditorEvent.Undo -> editorUndo()
-                is EditorEvent.Redo -> editorRedo()
+                is EditorEvent.Undo -> {
+                    state.undoState.undo()
+                }
+
+                is EditorEvent.Redo -> {
+                    state.undoState.redo()
+                }
+            }
+        }
+
+        private fun editorInsertSyntax(syntax: String, cursorOffset: Int) {
+            state.edit {
+                val start = selection.start
+                replace(start, start, syntax)
+                placeCursorAfterCharAt(start + cursorOffset - 1)
+            }
+        }
+
+        fun editorOnNoteOpened(noteUriString: String) {
+            viewModelScope.launch(Dispatchers.IO) {
+                try {
+                    val note = repository.getNoteByUri(noteUriString.toUri())
+                    val text = repository.getNoteText(note)
+                    withContext(Dispatchers.Main) {
+                        _uiState.update { it.copy(activeNote = note) }
+                        state.edit {
+                            replace(0, length, text)
+                        }
+                    }
+                } catch (e: Exception) {
+                    navigation.goBack()
+                }
             }
         }
 
@@ -268,7 +292,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             viewModelScope.launch(Dispatchers.IO) {
                 val relativePath = repository.copyToAssets(project = project, assetUri = event.uri)
                 val markdown = "![image](<$relativePath>)"
-                withContext(Dispatchers.Main) { editorInsertMarkdown(markdown) }
+                withContext(Dispatchers.Main) { editorInsertSyntax(markdown, 0) }
             }
         }
 
@@ -278,102 +302,14 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 val relativePath = repository.copyToAssets(project = project, assetUri = event.uri)
                 val label = event.displayName ?: relativePath.substringAfterLast("/")
                 val markdown = "[$label](<$relativePath>)"
-                withContext(Dispatchers.Main) { editorInsertMarkdown(markdown) }
-            }
-        }
-
-        private fun editorInsertMarkdown(markdown: String) {
-            val current = _uiState.value.editorTextFieldValue
-            val cursor = current.selection.start
-            val newText =
-                current.text.substring(0, cursor) + markdown + current.text.substring(cursor)
-            val newValue =
-                current.copy(text = newText, selection = TextRange(cursor + markdown.length))
-            editorOnContentChanged(newValue)
-        }
-
-        private fun editorInsertSyntax(syntax: String, cursorOffset: Int) {
-            val current = _uiState.value.editorTextFieldValue
-            val cursor = current.selection.start
-            val newText =
-                current.text.substring(0, cursor) + syntax + current.text.substring(cursor)
-            val newValue =
-                current.copy(text = newText, selection = TextRange(cursor + cursorOffset))
-            editorOnContentChanged(newValue)
-        }
-
-        fun editorUndo() {
-            val restored = history.undo(_uiState.value.editorTextFieldValue) ?: return
-            updateEditorState(restored)
-        }
-
-        fun editorRedo() {
-            val restored = history.redo(_uiState.value.editorTextFieldValue) ?: return
-            updateEditorState(restored)
-        }
-
-        fun editorOnContentChanged(newValue: TextFieldValue) {
-            val old = _uiState.value.editorTextFieldValue
-            val textChanged = newValue.text != old.text
-            if (!textChanged) {
-                _uiState.update { it.copy(editorTextFieldValue = newValue) }
-                return
-            }
-
-            if (pendingOldValue == null) pendingOldValue = old
-
-            pendingHistoryJob?.cancel()
-            pendingHistoryJob = viewModelScope.launch {
-                delay(500)
-                pendingOldValue?.let { burstStart ->
-                    history.push(burstStart, _uiState.value.editorTextFieldValue)
-                    _uiState.update {
-                        it.copy(
-                            editorCanUndo = history.canUndo,
-                            editorCanRedo = history.canRedo,
-                        )
-                    }
-                }
-                pendingOldValue = null
-            }
-
-            updateEditorState(newValue)
-        }
-
-        fun editorOnNoteOpened(noteUriString: String) {
-            viewModelScope.launch(Dispatchers.IO) {
-                try {
-                    val note = repository.getNoteByUri(noteUriString.toUri())
-                    val text = repository.getNoteText(note)
-                    withContext(Dispatchers.Main) {
-                        history.clear()
-                        _uiState.update { it.copy(activeNote = note) }
-                        updateEditorState(TextFieldValue(text))
-                    }
-                } catch (e: Exception) {
-                    navigation.goBack()
-                }
-            }
-        }
-
-        private fun updateEditorState(newValue: TextFieldValue) {
-            val spans = MarkdownParser.parse(newValue.text)
-
-            _uiState.update {
-                it.copy(
-                    editorTextFieldValue = newValue,
-                    editorSpans = spans,
-                    editorCanUndo = history.canUndo,
-                    editorCanRedo = history.canRedo,
-                    editorVersion = it.editorVersion + 1,
-                )
+                withContext(Dispatchers.Main) { editorInsertSyntax(markdown, 0) }
             }
         }
 
         fun editorOnSave() {
             val project = _uiState.value.project ?: return
             val note = _uiState.value.activeNote ?: return
-            val text = _uiState.value.editorTextFieldValue.text
+            val text = state.text.toString()
             viewModelScope.launch(Dispatchers.IO) {
                 repository.saveNoteText(note, text)
                 repository.syncDatabase(project)
@@ -471,7 +407,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
                             AttachmentType.PENDING_FILE -> {
                                 val path = repository.copyToAssets(project, attachment.uri)
-                                val label = attachment.displayName ?: path.substringAfterLast("/")
+                                val label = attachment.displayName
                                 append("\n[$label](<$path>)")
                             }
 
@@ -538,7 +474,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                                 AttachmentType.PENDING_FILE -> {
                                     val path = repository.copyToAssets(project, attachment.uri)
                                     val label =
-                                        attachment.displayName ?: path.substringAfterLast("/")
+                                        attachment.displayName
                                     append("\n[$label](<$path>)")
                                 }
 

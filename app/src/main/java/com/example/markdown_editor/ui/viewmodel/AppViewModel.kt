@@ -644,16 +644,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             _uiState.value.messengerSelectedNotes.mapNotNull { u ->
                 runCatching {
                     val note = repository.getNoteByUri(u.toUri())
-                    var text = repository.getNoteText(note, includeFrontMatter = false)
+                    val text = repository.getNoteText(note, includeFrontMatter = false)
 
-                    MarkdownParser.IMAGE_REGEX.findAll(text).forEach { match ->
-                        text = text.replace(match.value, "")
-                    }
-                    MarkdownParser.FILE_REGEX.findAll(text).forEach { match ->
-                        text = text.replace(match.value, "")
-                    }
-
-                    text.trim()
+                    MarkdownParser.stripAttachments(text, MarkdownParser.parse(text))
                 }.getOrNull()?.takeIf { it.isNotBlank() }
             }.joinToString("\n\n")
         }

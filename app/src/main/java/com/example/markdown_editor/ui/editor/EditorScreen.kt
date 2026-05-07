@@ -254,12 +254,7 @@ fun EditorScreen(
                                 selection.start <= span.end && selection.end >= span.start
 
                             if (!isSelected) {
-                                val rawText =
-                                    uiState.editorTextFieldValue.text.substring(
-                                        span.start,
-                                        span.end,
-                                    )
-                                val path = extractImagePath(rawText)
+                                val path = span.payload ?: ""
 
                                 val ratio = imageAspectRatios[path] ?: 1.777f
                                 val exactHeightPx =
@@ -306,15 +301,6 @@ fun EditorScreen(
             }
         }
     }
-}
-
-fun extractImagePath(markdown: String): String {
-    return markdown
-        .substringAfter("](")
-        .dropLast(1)
-        .substringBefore(" \"")
-        .trim()
-        .removeSurrounding("<", ">")
 }
 
 @Composable

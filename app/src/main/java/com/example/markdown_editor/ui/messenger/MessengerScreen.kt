@@ -138,6 +138,7 @@ import com.example.markdown_editor.data.util.LinkPreviewFetcher
 import com.example.markdown_editor.domain.markdown.MarkdownParser
 import com.example.markdown_editor.domain.messenger.Attachment
 import com.example.markdown_editor.domain.messenger.AttachmentType
+import com.example.markdown_editor.domain.model.TokenType
 import com.example.markdown_editor.ui.components.MenuPopup
 import com.example.markdown_editor.ui.components.MenuPopupGroup
 import com.example.markdown_editor.ui.components.MenuPopupItem
@@ -169,45 +170,33 @@ private fun extractLinkLabel(matched: String): String =
     matched.substringAfter("[").substringBefore("]")
 
 private fun parseNoteBody(body: String, project: Project): ParsedNoteBody {
-    val imageAttachments = MarkdownParser.IMAGE_REGEX.findAll(body)
-        .map { match ->
-            val path = extractLinkPath(match.value)
-            val uri = project.getFileUri(path)
-            Attachment(
-                uri = uri,
-                displayName = path,
-                path = path,
-                type = AttachmentType.IMAGE,
-            )
-        }
-        .toList()
+    val spans = MarkdownParser.parse(body)
 
-    val fileAttachments = MarkdownParser.FILE_REGEX.findAll(body)
-        .map { match ->
-            val label = extractLinkLabel(match.value)
-            val path = extractLinkPath(match.value)
-            val uri = project.getFileUri(path)
-            Attachment(
-                uri = uri,
-                displayName = label,
-                path = path,
-                type = AttachmentType.FILE,
-            )
-        }
-        .toList()
+    val imageAttachments = spans.filter { it.type == TokenType.IMAGE }.map { span ->
+        val path = span.payload ?: ""
+        Attachment(
+            uri = project.getFileUri(path),
+            displayName = path,
+            path = path,
+            type = AttachmentType.IMAGE,
+        )
+    }
 
-    var text = body
+    val fileAttachments = spans.filter { it.type == TokenType.FILE }.map { span ->
+        val path = span.payload ?: ""
+        val label = span.label ?: path
+        Attachment(
+            uri = project.getFileUri(path),
+            displayName = label,
+            path = path,
+            type = AttachmentType.FILE,
+        )
+    }
 
-    MarkdownParser.IMAGE_REGEX.findAll(body)
-        .map { it.value }
-        .forEach { text = text.replace(it, "") }
-
-    MarkdownParser.FILE_REGEX.findAll(body)
-        .map { it.value }
-        .forEach { text = text.replace(it, "") }
+    val text = MarkdownParser.stripAttachments(body, spans)
 
     return ParsedNoteBody(
-        text = text.trim(),
+        text = text,
         attachments = imageAttachments + fileAttachments,
     )
 }
@@ -1156,9 +1145,7 @@ private fun PinnedMessageBanner(
     val displayPreview = remember(currentNote.body) {
         val rawBody = currentNote.body ?: ""
         val cleaned = rawBody
-            .replace(MarkdownParser.IMAGE_REGEX, "")
-            .replace(MarkdownParser.FILE_REGEX, "")
-            .trim()
+            .let { MarkdownParser.stripAttachments(it, MarkdownParser.parse(it)) }
             .lines()
             .firstOrNull { it.isNotBlank() } ?: resources.getString(R.string.attachment)
         cleaned

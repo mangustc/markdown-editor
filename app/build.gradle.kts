@@ -58,6 +58,7 @@ dependencies {
     implementation(libs.androidx.compose.ui.unit)
     implementation(libs.androidx.material3)
     implementation(libs.androidx.compose.ui.text)
+    implementation(libs.commonmark)
     implementation(libs.kotlinx.serialization.json)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

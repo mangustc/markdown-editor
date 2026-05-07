@@ -1,11 +1,13 @@
 package com.example.markdown_editor.domain.markdown
 
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.em
 import com.example.markdown_editor.domain.model.SpanInfo
 import com.example.markdown_editor.domain.model.TokenType
@@ -43,24 +45,20 @@ object MarkdownAnnotator {
 
                     TokenType.BOLD -> addStyle(
                         SpanStyle(fontWeight = FontWeight.Bold),
-                        info.start, info.end,
+                        info.start,
+                        info.end,
                     )
 
                     TokenType.ITALIC -> addStyle(
                         SpanStyle(fontStyle = FontStyle.Italic),
-                        info.start, info.end,
+                        info.start,
+                        info.end,
                     )
 
-                    TokenType.CODE_INLINE -> addStyle(
+                    TokenType.CODE_INLINE, TokenType.CODE_BLOCK -> addStyle(
                         SpanStyle(
                             fontFamily = FontFamily.Monospace,
-                        ),
-                        info.start, info.end,
-                    )
-
-                    TokenType.CODE_BLOCK -> addStyle(
-                        SpanStyle(
-                            fontFamily = FontFamily.Monospace,
+                            background = Color.Gray.copy(alpha = 0.2f),
                         ),
                         info.start, info.end,
                     )
@@ -74,11 +72,29 @@ object MarkdownAnnotator {
                     )
 
                     TokenType.FILE -> addStyle(
+                        SpanStyle(fontWeight = FontWeight.Bold),
+                        info.start,
+                        info.end,
+                    )
+
+                    TokenType.LINK -> addStyle(
                         SpanStyle(
-                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF0055CC),
+                            textDecoration = TextDecoration.Underline,
                         ),
                         info.start, info.end,
                     )
+
+                    TokenType.BLOCKQUOTE -> addStyle(
+                        SpanStyle(
+                            color = Color.Gray,
+                            fontStyle = FontStyle.Italic,
+                            background = Color.LightGray.copy(alpha = 0.2f),
+                        ),
+                        info.start, info.end,
+                    )
+
+                    TokenType.LIST_ITEM -> {} // Layout handled in VisualTransformation
                 }
             }
         }

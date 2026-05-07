@@ -19,7 +19,6 @@ import com.example.markdown_editor.data.repository.ProjectRepositoryImpl
 import com.example.markdown_editor.data.util.LinkPreviewFetcher
 import com.example.markdown_editor.domain.editor.EditorEvent
 import com.example.markdown_editor.domain.editor.EditorHistory
-import com.example.markdown_editor.domain.editor.EditorRope
 import com.example.markdown_editor.domain.markdown.MarkdownParser
 import com.example.markdown_editor.domain.messenger.Attachment
 import com.example.markdown_editor.domain.messenger.AttachmentType
@@ -364,7 +363,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 it.copy(
                     editorTextFieldValue = newValue,
                     editorSpans = spans,
-                    editorRope = EditorRope.of(newValue.text),
                     editorCanUndo = history.canUndo,
                     editorCanRedo = history.canRedo,
                     editorVersion = it.editorVersion + 1,

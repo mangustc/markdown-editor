@@ -4,7 +4,6 @@ import androidx.compose.ui.text.input.TextFieldValue
 import com.example.markdown_editor.data.model.LinkPreview
 import com.example.markdown_editor.data.model.Note
 import com.example.markdown_editor.data.model.Project
-import com.example.markdown_editor.domain.editor.EditorRope
 import com.example.markdown_editor.domain.messenger.Attachment
 import com.example.markdown_editor.domain.model.SpanInfo
 
@@ -26,7 +25,6 @@ data class AppUiState(
 
     val editorTextFieldValue: TextFieldValue = TextFieldValue(),
     val editorSpans: List<SpanInfo> = emptyList(),
-    val editorRope: EditorRope = EditorRope.of(""),
     val editorCanUndo: Boolean = false,
     val editorCanRedo: Boolean = false,
     val editorVersion: Int = 0,

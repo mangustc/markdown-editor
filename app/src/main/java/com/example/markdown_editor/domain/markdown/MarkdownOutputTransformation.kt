@@ -11,8 +11,10 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextIndent
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.em
+import androidx.compose.ui.unit.sp
 import com.example.markdown_editor.domain.model.SpanInfo
 import com.example.markdown_editor.domain.model.TokenType
 
@@ -102,15 +104,27 @@ class MarkdownOutputTransformation(
                 )
 
                 TokenType.LIST_ITEM -> {
-//                    addStyle(
-//                        ParagraphStyle(
-//                            textIndent = TextIndent(
-//                                firstLine = 0.sp,
-//                                restLine = 24.sp,
-//                            ),
-//                        ),
-//                        start, end,
-//                    )
+                    var actualStart = start
+                    while (actualStart > 0 && this.originalText[actualStart - 1] != '\n') {
+                        actualStart--
+                    }
+
+                    var actualEnd = end
+                    while (actualEnd < textLength && this.originalText[actualEnd] != '\n') {
+                        actualEnd++
+                    }
+                    if (actualEnd < textLength) actualEnd++
+
+                    addStyle(
+                        ParagraphStyle(
+                            textIndent = TextIndent(
+                                firstLine = 0.sp,
+                                restLine = 8.sp,
+                            ),
+                        ),
+                        actualStart, actualEnd,
+                    )
+                    addStyle(SpanStyle(), start, end)
                 }
 
                 TokenType.IMAGE -> {

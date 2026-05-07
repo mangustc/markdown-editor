@@ -8,9 +8,7 @@ plugins {
 android {
     namespace = "com.example.markdown_editor"
     compileSdk {
-        version = release(36) {
-            minorApiLevel = 1
-        }
+        version = release(37)
     }
 
     defaultConfig {

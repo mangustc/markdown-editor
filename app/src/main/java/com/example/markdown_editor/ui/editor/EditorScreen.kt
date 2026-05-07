@@ -86,7 +86,6 @@ fun EditorScreen(
     val density = LocalDensity.current
 
     val visualTransformation = remember(
-        uiState.editorAnnotatedString,
         uiState.editorSpans,
         uiState.editorTextFieldValue.selection,
         imageAspectRatios,
@@ -94,7 +93,6 @@ fun EditorScreen(
         density,
     ) {
         MarkdownVisualTransformation(
-            annotated = uiState.editorAnnotatedString,
             spans = uiState.editorSpans,
             selection = uiState.editorTextFieldValue.selection,
             imageAspectRatios = imageAspectRatios,

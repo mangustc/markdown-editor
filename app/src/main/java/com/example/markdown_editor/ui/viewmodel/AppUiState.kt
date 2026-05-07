@@ -1,6 +1,5 @@
 package com.example.markdown_editor.ui.viewmodel
 
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.TextFieldValue
 import com.example.markdown_editor.data.model.LinkPreview
 import com.example.markdown_editor.data.model.Note
@@ -26,7 +25,6 @@ data class AppUiState(
     val searchQuery: String = "",
 
     val editorTextFieldValue: TextFieldValue = TextFieldValue(),
-    val editorAnnotatedString: AnnotatedString = AnnotatedString(""),
     val editorSpans: List<SpanInfo> = emptyList(),
     val editorRope: EditorRope = EditorRope.of(""),
     val editorCanUndo: Boolean = false,

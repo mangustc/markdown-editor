@@ -20,7 +20,6 @@ import com.example.markdown_editor.data.util.LinkPreviewFetcher
 import com.example.markdown_editor.domain.editor.EditorEvent
 import com.example.markdown_editor.domain.editor.EditorHistory
 import com.example.markdown_editor.domain.editor.EditorRope
-import com.example.markdown_editor.domain.markdown.MarkdownAnnotator
 import com.example.markdown_editor.domain.markdown.MarkdownParser
 import com.example.markdown_editor.domain.messenger.Attachment
 import com.example.markdown_editor.domain.messenger.AttachmentType
@@ -241,9 +240,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     @OptIn(FlowPreview::class)
     inner class EditorActions {
         private val history = EditorHistory()
+
         private var pendingHistoryJob: Job? = null
         private var pendingOldValue: TextFieldValue? = null
-        private var lastPushTime = 0L
 
         init {
             viewModelScope.launch {
@@ -306,32 +305,12 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
         fun editorUndo() {
             val restored = history.undo(_uiState.value.editorTextFieldValue) ?: return
-            val spans = MarkdownParser.parse(restored.text)
-            _uiState.update {
-                it.copy(
-                    editorTextFieldValue = restored,
-                    editorRope = EditorRope.of(restored.text),
-                    editorAnnotatedString = MarkdownAnnotator.annotate(restored.text, spans),
-                    editorSpans = spans,
-                    editorCanUndo = history.canUndo,
-                    editorCanRedo = history.canRedo,
-                )
-            }
+            updateEditorState(restored)
         }
 
         fun editorRedo() {
             val restored = history.redo(_uiState.value.editorTextFieldValue) ?: return
-            val spans = MarkdownParser.parse(restored.text)
-            _uiState.update {
-                it.copy(
-                    editorTextFieldValue = restored,
-                    editorRope = EditorRope.of(restored.text),
-                    editorAnnotatedString = MarkdownAnnotator.annotate(restored.text, spans),
-                    editorSpans = spans,
-                    editorCanUndo = history.canUndo,
-                    editorCanRedo = history.canRedo,
-                )
-            }
+            updateEditorState(restored)
         }
 
         fun editorOnContentChanged(newValue: TextFieldValue) {
@@ -380,13 +359,12 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
         private fun updateEditorState(newValue: TextFieldValue) {
             val spans = MarkdownParser.parse(newValue.text)
-            val annotated = MarkdownAnnotator.annotate(newValue.text, spans)
+
             _uiState.update {
                 it.copy(
                     editorTextFieldValue = newValue,
-                    editorRope = EditorRope.of(newValue.text),
-                    editorAnnotatedString = annotated,
                     editorSpans = spans,
+                    editorRope = EditorRope.of(newValue.text),
                     editorCanUndo = history.canUndo,
                     editorCanRedo = history.canRedo,
                     editorVersion = it.editorVersion + 1,

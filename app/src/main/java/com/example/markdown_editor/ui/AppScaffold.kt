@@ -94,16 +94,16 @@ import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
 import com.example.markdown_editor.R
 import com.example.markdown_editor.data.model.Note
+import com.example.markdown_editor.domain.navigation.EditorDestination
+import com.example.markdown_editor.domain.navigation.MessengerDestination
+import com.example.markdown_editor.domain.viewmodel.AppViewModel
 import com.example.markdown_editor.ui.components.MenuPopup
 import com.example.markdown_editor.ui.components.MenuPopupGroup
 import com.example.markdown_editor.ui.components.MenuPopupItem
 import com.example.markdown_editor.ui.components.TooltipIconButton
 import com.example.markdown_editor.ui.editor.EditorScreen
 import com.example.markdown_editor.ui.messenger.MessengerScreen
-import com.example.markdown_editor.ui.navigation.EditorDestination
-import com.example.markdown_editor.ui.navigation.MessengerDestination
 import com.example.markdown_editor.ui.util.scrollbar
-import com.example.markdown_editor.ui.viewmodel.AppViewModel
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)

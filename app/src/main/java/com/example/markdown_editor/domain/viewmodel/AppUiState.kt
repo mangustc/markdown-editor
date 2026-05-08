@@ -1,4 +1,4 @@
-package com.example.markdown_editor.ui.viewmodel
+package com.example.markdown_editor.domain.viewmodel
 
 import com.example.markdown_editor.data.model.LinkPreview
 import com.example.markdown_editor.data.model.Note

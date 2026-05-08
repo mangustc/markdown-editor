@@ -4,7 +4,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.net.Uri
-import android.provider.DocumentsContract
 import androidx.core.content.edit
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
@@ -14,13 +13,9 @@ import androidx.paging.PagingData
 import androidx.paging.map
 import androidx.sqlite.db.SimpleSQLiteQuery
 import androidx.sqlite.db.SupportSQLiteQuery
-import com.example.markdown_editor.data.database.LinkPreviewDao
-import com.example.markdown_editor.data.database.LinkPreviewEntity
 import com.example.markdown_editor.data.database.NoteDao
 import com.example.markdown_editor.data.database.NoteEntity
 import com.example.markdown_editor.data.model.FrontMatter
-import com.example.markdown_editor.data.model.FrontMatterValue
-import com.example.markdown_editor.data.model.LinkPreview
 import com.example.markdown_editor.data.model.Note
 import com.example.markdown_editor.data.model.Project
 import com.example.markdown_editor.data.model.SearchQuery
@@ -33,7 +28,6 @@ import kotlinx.coroutines.withContext
 class ProjectRepositoryImpl(
     private val context: Context,
     private val noteDao: NoteDao,
-    private val linkPreviewDao: LinkPreviewDao,
     private val prefs: SharedPreferences = context.getSharedPreferences(
         "project_prefs",
         Context.MODE_PRIVATE,
@@ -155,74 +149,6 @@ class ProjectRepositoryImpl(
         buildProject(uriString.toUri(), name)
     }
 
-    override suspend fun toggleNotePin(note: Note): String = withContext(Dispatchers.IO) {
-        val fullText = readFullText(note.uri)
-        val (frontMatter, body) = FrontMatter.splitFromContent(fullText)
-
-        val currentTags = frontMatter.tags.toMutableList()
-        if ("pinned" in currentTags) currentTags.remove("pinned") else currentTags.add("pinned")
-
-        val updatedFields = frontMatter.fields.toMutableMap().apply {
-            put("tags", FrontMatterValue.StringList(currentTags))
-        }
-        val updatedFrontMatter = frontMatter.copy(fields = updatedFields)
-        val newFrontMatterString = updatedFrontMatter.toString()
-
-        context.contentResolver.openOutputStream(note.uri, "wt")
-            ?.bufferedWriter()
-            ?.use { it.write("$newFrontMatterString\n$body") }
-
-        newFrontMatterString
-    }
-
-    override suspend fun createNote(project: Project, name: String?, tags: List<String>?): Uri? =
-        withContext(Dispatchers.IO) {
-            val notesDir =
-                DocumentFile.fromTreeUri(context, project.notesUri) ?: return@withContext null
-
-            val isoDate = java.time.Instant.now().toString()
-            var frontMatterBuilder = "---\ncreatedAt: $isoDate"
-            if (!tags.isNullOrEmpty()) {
-                frontMatterBuilder += "\ntags:"
-                tags.forEach { tag -> frontMatterBuilder += "\n- $tag" }
-            }
-            val initialContent = "$frontMatterBuilder\n---"
-
-            val newFile =
-                notesDir.createFile("text/markdown", "$name.md") ?: return@withContext null
-            context.contentResolver.openOutputStream(newFile.uri, "wt")?.use { out ->
-                out.bufferedWriter().use { it.write(initialContent) }
-            }
-            newFile.uri
-        }
-
-    override suspend fun getNoteText(note: Note, includeFrontMatter: Boolean): String =
-        withContext(Dispatchers.IO) {
-            val fullText = readFullText(note.uri)
-            if (includeFrontMatter) fullText else FrontMatter.splitFromContent(fullText).second
-        }
-
-    override suspend fun saveNoteText(note: Note, text: String): Note =
-        withContext(Dispatchers.IO) {
-            context.contentResolver.openOutputStream(note.uri, "wt")
-                ?.bufferedWriter()
-                ?.use { it.write(text) }
-            note
-        }
-
-    override suspend fun getNoteByUri(uri: Uri): Note = withContext(Dispatchers.IO) {
-        val (frontMatter, _) = FrontMatter.splitFromContent(readFullText(uri))
-        val documentFile = DocumentFile.fromSingleUri(context, uri)
-            ?: throw Exception()
-
-        Note(
-            name = documentFile.name?.removeSuffix(".md") ?: "Untitled",
-            uri = uri,
-            lastModified = documentFile.lastModified(),
-            createdAt = frontMatter.toCreatedAtMillis(),
-        )
-    }
-
     override suspend fun copyToAssets(project: Project, assetUri: Uri): String =
         withContext(Dispatchers.IO) {
             val resolver = context.contentResolver
@@ -248,46 +174,6 @@ class ProjectRepositoryImpl(
 
             "assets/${targetFile.name}"
         }
-
-    override suspend fun deleteNote(note: Note) = withContext(Dispatchers.IO) {
-        val file = DocumentFile.fromSingleUri(context, note.uri)
-        if (file?.exists() == true) file.delete()
-    }
-
-    override suspend fun renameNote(note: Note, newName: String) = withContext(Dispatchers.IO) {
-        DocumentsContract.renameDocument(
-            context.contentResolver,
-            note.uri,
-            "$newName.md",
-        ) ?: throw IllegalStateException("Failed to rename file in storage")
-        Unit
-    }
-
-    override suspend fun getCachedLinkPreview(url: String): LinkPreview? =
-        withContext(Dispatchers.IO) {
-            linkPreviewDao.getByUrl(url)?.let { entity ->
-                if (entity.title == null && entity.description == null && entity.imageUrl == null)
-                    null
-                else
-                    LinkPreview(
-                        url = entity.url,
-                        title = entity.title,
-                        description = entity.description,
-                        imageUrl = entity.imageUrl,
-                    )
-            }
-        }
-
-    override suspend fun saveLinkPreview(preview: LinkPreview) = withContext(Dispatchers.IO) {
-        linkPreviewDao.insert(
-            LinkPreviewEntity(
-                url = preview.url,
-                title = preview.title,
-                description = preview.description,
-                imageUrl = preview.imageUrl,
-            ),
-        )
-    }
 
     private fun readFullText(uri: Uri): String =
         context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() } ?: ""

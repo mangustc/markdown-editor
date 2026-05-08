@@ -1,4 +1,4 @@
-package com.example.markdown_editor.ui.navigation
+package com.example.markdown_editor.domain.navigation
 
 import kotlinx.serialization.Serializable
 

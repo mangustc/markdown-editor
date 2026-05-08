@@ -1,4 +1,4 @@
-package com.example.markdown_editor.ui.viewmodel
+package com.example.markdown_editor.domain.viewmodel
 
 import android.app.Application
 import android.net.Uri
@@ -16,8 +16,9 @@ import com.example.markdown_editor.data.model.Note
 import com.example.markdown_editor.data.model.Project
 import com.example.markdown_editor.data.model.SearchQuery
 import com.example.markdown_editor.data.model.SortBy
+import com.example.markdown_editor.data.repository.LinkPreviewRepositoryImpl
+import com.example.markdown_editor.data.repository.NoteRepositoryImpl
 import com.example.markdown_editor.data.repository.ProjectRepositoryImpl
-import com.example.markdown_editor.data.util.LinkPreviewFetcher
 import com.example.markdown_editor.domain.editor.EditorEvent
 import com.example.markdown_editor.domain.markdown.MarkdownParser
 import com.example.markdown_editor.domain.messenger.Attachment
@@ -39,6 +40,9 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class AppViewModel(application: Application) : AndroidViewModel(application) {
@@ -49,9 +53,14 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         .fallbackToDestructiveMigration(true)
         .build()
 
-    private val repository = ProjectRepositoryImpl(
+    private val projectRepository = ProjectRepositoryImpl(
         context = application,
         noteDao = db.noteDao(),
+    )
+    private val noteRepository = NoteRepositoryImpl(
+        context = application,
+    )
+    private val linkPreviewRepository = LinkPreviewRepositoryImpl(
         linkPreviewDao = db.linkPreviewDao(),
     )
 
@@ -64,17 +73,17 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         fun onProjectSelected(uri: Uri) {
             viewModelScope.launch {
                 val name = uri.lastPathSegment?.substringAfterLast(":") ?: "Project"
-                val project = repository.buildProject(uri, name)
-                repository.saveProject(project)
+                val project = projectRepository.buildProject(uri, name)
+                projectRepository.saveProject(project)
                 _uiState.update { it.copy(project = project) }
-                repository.syncDatabase(project)
+                projectRepository.syncDatabase(project)
                 updateNoteLists()
             }
         }
 
         fun loadSavedProject() {
             viewModelScope.launch {
-                val project = repository.loadSavedProject()
+                val project = projectRepository.loadSavedProject()
                 if (project != null) {
                     _uiState.update { it.copy(project = project) }
                     updateNoteLists()
@@ -114,7 +123,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                     negatedTagFilters = parsedInit.negatedTagFilters + "quick-note",
                     pinnedFirst = true,
                 )
-                repository.getNotesPaged(project, parsed)
+                projectRepository.getNotesPaged(project, parsed)
             }
             .cachedIn(viewModelScope)
 
@@ -149,9 +158,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             val project = _uiState.value.project ?: return
             val nameToUse = _uiState.value.newNoteNameInput
             viewModelScope.launch {
-                val uri = repository.createNote(project, nameToUse)
+                val uri = noteRepository.createNote(project, nameToUse)
                 if (uri != null) {
-                    repository.syncDatabase(project)
+                    projectRepository.syncDatabase(project)
                     updateNoteLists()
                 }
             }
@@ -161,7 +170,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             if (raw != null) _uiState.update { it.copy(searchQuery = raw) }
             val project = _uiState.value.project ?: return
             viewModelScope.launch {
-                repository.syncDatabase(project)
+                projectRepository.syncDatabase(project)
                 afterUpdate()
             }
         }
@@ -178,8 +187,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             viewModelScope.launch {
                 val project = _uiState.value.project ?: return@launch
                 val activeNote = _uiState.value.activeNote
-                repository.deleteNote(note)
-                repository.syncDatabase(project)
+                noteRepository.deleteNote(note)
+                projectRepository.syncDatabase(project)
                 updateNoteLists()
                 if (note.uri == activeNote?.uri) goBack()
             }
@@ -216,8 +225,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         fun onRenameNote(note: Note, newName: String) {
             viewModelScope.launch {
                 val project = _uiState.value.project ?: return@launch
-                repository.renameNote(note, newName)
-                repository.syncDatabase(project)
+                noteRepository.renameNote(note, newName)
+                projectRepository.syncDatabase(project)
                 updateNoteLists()
             }
         }
@@ -225,8 +234,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         fun onPinNote(note: Note) {
             viewModelScope.launch {
                 val project = _uiState.value.project ?: return@launch
-                repository.toggleNotePin(note)
-                repository.syncDatabase(project)
+                noteRepository.toggleNotePin(note)
+                projectRepository.syncDatabase(project)
                 updateNoteLists()
             }
         }
@@ -273,8 +282,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         fun editorOnNoteOpened(noteUriString: String) {
             viewModelScope.launch(Dispatchers.IO) {
                 try {
-                    val note = repository.getNoteByUri(noteUriString.toUri())
-                    val text = repository.getNoteText(note)
+                    val note = noteRepository.getNoteByUri(noteUriString.toUri())
+                    val text = noteRepository.getNoteText(note)
                     withContext(Dispatchers.Main) {
                         _uiState.update { it.copy(activeNote = note) }
                         state.edit {
@@ -290,7 +299,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         private fun editorHandleAttachPhoto(event: EditorEvent.AttachPhoto) {
             val project = _uiState.value.project ?: return
             viewModelScope.launch(Dispatchers.IO) {
-                val relativePath = repository.copyToAssets(project = project, assetUri = event.uri)
+                val relativePath =
+                    projectRepository.copyToAssets(project = project, assetUri = event.uri)
                 val markdown = "![image](<$relativePath>)"
                 withContext(Dispatchers.Main) { editorInsertSyntax(markdown, 0) }
             }
@@ -299,7 +309,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         private fun editorHandleAttachFile(event: EditorEvent.AttachFile) {
             val project = _uiState.value.project ?: return
             viewModelScope.launch(Dispatchers.IO) {
-                val relativePath = repository.copyToAssets(project = project, assetUri = event.uri)
+                val relativePath =
+                    projectRepository.copyToAssets(project = project, assetUri = event.uri)
                 val label = event.displayName ?: relativePath.substringAfterLast("/")
                 val markdown = "[$label](<$relativePath>)"
                 withContext(Dispatchers.Main) { editorInsertSyntax(markdown, 0) }
@@ -311,8 +322,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             val note = _uiState.value.activeNote ?: return
             val text = state.text.toString()
             viewModelScope.launch(Dispatchers.IO) {
-                repository.saveNoteText(note, text)
-                repository.syncDatabase(project)
+                noteRepository.saveNoteText(note, text)
+                projectRepository.syncDatabase(project)
                 updateNoteLists()
                 _uiState.update { it.copy(editorSavedVersion = it.editorVersion) }
             }
@@ -328,7 +339,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             .distinctUntilChanged()
             .flatMapLatest { project ->
                 if (project == null) return@flatMapLatest emptyFlow()
-                repository.getNotesPaged(
+                projectRepository.getNotesPaged(
                     project,
                     SearchQuery(tagFilters = listOf("quick-note"), sortBy = SortBy.CREATED_AT),
                     includeText = true,
@@ -339,8 +350,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
         fun onMessengerOpened(project: Project, afterUpdate: () -> Unit = {}) {
             viewModelScope.launch {
-                repository.syncDatabase(project)
-                val pinnedNotes = repository.getNotes(
+                projectRepository.syncDatabase(project)
+                val pinnedNotes = projectRepository.getNotes(
                     project = project,
                     SearchQuery(
                         tagFilters = listOf("quick-note", "pinned"),
@@ -387,7 +398,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             val newBodyText = _uiState.value.messengerNewNoteText.trim()
 
             viewModelScope.launch(Dispatchers.IO) {
-                val fullText = repository.getNoteText(note, includeFrontMatter = true)
+                val fullText = noteRepository.getNoteText(note, includeFrontMatter = true)
                 val frontMatterEnd = run {
                     if (!fullText.trimStart().startsWith("---")) return@run 0
                     val lines = fullText.lines()
@@ -401,12 +412,12 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                     attachments.forEach { attachment ->
                         when (attachment.type) {
                             AttachmentType.PENDING_IMAGE -> {
-                                val path = repository.copyToAssets(project, attachment.uri)
+                                val path = projectRepository.copyToAssets(project, attachment.uri)
                                 append("\n![image](<$path>)")
                             }
 
                             AttachmentType.PENDING_FILE -> {
-                                val path = repository.copyToAssets(project, attachment.uri)
+                                val path = projectRepository.copyToAssets(project, attachment.uri)
                                 val label = attachment.displayName
                                 append("\n[$label](<$path>)")
                             }
@@ -429,7 +440,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                     else -> frontMatter
                 }
 
-                repository.saveNoteText(note, newFullContent)
+                noteRepository.saveNoteText(note, newFullContent)
                 withContext(Dispatchers.Main) {
                     _uiState.update {
                         it.copy(
@@ -450,29 +461,32 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             val text = _uiState.value.messengerNewNoteText.trim()
             if (text.isBlank() && attachments.isEmpty()) return
 
-            val timestamp = java.time.format.DateTimeFormatter
+            val timestamp = DateTimeFormatter
                 .ofPattern("yyyyMMdd_HHmmss")
-                .withZone(java.time.ZoneId.systemDefault())
-                .format(java.time.Instant.now())
+                .withZone(ZoneId.systemDefault())
+                .format(Instant.now())
             val name = "quick-note-$timestamp"
             val tags = listOf("quick-note")
 
             viewModelScope.launch(Dispatchers.IO) {
-                val uri = repository.createNote(project, name, tags)
+                val uri = noteRepository.createNote(project, name, tags)
                 if (uri != null) {
-                    val newNote = repository.getNoteByUri(uri)
-                    val currentContent = repository.getNoteText(newNote, includeFrontMatter = true)
+                    val newNote = noteRepository.getNoteByUri(uri)
+                    val currentContent =
+                        noteRepository.getNoteText(newNote, includeFrontMatter = true)
 
                     val attachmentLines = buildString {
                         attachments.forEach { attachment ->
                             when (attachment.type) {
                                 AttachmentType.PENDING_IMAGE -> {
-                                    val path = repository.copyToAssets(project, attachment.uri)
+                                    val path =
+                                        projectRepository.copyToAssets(project, attachment.uri)
                                     append("\n![image](<$path>)")
                                 }
 
                                 AttachmentType.PENDING_FILE -> {
-                                    val path = repository.copyToAssets(project, attachment.uri)
+                                    val path =
+                                        projectRepository.copyToAssets(project, attachment.uri)
                                     val label =
                                         attachment.displayName
                                     append("\n[$label](<$path>)")
@@ -494,7 +508,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                             "$currentContent\n$attachmentLines"
                     }
 
-                    repository.saveNoteText(newNote, fullContent)
+                    noteRepository.saveNoteText(newNote, fullContent)
                     withContext(Dispatchers.Main) {
                         _uiState.update { it.copy(messengerNewNoteText = "") }
                     }
@@ -508,20 +522,12 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             _uiState.update { it.copy(messengerLinkPreviews = it.messengerLinkPreviews + (url to null)) }
 
             viewModelScope.launch {
-                val cached = repository.getCachedLinkPreview(url)
-                if (cached != null) {
+                val preview = linkPreviewRepository.getLinkPreview(url)
+                if (preview != null) {
                     _uiState.update {
-                        it.copy(messengerLinkPreviews = it.messengerLinkPreviews + (url to cached))
+                        it.copy(messengerLinkPreviews = it.messengerLinkPreviews + (url to preview))
                     }
                     return@launch
-                }
-
-                val fetched = LinkPreviewFetcher.fetch(url)
-                if (fetched != null) {
-                    repository.saveLinkPreview(fetched)
-                    _uiState.update {
-                        it.copy(messengerLinkPreviews = it.messengerLinkPreviews + (url to fetched))
-                    }
                 }
             }
         }
@@ -542,9 +548,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             val project = _uiState.value.project ?: return
             viewModelScope.launch(Dispatchers.IO) {
                 uris.forEach { u ->
-                    runCatching { repository.deleteNote(repository.getNoteByUri(u.toUri())) }
+                    runCatching { noteRepository.deleteNote(noteRepository.getNoteByUri(u.toUri())) }
                 }
-                repository.syncDatabase(project)
+                projectRepository.syncDatabase(project)
                 withContext(Dispatchers.Main) {
                     clearSelection()
                     updateNoteLists()
@@ -555,8 +561,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         suspend fun getSelectedNotesText(): String = withContext(Dispatchers.IO) {
             _uiState.value.messengerSelectedNotes.mapNotNull { u ->
                 runCatching {
-                    val note = repository.getNoteByUri(u.toUri())
-                    val text = repository.getNoteText(note, includeFrontMatter = false)
+                    val note = noteRepository.getNoteByUri(u.toUri())
+                    val text = noteRepository.getNoteText(note, includeFrontMatter = false)
 
                     MarkdownParser.stripAttachments(text, MarkdownParser.parse(text))
                 }.getOrNull()?.takeIf { it.isNotBlank() }

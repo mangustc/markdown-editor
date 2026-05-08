@@ -68,8 +68,8 @@ import com.example.markdown_editor.domain.editor.EditorEvent
 import com.example.markdown_editor.domain.markdown.MarkdownParser
 import com.example.markdown_editor.domain.model.SpanInfo
 import com.example.markdown_editor.domain.model.TokenType
+import com.example.markdown_editor.domain.viewmodel.AppViewModel
 import com.example.markdown_editor.ui.components.TooltipIconButton
-import com.example.markdown_editor.ui.viewmodel.AppViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 

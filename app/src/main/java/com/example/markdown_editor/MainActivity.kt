@@ -12,9 +12,9 @@ import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.ViewModelProvider
 import com.example.markdown_editor.domain.messenger.Attachment
 import com.example.markdown_editor.domain.messenger.AttachmentType
+import com.example.markdown_editor.domain.viewmodel.AppViewModel
 import com.example.markdown_editor.ui.AppScaffold
 import com.example.markdown_editor.ui.MarkdowneditorTheme
-import com.example.markdown_editor.ui.viewmodel.AppViewModel
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {

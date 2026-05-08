@@ -1,4 +1,4 @@
-package com.example.markdown_editor.domain.markdown
+package com.example.markdown_editor.ui.editor
 
 import androidx.compose.foundation.text.input.OutputTransformation
 import androidx.compose.foundation.text.input.TextFieldBuffer
@@ -83,7 +83,10 @@ class MarkdownOutputTransformation(
                 )
 
                 TokenType.LINK -> addStyle(
-                    SpanStyle(color = Color(0xFF0055CC), textDecoration = TextDecoration.Underline),
+                    SpanStyle(
+                        color = Color(0xFF0055CC),
+                        textDecoration = TextDecoration.Underline,
+                    ),
                     start,
                     end,
                 )

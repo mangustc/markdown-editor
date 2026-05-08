@@ -1,6 +1,5 @@
 package com.example.markdown_editor.data.repository
 
-import android.util.Log
 import com.example.markdown_editor.data.database.LinkPreviewDao
 import com.example.markdown_editor.data.database.LinkPreviewEntity
 import com.example.markdown_editor.data.model.LinkPreview
@@ -15,7 +14,6 @@ class LinkPreviewRepositoryImpl(
     override suspend fun getLinkPreview(url: String): LinkPreview? =
         withContext(Dispatchers.IO) {
             linkPreviewDao.getByUrl(url)?.let { entity ->
-                Log.d("debug", "null")
                 if (entity.title == null && entity.description == null && entity.imageUrl == null)
                     null
                 else

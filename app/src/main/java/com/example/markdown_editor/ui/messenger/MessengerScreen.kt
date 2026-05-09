@@ -138,7 +138,7 @@ import com.example.markdown_editor.domain.markdown.MarkdownParser
 import com.example.markdown_editor.domain.messenger.Attachment
 import com.example.markdown_editor.domain.messenger.AttachmentType
 import com.example.markdown_editor.domain.messenger.LinkPreviewFetcher
-import com.example.markdown_editor.domain.model.TokenType
+import com.example.markdown_editor.domain.messenger.ParsedNoteBody
 import com.example.markdown_editor.domain.viewmodel.AppViewModel
 import com.example.markdown_editor.ui.components.MenuPopup
 import com.example.markdown_editor.ui.components.MenuPopupGroup
@@ -150,49 +150,6 @@ import java.net.URL
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-
-private val URL_PATTERN = Regex("""https?://[^\s<>"')]+""")
-
-private data class ParsedNoteBody(
-    val text: String,
-    val attachments: List<Attachment>,
-    val links: Sequence<MatchResult>,
-)
-
-private fun parseNoteBody(body: String, project: Project): ParsedNoteBody {
-    val spans = MarkdownParser.parse(body)
-
-    val imageAttachments = spans.filter { it.type == TokenType.IMAGE }.map { span ->
-        val path = span.payload ?: ""
-        Attachment(
-            uri = project.getFileUri(path),
-            displayName = path,
-            path = path,
-            type = AttachmentType.IMAGE,
-        )
-    }
-
-    val fileAttachments = spans.filter { it.type == TokenType.FILE }.map { span ->
-        val path = span.payload ?: ""
-        val label = span.label ?: path
-        Attachment(
-            uri = project.getFileUri(path),
-            displayName = label,
-            path = path,
-            type = AttachmentType.FILE,
-        )
-    }
-
-    val text = MarkdownParser.stripAttachments(body, spans).ifBlank { "" }
-
-    val links = URL_PATTERN.findAll(text)
-
-    return ParsedNoteBody(
-        text = text,
-        attachments = imageAttachments + fileAttachments,
-        links = links,
-    )
-}
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -821,7 +778,7 @@ private fun MessageBubble(
     LaunchedEffect(urls) { urls.forEach { onEnsurePreview(it) } }
 
     val previews = remember(urls, linkPreviews) { urls.mapNotNull { linkPreviews[it] } }
-    val parsedBody = remember(note.body) { parseNoteBody(note.body ?: "", project) }
+    val parsedBody = remember(note.body) { ParsedNoteBody.parse(note.body ?: "", project) }
 
     var menuExpanded by remember { mutableStateOf(false) }
     var touchX by remember { mutableStateOf(0.dp) }

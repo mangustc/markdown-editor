@@ -129,7 +129,9 @@ import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
+import coil3.ImageLoader
 import coil3.compose.AsyncImage
+import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import com.example.markdown_editor.R
 import com.example.markdown_editor.data.model.LinkPreview
 import com.example.markdown_editor.data.model.Note
@@ -146,6 +148,8 @@ import com.example.markdown_editor.ui.components.MenuPopupItem
 import com.example.markdown_editor.ui.components.TooltipIconButton
 import com.example.markdown_editor.ui.util.scrollbar
 import kotlinx.coroutines.launch
+import okhttp3.Interceptor
+import okhttp3.OkHttpClient
 import java.net.URL
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -1323,6 +1327,7 @@ private fun ZoomableImage(uri: Uri, onTap: () -> Unit) {
 @Composable
 private fun LinkPreviewCarousel(previews: List<LinkPreview>) {
     val state = rememberCarouselState { previews.size }
+
     Box(modifier = Modifier.fillMaxWidth()) {
         HorizontalUncontainedCarousel(
             state = state,
@@ -1346,9 +1351,47 @@ private fun LinkPreviewCarousel(previews: List<LinkPreview>) {
             ) {
                 Column {
                     if (!preview.imageUrl.isNullOrBlank()) {
+                        val context = LocalContext.current
+                        val browserImageLoader = remember {
+                            ImageLoader.Builder(context)
+                                .components {
+                                    add(
+                                        OkHttpNetworkFetcherFactory(
+                                            callFactory = {
+                                                OkHttpClient.Builder()
+                                                    .addInterceptor(
+                                                        Interceptor { chain ->
+                                                            chain.proceed(
+                                                                chain.request().newBuilder()
+                                                                    .header(
+                                                                        "User-Agent",
+                                                                        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+                                                                    )
+                                                                    .header(
+                                                                        "Accept",
+                                                                        "image/webp,image/apng,image/*,*/*;q=0.8",
+                                                                    )
+                                                                    .header(
+                                                                        "Accept-Language",
+                                                                        "en-US,en;q=0.9",
+                                                                    )
+                                                                    .header("Referer", preview.url)
+                                                                    .build(),
+                                                            )
+                                                        },
+                                                    )
+                                                    .build()
+                                            },
+                                        ),
+                                    )
+                                }
+                                .build()
+                        }
+
                         AsyncImage(
                             model = preview.imageUrl,
                             contentDescription = preview.title,
+                            imageLoader = browserImageLoader,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .aspectRatio(16f / 9f)

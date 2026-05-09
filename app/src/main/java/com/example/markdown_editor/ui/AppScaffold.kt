@@ -164,14 +164,14 @@ fun AppScaffold() {
 
                     HorizontalDivider()
 
-                    Button(
-                        onClick = { appViewModel.navigation.showCreateNoteDialog() },
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text(stringResource(R.string.create_new_note))
-                    }
-
                     if (uiState.project != null) {
+                        Button(
+                            onClick = { appViewModel.navigation.showCreateNoteDialog() },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text(stringResource(R.string.create_new_note))
+                        }
+                        
                         DockedSearchBar(
                             inputField = {
                                 SearchBarDefaults.InputField(

@@ -279,6 +279,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
 
+        @OptIn(ExperimentalFoundationApi::class)
         fun editorOnNoteOpened(noteUriString: String) {
             viewModelScope.launch(Dispatchers.IO) {
                 try {
@@ -289,8 +290,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                         state.edit {
                             replace(0, length, text)
                         }
+                        state.undoState.clearHistory()
                     }
-                } catch (e: Exception) {
+                } catch (_: Exception) {
                     navigation.goBack()
                 }
             }

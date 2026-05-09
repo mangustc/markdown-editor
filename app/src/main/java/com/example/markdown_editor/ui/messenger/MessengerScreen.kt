@@ -158,17 +158,6 @@ private data class ParsedNoteBody(
     val attachments: List<Attachment>,
 )
 
-private fun extractLinkPath(matched: String): String =
-    matched
-        .substringAfter("](")
-        .dropLast(1)
-        .substringBefore(" \"")
-        .trim()
-        .removeSurrounding("<", ">")
-
-private fun extractLinkLabel(matched: String): String =
-    matched.substringAfter("[").substringBefore("]")
-
 private fun parseNoteBody(body: String, project: Project): ParsedNoteBody {
     val spans = MarkdownParser.parse(body)
 

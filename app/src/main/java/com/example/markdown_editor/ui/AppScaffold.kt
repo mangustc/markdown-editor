@@ -171,7 +171,7 @@ fun AppScaffold() {
                         ) {
                             Text(stringResource(R.string.create_new_note))
                         }
-                        
+
                         DockedSearchBar(
                             inputField = {
                                 SearchBarDefaults.InputField(

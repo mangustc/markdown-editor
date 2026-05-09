@@ -156,6 +156,7 @@ private val URL_PATTERN = Regex("""https?://[^\s<>"')]+""")
 private data class ParsedNoteBody(
     val text: String,
     val attachments: List<Attachment>,
+    val links: Sequence<MatchResult>,
 )
 
 private fun parseNoteBody(body: String, project: Project): ParsedNoteBody {
@@ -182,11 +183,14 @@ private fun parseNoteBody(body: String, project: Project): ParsedNoteBody {
         )
     }
 
-    val text = MarkdownParser.stripAttachments(body, spans)
+    val text = MarkdownParser.stripAttachments(body, spans).ifBlank { "" }
+
+    val links = URL_PATTERN.findAll(text)
 
     return ParsedNoteBody(
         text = text,
         attachments = imageAttachments + fileAttachments,
+        links = links,
     )
 }
 
@@ -818,18 +822,17 @@ private fun MessageBubble(
 
     val previews = remember(urls, linkPreviews) { urls.mapNotNull { linkPreviews[it] } }
     val parsedBody = remember(note.body) { parseNoteBody(note.body ?: "", project) }
-    val bodyText = parsedBody.text.ifBlank { "" }
 
     var menuExpanded by remember { mutableStateOf(false) }
     var touchX by remember { mutableStateOf(0.dp) }
     var touchY by remember { mutableStateOf(0.dp) }
 
     val urlColor = MaterialTheme.colorScheme.primary
-    val annotatedBody = remember(bodyText) {
+    val annotatedBody = remember(parsedBody.text) {
         buildAnnotatedString {
             var lastIndex = 0
-            URL_PATTERN.findAll(bodyText).forEach { match ->
-                append(bodyText.substring(lastIndex, match.range.first))
+            parsedBody.links.forEach { match ->
+                append(parsedBody.text.substring(lastIndex, match.range.first))
                 pushStringAnnotation(tag = "URL", annotation = match.value)
                 withStyle(SpanStyle(color = urlColor, textDecoration = TextDecoration.Underline)) {
                     append(match.value)
@@ -837,7 +840,7 @@ private fun MessageBubble(
                 pop()
                 lastIndex = match.range.last + 1
             }
-            if (lastIndex < bodyText.length) append(bodyText.substring(lastIndex))
+            if (lastIndex < parsedBody.text.length) append(parsedBody.text.substring(lastIndex))
         }
     }
 
@@ -948,10 +951,10 @@ private fun MessageBubble(
                                 },
                                 isViewing = true,
                             )
-                            if (bodyText.isNotBlank()) Spacer(modifier = Modifier.height(8.dp))
+                            if (parsedBody.text.isNotBlank()) Spacer(modifier = Modifier.height(8.dp))
                         }
 
-                        if (bodyText.isNotBlank()) {
+                        if (parsedBody.text.isNotBlank()) {
                             SelectionContainer {
                                 Text(
                                     text = annotatedBody,
@@ -1081,7 +1084,7 @@ private fun MessageBubble(
                                     ClipEntry(
                                         ClipData.newPlainText(
                                             "Note text",
-                                            bodyText,
+                                            parsedBody.text,
                                         ),
                                     ),
                                 )

@@ -66,7 +66,7 @@ class EditorActions(
 
     fun insertNoteLink(note: Note) {
         val syntax = "[${note.name}](<${note.name}.md>)"
-        editorInsertSyntax(syntax, syntax.length)
+        insertWithOffset(syntax, syntax.length)
         dismissLinkNoteDialog()
     }
 
@@ -74,16 +74,38 @@ class EditorActions(
         deps.scope.launch {
             snapshotFlow { state.text }
                 .debounce(2_000)
-                .collect { editorOnSave() }
+                .collect { onSave() }
         }
     }
 
     @OptIn(ExperimentalFoundationApi::class)
-    fun editorOnEvent(event: EditorEvent) {
+    fun onEvent(event: EditorEvent) {
         when (event) {
-            is EditorEvent.InsertSyntax -> editorInsertSyntax(event.syntax, event.cursorOffset)
-            is EditorEvent.AttachPhoto -> editorHandleAttachPhoto(event)
-            is EditorEvent.AttachFile -> editorHandleAttachFile(event)
+            is EditorEvent.InsertSyntax -> {
+                insertWithOffset(event.syntax, event.cursorOffset)
+            }
+
+            is EditorEvent.AttachPhoto -> {
+                val project = deps.uiState.value.project ?: return
+                deps.scope.launch(Dispatchers.IO) {
+                    val relativePath =
+                        deps.projectRepo.copyToAssets(project = project, assetUri = event.uri)
+                    val markdown = "![image](<$relativePath>)"
+                    withContext(Dispatchers.Main) { insertWithOffset(markdown, 0) }
+                }
+            }
+
+            is EditorEvent.AttachFile -> {
+                val project = deps.uiState.value.project ?: return
+                deps.scope.launch(Dispatchers.IO) {
+                    val relativePath =
+                        deps.projectRepo.copyToAssets(project = project, assetUri = event.uri)
+                    val label = event.displayName ?: relativePath.substringAfterLast("/")
+                    val markdown = "[$label](<$relativePath>)"
+                    withContext(Dispatchers.Main) { insertWithOffset(markdown, 0) }
+                }
+            }
+
             is EditorEvent.Undo -> {
                 state.undoState.undo()
             }
@@ -94,16 +116,16 @@ class EditorActions(
         }
     }
 
-    private fun editorInsertSyntax(syntax: String, cursorOffset: Int) {
+    private fun insertWithOffset(text: String, offset: Int) {
         state.edit {
             val start = selection.start
-            replace(start, start, syntax)
-            placeCursorAfterCharAt(start + cursorOffset - 1)
+            replace(start, start, text)
+            placeCursorAfterCharAt(start + offset - 1)
         }
     }
 
     @OptIn(ExperimentalFoundationApi::class)
-    fun editorOnNoteOpened(noteUriString: String) {
+    fun onNoteOpened(noteUriString: String) {
         deps.scope.launch(Dispatchers.IO) {
             try {
                 val note = deps.noteRepo.getNoteByUri(noteUriString.toUri())
@@ -137,7 +159,7 @@ class EditorActions(
                 ),
             )
         }
-        editorOnSave()
+        onSave()
     }
 
     fun updateFmValue(key: String, value: String) {
@@ -149,7 +171,7 @@ class EditorActions(
                 ),
             )
         }
-        editorOnSave()
+        onSave()
     }
 
     fun addFmProperty() {
@@ -168,48 +190,27 @@ class EditorActions(
                 ),
             )
         }
-        editorOnSave()
+        onSave()
     }
 
     fun addFmTag(tag: String) {
         deps.uiState.update { it.copy(editorFrontMatter = it.editorFrontMatter?.withTag(tag)) }
-        editorOnSave()
+        onSave()
     }
 
     fun removeFmTag(tag: String) {
         deps.uiState.update { it.copy(editorFrontMatter = it.editorFrontMatter?.withoutTag(tag)) }
-        editorOnSave()
+        onSave()
     }
 
     fun removeFmProperty(key: String) {
         if (key == "createdAt" || key == "tags") return
 
         deps.uiState.update { it.copy(editorFrontMatter = it.editorFrontMatter?.withoutField(key)) }
-        editorOnSave()
+        onSave()
     }
 
-    private fun editorHandleAttachPhoto(event: EditorEvent.AttachPhoto) {
-        val project = deps.uiState.value.project ?: return
-        deps.scope.launch(Dispatchers.IO) {
-            val relativePath =
-                deps.projectRepo.copyToAssets(project = project, assetUri = event.uri)
-            val markdown = "![image](<$relativePath>)"
-            withContext(Dispatchers.Main) { editorInsertSyntax(markdown, 0) }
-        }
-    }
-
-    private fun editorHandleAttachFile(event: EditorEvent.AttachFile) {
-        val project = deps.uiState.value.project ?: return
-        deps.scope.launch(Dispatchers.IO) {
-            val relativePath =
-                deps.projectRepo.copyToAssets(project = project, assetUri = event.uri)
-            val label = event.displayName ?: relativePath.substringAfterLast("/")
-            val markdown = "[$label](<$relativePath>)"
-            withContext(Dispatchers.Main) { editorInsertSyntax(markdown, 0) }
-        }
-    }
-
-    fun editorOnSave() {
+    fun onSave() {
         val project = deps.uiState.value.project ?: return
         val note = deps.uiState.value.activeNote ?: return
         val bodyText = state.text.toString()

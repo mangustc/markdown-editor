@@ -123,7 +123,7 @@ fun EditorScreen(
     val scrollState = rememberScrollState()
 
     LaunchedEffect(noteUriString) {
-        viewModel.editor.editorOnNoteOpened(noteUriString)
+        viewModel.editor.onNoteOpened(noteUriString)
     }
 
     val bringIntoViewRequester = remember { BringIntoViewRequester() }
@@ -162,7 +162,7 @@ fun EditorScreen(
         contract = ActivityResultContracts.PickVisualMedia(),
     ) { uri ->
         if (uri != null) {
-            viewModel.editor.editorOnEvent(EditorEvent.AttachPhoto(uri = uri))
+            viewModel.editor.onEvent(EditorEvent.AttachPhoto(uri = uri))
         }
     }
 
@@ -170,7 +170,7 @@ fun EditorScreen(
         contract = ActivityResultContracts.OpenDocument(),
     ) { uri ->
         if (uri != null) {
-            viewModel.editor.editorOnEvent(EditorEvent.AttachFile(uri = uri))
+            viewModel.editor.onEvent(EditorEvent.AttachFile(uri = uri))
         }
     }
 
@@ -190,13 +190,13 @@ fun EditorScreen(
                 },
         ) {
             TooltipIconButton(
-                onClick = { viewModel.editor.editorOnEvent(EditorEvent.Undo) },
+                onClick = { viewModel.editor.onEvent(EditorEvent.Undo) },
                 icon = Icons.AutoMirrored.Filled.Undo,
                 tooltip = stringResource(R.string.undo),
                 enabled = viewModel.editor.state.undoState.canUndo,
             )
             TooltipIconButton(
-                onClick = { viewModel.editor.editorOnEvent(EditorEvent.Redo) },
+                onClick = { viewModel.editor.onEvent(EditorEvent.Redo) },
                 icon = Icons.AutoMirrored.Filled.Redo,
                 tooltip = stringResource(R.string.redo),
                 enabled = viewModel.editor.state.undoState.canRedo,
@@ -224,7 +224,7 @@ fun EditorScreen(
             )
             TooltipIconButton(
                 onClick = {
-                    viewModel.editor.editorOnEvent(
+                    viewModel.editor.onEvent(
                         EditorEvent.InsertSyntax(
                             "****",
                             2,
@@ -236,7 +236,7 @@ fun EditorScreen(
             )
             TooltipIconButton(
                 onClick = {
-                    viewModel.editor.editorOnEvent(
+                    viewModel.editor.onEvent(
                         EditorEvent.InsertSyntax(
                             "**",
                             1,
@@ -248,7 +248,7 @@ fun EditorScreen(
             )
             TooltipIconButton(
                 onClick = {
-                    viewModel.editor.editorOnEvent(
+                    viewModel.editor.onEvent(
                         EditorEvent.InsertSyntax(
                             "``",
                             1,

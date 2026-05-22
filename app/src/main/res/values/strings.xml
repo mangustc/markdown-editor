@@ -68,4 +68,6 @@
     <string name="delete_selected">Delete selected</string>
     <string name="undo">Undo</string>
     <string name="redo">Redo</string>
+    <string name="reverse">Reverse</string>
+    <string name="add_property">Add property</string>
 </resources>

@@ -27,4 +27,5 @@ interface ProjectRepository {
     suspend fun loadSavedProject(): Project?
     suspend fun syncDatabase(project: Project)
     suspend fun copyToAssets(project: Project, assetUri: Uri): String
+    suspend fun getAllTags(): List<String>
 }

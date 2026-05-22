@@ -13,6 +13,8 @@ import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import androidx.room.Room
 import com.example.markdown_editor.data.database.NoteDb
+import com.example.markdown_editor.data.model.FrontMatter
+import com.example.markdown_editor.data.model.FrontMatterValue
 import com.example.markdown_editor.data.model.Note
 import com.example.markdown_editor.data.model.Project
 import com.example.markdown_editor.data.model.SearchQuery
@@ -95,7 +97,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 }
             }
         }
-
     }
 
 
@@ -333,10 +334,16 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 try {
                     val note = noteRepository.getNoteByUri(noteUriString.toUri())
                     val text = noteRepository.getNoteText(note)
+                    val (frontMatter, body) = FrontMatter.splitFromContent(text)
                     withContext(Dispatchers.Main) {
-                        _uiState.update { it.copy(activeNote = note) }
+                        _uiState.update {
+                            it.copy(
+                                activeNote = note,
+                                editorFrontMatter = frontMatter,
+                            )
+                        }
                         state.edit {
-                            replace(0, length, text)
+                            replace(0, length, body)
                         }
                         state.undoState.clearHistory()
                     }
@@ -344,6 +351,67 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                     navigation.goBack()
                 }
             }
+        }
+
+        fun updateFmKey(oldKey: String, newKey: String) {
+            if (oldKey == newKey || newKey.isBlank()) return
+            _uiState.update {
+                it.copy(
+                    editorFrontMatter = it.editorFrontMatter?.withRenamedKey(
+                        oldKey,
+                        newKey,
+                    ),
+                )
+            }
+            editorOnSave()
+        }
+
+        fun updateFmValue(key: String, value: String) {
+            _uiState.update {
+                it.copy(
+                    editorFrontMatter = it.editorFrontMatter?.withField(
+                        key,
+                        FrontMatterValue.Scalar(value),
+                    ),
+                )
+            }
+            editorOnSave()
+        }
+
+        fun addFmProperty() {
+            val fm = _uiState.value.editorFrontMatter ?: FrontMatter.Empty
+            var newKey = "newProperty"
+            var count = 1
+            while (fm.fields.containsKey(newKey)) {
+                newKey = "newProperty$count"
+                count++
+            }
+            _uiState.update {
+                it.copy(
+                    editorFrontMatter = fm.withField(
+                        newKey,
+                        FrontMatterValue.Scalar(""),
+                    ),
+                )
+            }
+            editorOnSave()
+        }
+
+        fun addFmTag(tag: String) {
+            _uiState.update { it.copy(editorFrontMatter = it.editorFrontMatter?.withTag(tag)) }
+            editorOnSave()
+        }
+
+        fun removeFmTag(tag: String) {
+            _uiState.update { it.copy(editorFrontMatter = it.editorFrontMatter?.withoutTag(tag)) }
+            editorOnSave()
+        }
+
+        fun removeFmProperty(key: String) {
+            if (key == "createdAt" || key == "tags") return
+
+            _uiState.update { it.copy(editorFrontMatter = it.editorFrontMatter?.withoutField(key)) }
+            editorOnSave()
         }
 
         private fun editorHandleAttachPhoto(event: EditorEvent.AttachPhoto) {
@@ -370,15 +438,22 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         fun editorOnSave() {
             val project = _uiState.value.project ?: return
             val note = _uiState.value.activeNote ?: return
-            val text = state.text.toString()
+            val bodyText = state.text.toString()
+            val fm = _uiState.value.editorFrontMatter
+
+            val textToSave = if (fm != null && fm.fields.isNotEmpty()) {
+                "$fm\n$bodyText"
+            } else {
+                bodyText
+            }
+
             viewModelScope.launch(Dispatchers.IO) {
-                noteRepository.saveNoteText(note, text)
+                noteRepository.saveNoteText(note, textToSave)
                 projectRepository.syncDatabase(project)
                 updateNoteLists()
                 _uiState.update { it.copy(editorSavedVersion = it.editorVersion) }
             }
         }
-
     }
 
     val messenger = MessengerActions()
@@ -625,6 +700,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         val project = _uiState.value.project ?: return
         viewModelScope.launch {
             projectRepository.syncDatabase(project)
+            _uiState.update { it.copy(allProjectTags = projectRepository.getAllTags()) }
             afterUpdateSearch()
         }
         messenger.onMessengerOpened(project, afterUpdate = afterUpdateMessenger)

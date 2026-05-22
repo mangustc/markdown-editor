@@ -5,9 +5,15 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -15,28 +21,41 @@ import androidx.compose.foundation.layout.imeNestedScroll
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.OutputTransformation
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Redo
 import androidx.compose.material.icons.automirrored.filled.Undo
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AttachFile
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.FormatBold
 import androidx.compose.material.icons.filled.FormatItalic
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
+import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.FloatingToolbarDefaults.ScreenOffset
 import androidx.compose.material3.HorizontalFloatingToolbar
+import androidx.compose.material3.Icon
+import androidx.compose.material3.InputChip
+import androidx.compose.material3.InputChipDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -49,12 +68,16 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.focus.onFocusEvent
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntOffset
@@ -63,6 +86,8 @@ import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.example.markdown_editor.R
+import com.example.markdown_editor.data.model.FrontMatter
+import com.example.markdown_editor.data.model.FrontMatterValue
 import com.example.markdown_editor.data.model.Project
 import com.example.markdown_editor.domain.editor.EditorEvent
 import com.example.markdown_editor.domain.markdown.MarkdownParser
@@ -235,43 +260,254 @@ fun EditorScreen(
                     .imeNestedScroll()
                     .verticalScroll(scrollState),
             ) {
-                MarkdownEditorField(
-                    state = viewModel.editor.state,
-                    transformation = outputTransformation,
-                    onTextLayout = onLayoutChange,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .bringIntoViewRequester(bringIntoViewRequester)
-                        .padding(start = 16.dp, end = 16.dp, bottom = toolbarHeightDp)
-                        .onFocusEvent { focusState ->
-                            if (focusState.isFocused) {
-                                scope.launch {
-                                    delay(300)
-                                    bringIntoViewRequester.bringIntoView()
-                                }
-                            }
-                        },
-                )
+                Column {
+                    uiState.editorFrontMatter?.let { fm ->
+                        FrontMatterProperties(
+                            frontMatter = fm,
+                            allTags = uiState.allProjectTags,
+                            onUpdateKey = viewModel.editor::updateFmKey,
+                            onUpdateValue = viewModel.editor::updateFmValue,
+                            onAddProperty = viewModel.editor::addFmProperty,
+                            onAddTag = viewModel.editor::addFmTag,
+                            onRemoveTag = viewModel.editor::removeFmTag,
+                            onRemoveProperty = viewModel.editor::removeFmProperty,
+                        )
+                    }
+                    Box {
+                        MarkdownEditorField(
+                            state = viewModel.editor.state,
+                            transformation = outputTransformation,
+                            onTextLayout = onLayoutChange,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .bringIntoViewRequester(bringIntoViewRequester)
+                                .padding(start = 16.dp, end = 16.dp, bottom = toolbarHeightDp)
+                                .onFocusEvent { focusState ->
+                                    if (focusState.isFocused) {
+                                        scope.launch {
+                                            delay(300)
+                                            bringIntoViewRequester.bringIntoView()
+                                        }
+                                    }
+                                },
+                        )
 
-                layoutState?.let { state ->
-                    if (state.imageSpans.isNotEmpty() && uiState.project != null) {
-                        state.imageSpans.forEach { span ->
-                            key(span.payload ?: span.start) {
-                                MarkdownImageOverlay(
-                                    span = span,
-                                    state = viewModel.editor.state,
-                                    layoutResult = state.layout,
-                                    project = uiState.project!!,
-                                    density = density,
-                                    editorWidth = editorWidth,
-                                    imageAspectRatios = imageAspectRatios,
-                                    onRatioMeasured = { path, ratio ->
-                                        imageAspectRatios = imageAspectRatios + (path to ratio)
-                                    },
-                                )
+                        layoutState?.let { state ->
+                            if (state.imageSpans.isNotEmpty() && uiState.project != null) {
+                                state.imageSpans.forEach { span ->
+                                    key(span.payload ?: span.start) {
+                                        MarkdownImageOverlay(
+                                            span = span,
+                                            state = viewModel.editor.state,
+                                            layoutResult = state.layout,
+                                            project = uiState.project!!,
+                                            density = density,
+                                            editorWidth = editorWidth,
+                                            imageAspectRatios = imageAspectRatios,
+                                            onRatioMeasured = { path, ratio ->
+                                                imageAspectRatios =
+                                                    imageAspectRatios + (path to ratio)
+                                            },
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun FrontMatterProperties(
+    frontMatter: FrontMatter,
+    allTags: List<String>,
+    onUpdateKey: (String, String) -> Unit,
+    onUpdateValue: (String, String) -> Unit,
+    onAddProperty: () -> Unit,
+    onAddTag: (String) -> Unit,
+    onRemoveTag: (String) -> Unit,
+    onRemoveProperty: (String) -> Unit,
+) {
+    Column(
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+            .background(MaterialTheme.colorScheme.surfaceContainer, MaterialTheme.shapes.medium)
+            .padding(16.dp),
+    ) {
+        frontMatter.fields.forEach { (key, value) ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                var localKey by remember(key) { mutableStateOf(key) }
+                val focusManager = LocalFocusManager.current
+
+                BasicTextField(
+                    value = localKey,
+                    onValueChange = { localKey = it },
+                    modifier = Modifier
+                        .weight(1f)
+                        .onFocusChanged { focusState ->
+                            if (!focusState.isFocused) {
+                                if (localKey.isBlank() && key != "createdAt" && key != "tags") {
+                                    onRemoveProperty(key)
+                                } else if (localKey.isBlank()) {
+                                    localKey = key
+                                } else if (localKey != key) {
+                                    onUpdateKey(key, localKey)
+                                }
+                            }
+                        },
+                    textStyle = MaterialTheme.typography.bodyMedium.copy(
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontWeight = FontWeight.Bold,
+                    ),
+                    readOnly = key == "createdAt" || key == "tags",
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(
+                        onDone = {
+                            if (localKey.isEmpty()) onRemoveProperty(key)
+                            focusManager.clearFocus()
+                        },
+                    ),
+                )
+
+                Spacer(Modifier.width(8.dp))
+
+                Box(modifier = Modifier.weight(2f)) {
+                    if (key == "tags") {
+                        TagEditor(
+                            tags = frontMatter.tags,
+                            allTags = allTags,
+                            onAddTag = onAddTag,
+                            onRemoveTag = onRemoveTag,
+                        )
+                    } else if (value is FrontMatterValue.Scalar || value is FrontMatterValue.StringList) {
+                        val realVal = if (value is FrontMatterValue.Scalar) value.value else ""
+                        var localVal by remember(realVal) { mutableStateOf(realVal) }
+                        BasicTextField(
+                            value = localVal,
+                            onValueChange = { localVal = it },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .onFocusChanged {
+                                    if (!it.isFocused && localVal != realVal) onUpdateValue(
+                                        key,
+                                        localVal,
+                                    )
+                                },
+                            textStyle = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface),
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                            keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
+                        )
+                    }
+                }
+            }
+        }
+
+        TextButton(onClick = onAddProperty) {
+            Icon(
+                Icons.Default.Add,
+                contentDescription = null,
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(stringResource(R.string.add_property))
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
+@Composable
+fun TagEditor(
+    tags: List<String>,
+    allTags: List<String>,
+    onAddTag: (String) -> Unit,
+    onRemoveTag: (String) -> Unit,
+) {
+    var text by remember { mutableStateOf("") }
+    var expanded by remember { mutableStateOf(false) }
+    val filtered by remember(text, allTags, tags) {
+        derivedStateOf {
+            allTags.filter {
+                it.contains(
+                    text,
+                    ignoreCase = true,
+                ) && !tags.contains(it)
+            }
+        }
+    }
+    val focusManager = LocalFocusManager.current
+
+    FlowRow(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        itemVerticalAlignment = Alignment.CenterVertically,
+    ) {
+        tags.forEach { tag ->
+            InputChip(
+                selected = false,
+                onClick = {},
+                label = { Text(tag) },
+                trailingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(18.dp)
+                            .clickable { onRemoveTag(tag) },
+                    )
+                },
+            )
+        }
+
+        ExposedDropdownMenuBox(
+            expanded = expanded && filtered.isNotEmpty(),
+            onExpandedChange = { expanded = it },
+        ) {
+            BasicTextField(
+                value = text,
+                onValueChange = { newText ->
+                    text = newText
+                    expanded = newText.isNotEmpty()
+                },
+                modifier = Modifier
+                    .height(InputChipDefaults.Height)
+                    .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable),
+                textStyle = MaterialTheme.typography.bodyMedium.copy(
+                    color = MaterialTheme.colorScheme.onSurface,
+                    lineHeight = with(LocalDensity.current) { InputChipDefaults.Height.toSp() },
+                ),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(
+                    onDone = {
+                        if (text.isNotBlank()) onAddTag(text.trim())
+                        text = ""
+                        expanded = false
+                        focusManager.clearFocus()
+                    },
+                ),
+            )
+
+            ExposedDropdownMenu(
+                expanded = expanded && filtered.isNotEmpty(),
+                onDismissRequest = { expanded = false },
+            ) {
+                filtered.forEach { sugg ->
+                    DropdownMenuItem(
+                        text = { Text(sugg) },
+                        onClick = {
+                            onAddTag(sugg)
+                            text = ""
+                            expanded = false
+                            focusManager.clearFocus()
+                        },
+                    )
                 }
             }
         }

@@ -175,6 +175,10 @@ class ProjectRepositoryImpl(
             "assets/${targetFile.name}"
         }
 
+    override suspend fun getAllTags(): List<String> = withContext(Dispatchers.IO) {
+        noteDao.getAllTags().flatMap { it.split(" ") }.filter { it.isNotBlank() }.distinct()
+    }
+
     private fun readFullText(uri: Uri): String =
         context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() } ?: ""
 

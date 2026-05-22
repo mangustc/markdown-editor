@@ -19,6 +19,40 @@ data class FrontMatter(
         }
     }
 
+    fun withField(key: String, value: FrontMatterValue): FrontMatter {
+        val newFields = fields.toMutableMap()
+        newFields[key] = value
+        return copy(fields = newFields)
+    }
+
+    fun withRenamedKey(oldKey: String, newKey: String): FrontMatter {
+        if (oldKey == newKey || newKey.isBlank()) return this
+        val newFields = mutableMapOf<String, FrontMatterValue>()
+        for ((k, v) in fields) {
+            if (k == oldKey) newFields[newKey] = v else newFields[k] = v
+        }
+        return copy(fields = newFields)
+    }
+
+    fun withTag(tag: String): FrontMatter {
+        if (tag.isBlank()) return this
+        val currentTags = tags.toMutableList()
+        if (!currentTags.contains(tag)) currentTags.add(tag)
+        return withField("tags", FrontMatterValue.StringList(currentTags))
+    }
+
+    fun withoutTag(tag: String): FrontMatter {
+        val currentTags = tags.toMutableList()
+        currentTags.remove(tag)
+        return withField("tags", FrontMatterValue.StringList(currentTags))
+    }
+
+    fun withoutField(key: String): FrontMatter {
+        val newFields = fields.toMutableMap()
+        newFields.remove(key)
+        return copy(fields = newFields)
+    }
+
     companion object {
         val Empty = FrontMatter()
 

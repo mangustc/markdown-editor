@@ -24,4 +24,7 @@ interface NoteDao {
 
     @RawQuery(observedEntities = [NoteEntity::class, NoteEntityFts::class])
     fun searchNotesPaged(query: SupportSQLiteQuery): PagingSource<Int, NoteEntity>
+
+    @Query("SELECT tags FROM notes")
+    suspend fun getAllTags(): List<String>
 }

@@ -4,11 +4,9 @@ import android.content.ClipData
 import android.text.format.DateUtils
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -181,9 +179,6 @@ fun AppScaffold() {
                             Text(stringResource(R.string.create_new_note))
                         }
 
-                        val searchInteractionSource = remember { MutableInteractionSource() }
-                        val isSearchFocused by searchInteractionSource.collectIsFocusedAsState()
-
                         DockedSearchBar(
                             inputField = {
                                 SearchBarDefaults.InputField(
@@ -206,61 +201,58 @@ fun AppScaffold() {
                                             )
                                         }
                                     },
-                                    interactionSource = searchInteractionSource,
                                 )
                             },
                             expanded = true,
                             onExpandedChange = {},
                             modifier = Modifier.fillMaxWidth(),
                         ) {
-                            AnimatedVisibility(visible = isSearchFocused) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .horizontalScroll(rememberScrollState())
-                                        .padding(horizontal = 8.dp, vertical = 4.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                ) {
-                                    SuggestionChip(
-                                        onClick = {
-                                            appViewModel.navigation.onSearchEvent(SearchEvent.AppendTag)
-                                        },
-                                        label = { Text("tag:") },
-                                        icon = {
-                                            Icon(
-                                                Icons.Default.Tag,
-                                                contentDescription = null,
-                                                modifier = Modifier.size(18.dp),
-                                            )
-                                        },
-                                    )
-                                    SuggestionChip(
-                                        onClick = {
-                                            appViewModel.navigation.onSearchEvent(SearchEvent.AppendName)
-                                        },
-                                        label = { Text("name:") },
-                                        icon = {
-                                            Icon(
-                                                Icons.Default.Abc,
-                                                contentDescription = null,
-                                                modifier = Modifier.size(18.dp),
-                                            )
-                                        },
-                                    )
-                                    SuggestionChip(
-                                        onClick = {
-                                            appViewModel.navigation.onSearchEvent(SearchEvent.ToggleNegation)
-                                        },
-                                        label = { Text("−keyword") },
-                                        icon = {
-                                            Icon(
-                                                Icons.Default.Remove,
-                                                contentDescription = null,
-                                                modifier = Modifier.size(18.dp),
-                                            )
-                                        },
-                                    )
-                                }
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .horizontalScroll(rememberScrollState())
+                                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                SuggestionChip(
+                                    onClick = {
+                                        appViewModel.navigation.onSearchEvent(SearchEvent.AppendTag)
+                                    },
+                                    label = { Text("tag:") },
+                                    icon = {
+                                        Icon(
+                                            Icons.Default.Tag,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(18.dp),
+                                        )
+                                    },
+                                )
+                                SuggestionChip(
+                                    onClick = {
+                                        appViewModel.navigation.onSearchEvent(SearchEvent.AppendName)
+                                    },
+                                    label = { Text("name:") },
+                                    icon = {
+                                        Icon(
+                                            Icons.Default.Abc,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(18.dp),
+                                        )
+                                    },
+                                )
+                                SuggestionChip(
+                                    onClick = {
+                                        appViewModel.navigation.onSearchEvent(SearchEvent.ToggleNegation)
+                                    },
+                                    label = { Text(stringResource(R.string.reverse)) },
+                                    icon = {
+                                        Icon(
+                                            Icons.Default.Remove,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(18.dp),
+                                        )
+                                    },
+                                )
                             }
                             if (searchResults.itemCount == 0) {
                                 Text(

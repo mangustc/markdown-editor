@@ -423,8 +423,8 @@ fun MessengerScreen(viewModel: AppViewModel) {
                                         project = uiState.project!!,
                                         linkPreviews = uiState.messengerLinkPreviews,
                                         onEnsurePreview = { viewModel.messenger.ensureLinkPreview(it) },
-                                        onNoteSelected = { viewModel.navigation.onNoteSelected(it) },
-                                        onDeleteNote = { viewModel.navigation.onDeleteNote(it) },
+                                        onNoteSelected = { viewModel.drawer.onNoteSelected(it) },
+                                        onDeleteNote = { viewModel.drawer.onDeleteNote(it) },
                                         onEditNote = { n, text, attach ->
                                             viewModel.messenger.startEditNote(n, text)
                                             attachments.clear()
@@ -434,7 +434,7 @@ fun MessengerScreen(viewModel: AppViewModel) {
                                         onImageClick = { idx, uris ->
                                             imagePagerState = idx to uris
                                         },
-                                        onPinNote = { viewModel.navigation.onPinNote(it) },
+                                        onPinNote = { viewModel.drawer.onPinNote(it) },
                                         isPinned = note.tags?.contains("pinned") ?: false,
                                         isSelected = uiState.messengerSelectedNotes.contains(note.uri.toString()),
                                         isSelectionMode = uiState.messengerSelectedNotes.isNotEmpty(),

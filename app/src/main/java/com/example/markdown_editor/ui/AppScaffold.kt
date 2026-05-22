@@ -92,7 +92,7 @@ fun AppScaffold() {
     }
 
     LaunchedEffect(Unit) {
-        appViewModel.navigation.navigationEvents.collect { event ->
+        appViewModel.navigationEvents.collect { event ->
             when (event) {
                 is AppViewModel.NavigationEvent.GoToEditor ->
                     navController.navigate(EditorDestination(event.note.uri.toString()))
@@ -103,7 +103,7 @@ fun AppScaffold() {
             }
         }
     }
-    val searchResults = appViewModel.navigation.searchResultsPaged.collectAsLazyPagingItems()
+    val searchResults = appViewModel.drawer.searchResultsPaged.collectAsLazyPagingItems()
 
     val clipboard = LocalClipboard.current
     val isSelectionMode = uiState.messengerSelectedNotes.isNotEmpty()
@@ -134,16 +134,16 @@ fun AppScaffold() {
 
                     if (uiState.project != null) {
                         Button(
-                            onClick = { appViewModel.navigation.showCreateNoteDialog() },
+                            onClick = { appViewModel.drawer.showCreateNoteDialog() },
                             modifier = Modifier.fillMaxWidth(),
                         ) {
                             Text(stringResource(R.string.create_new_note))
                         }
 
                         NoteSearchBar(
-                            searchState = appViewModel.navigation.searchState,
+                            searchState = appViewModel.drawer.searchState,
                             searchResults = searchResults,
-                            onSearchEvent = appViewModel.navigation::onSearchEvent,
+                            onSearchEvent = appViewModel.drawer::onSearchEvent,
                         ) { note ->
                             NoteDrawerItem(
                                 name = note.name,
@@ -152,12 +152,12 @@ fun AppScaffold() {
                                 ) else null,
                                 isPinned = note.tags?.contains("pinned") == true,
                                 selected = note.uri == uiState.activeNote?.uri,
-                                onClick = { appViewModel.navigation.onNoteSelected(note) },
-                                onOpen = { appViewModel.navigation.onNoteSelected(note) },
-                                onDelete = { appViewModel.navigation.showNoteDeleteDialog(note) },
-                                onRename = { appViewModel.navigation.showNoteRenameDialog(note) },
-                                onShowInfo = { appViewModel.navigation.showNoteShowInfoDialog(note) },
-                                onPin = { appViewModel.navigation.onPinNote(note) },
+                                onClick = { appViewModel.drawer.onNoteSelected(note) },
+                                onOpen = { appViewModel.drawer.onNoteSelected(note) },
+                                onDelete = { appViewModel.drawer.showNoteDeleteDialog(note) },
+                                onRename = { appViewModel.drawer.showNoteRenameDialog(note) },
+                                onShowInfo = { appViewModel.drawer.showNoteShowInfoDialog(note) },
+                                onPin = { appViewModel.drawer.onPinNote(note) },
                             )
                         }
                     } else {
@@ -197,14 +197,14 @@ fun AppScaffold() {
                             )
                         } else if (navBackStackEntry?.destination?.route != MessengerDestination::class.qualifiedName) {
                             TooltipIconButton(
-                                onClick = { scope.launch { appViewModel.navigation.goBack() } },
+                                onClick = { scope.launch { appViewModel.goBack() } },
                                 icon = Icons.AutoMirrored.Filled.ArrowBack,
                                 tooltip = stringResource(R.string.go_back),
                                 tooltipAnchorPosition = TooltipAnchorPosition.Below,
                             )
                         } else {
                             TooltipIconButton(
-                                onClick = { scope.launch { appViewModel.navigation.openDrawer() } },
+                                onClick = { scope.launch { appViewModel.openDrawer() } },
                                 icon = Icons.Default.Menu,
                                 tooltip = stringResource(R.string.open_menu),
                                 tooltipAnchorPosition = TooltipAnchorPosition.Below,
@@ -261,39 +261,39 @@ fun AppScaffold() {
 
     if (uiState.isCreateNoteDialogVisible) {
         CreateNoteDialog(
-            onDismissRequest = { appViewModel.navigation.dismissCreateNoteDialog() },
+            onDismissRequest = { appViewModel.drawer.dismissCreateNoteDialog() },
             onConfirmCreate = {
-                appViewModel.navigation.onCreateNote()
-                appViewModel.navigation.dismissCreateNoteDialog()
+                appViewModel.drawer.onCreateNote()
+                appViewModel.drawer.dismissCreateNoteDialog()
             },
             initialName = uiState.newNoteNameInput,
-            onNameChange = { newName -> appViewModel.navigation.updateNewNoteName(newName) },
+            onNameChange = { newName -> appViewModel.drawer.updateNewNoteName(newName) },
         )
     }
     if (uiState.isNoteDeleteDialogVisible && uiState.dialogNote != null) {
         DeleteNoteDialog(
-            onDismissRequest = { appViewModel.navigation.dismissNoteDeleteDialog() },
+            onDismissRequest = { appViewModel.drawer.dismissNoteDeleteDialog() },
             onConfirmDelete = {
-                appViewModel.navigation.onDeleteNote(uiState.dialogNote!!)
-                appViewModel.navigation.dismissNoteDeleteDialog()
+                appViewModel.drawer.onDeleteNote(uiState.dialogNote!!)
+                appViewModel.drawer.dismissNoteDeleteDialog()
             },
             noteName = uiState.dialogNote!!.name,
         )
     }
     if (uiState.isNoteRenameDialogVisible && uiState.dialogNote != null) {
         RenameNoteDialog(
-            onDismissRequest = { appViewModel.navigation.dismissNoteRenameDialog() },
+            onDismissRequest = { appViewModel.drawer.dismissNoteRenameDialog() },
             onConfirmRename = {
-                appViewModel.navigation.onRenameNote(uiState.dialogNote!!, uiState.noteRenameInput)
-                appViewModel.navigation.dismissNoteRenameDialog()
+                appViewModel.drawer.onRenameNote(uiState.dialogNote!!, uiState.noteRenameInput)
+                appViewModel.drawer.dismissNoteRenameDialog()
             },
             name = uiState.noteRenameInput,
-            onNameChange = { newName -> appViewModel.navigation.onRenameNameInputChanged(newName) },
+            onNameChange = { newName -> appViewModel.drawer.onRenameNameInputChanged(newName) },
         )
     }
     if (uiState.isNoteShowInfoDialogVisible && uiState.dialogNote != null) {
         ShowInfoDialog(
-            onDismissRequest = { appViewModel.navigation.dismissNoteShowInfoDialog() },
+            onDismissRequest = { appViewModel.drawer.dismissNoteShowInfoDialog() },
             note = uiState.dialogNote!!,
         )
     }

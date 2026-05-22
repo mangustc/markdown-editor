@@ -154,6 +154,7 @@ fun EditorScreen(
     }
 
     val linkColor = MaterialTheme.colorScheme.primary
+    val dimmedTextColor = MaterialTheme.colorScheme.primaryFixedDim
     val outputTransformation = remember {
         MarkdownOutputTransformation(
             state = viewModel.editor.state,
@@ -162,6 +163,7 @@ fun EditorScreen(
             spansProvider = { editorSpans },
             ratiosProvider = { imageAspectRatios },
             linkColor = linkColor,
+            dimmedTextColor = dimmedTextColor,
         )
     }
 
@@ -683,7 +685,7 @@ fun MarkdownLinkOverlay(
             .offset {
                 IntOffset(
                     cursorRect.left.toInt(),
-                    (cursorRect.top - surfaceHeight).toInt()
+                    (cursorRect.top - surfaceHeight).toInt(),
                 )
             },
     ) {

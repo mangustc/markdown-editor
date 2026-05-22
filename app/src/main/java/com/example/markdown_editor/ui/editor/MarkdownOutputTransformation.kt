@@ -25,6 +25,7 @@ class MarkdownOutputTransformation(
     private val spansProvider: () -> List<SpanInfo>,
     private val ratiosProvider: () -> Map<String, Float>,
     private val linkColor: Color,
+    private val dimmedTextColor: Color,
 ) : OutputTransformation {
     override fun TextFieldBuffer.transformOutput() {
         val textLength = this.length
@@ -83,14 +84,31 @@ class MarkdownOutputTransformation(
                     start, end,
                 )
 
-                TokenType.LINK -> addStyle(
-                    SpanStyle(
-                        color = linkColor,
-                        textDecoration = TextDecoration.Underline,
-                    ),
-                    start,
-                    end,
-                )
+                TokenType.LINK, TokenType.FILE -> {
+                    val rawText = this.originalText.subSequence(start, end).toString()
+                    val rightBracketIndex = rawText.indexOf(']')
+                    if (rightBracketIndex != -1) {
+                        val dimStyle = SpanStyle(
+                            color = dimmedTextColor,
+                        )
+                        val nameStyle = SpanStyle(
+                            color = linkColor,
+                            textDecoration = TextDecoration.Underline,
+                            fontWeight = FontWeight.Medium,
+                        )
+                        addStyle(dimStyle, start, start + 1)
+                        addStyle(nameStyle, start + 1, start + rightBracketIndex)
+                        addStyle(dimStyle, start + rightBracketIndex, end)
+                    } else {
+                        addStyle(
+                            SpanStyle(
+                                color = linkColor,
+                                textDecoration = TextDecoration.Underline,
+                            ),
+                            start, end,
+                        )
+                    }
+                }
 
                 TokenType.BLOCKQUOTE -> addStyle(
                     SpanStyle(
@@ -100,31 +118,6 @@ class MarkdownOutputTransformation(
                     ),
                     start, end,
                 )
-
-                TokenType.FILE -> {
-                    val isSelected = currentSelection.start <= end && currentSelection.end >= start
-                    val label = span.label ?: ""
-
-                    if (!isSelected) {
-                        addStyle(SpanStyle(color = Color.Transparent), start, start + 1)
-                        addStyle(
-                            SpanStyle(
-                                color = linkColor,
-                                textDecoration = TextDecoration.Underline,
-                                fontWeight = FontWeight.Medium,
-                            ),
-                            start + 1, start + 1 + label.length,
-                        )
-                        addStyle(
-                            SpanStyle(color = Color.Transparent),
-                            start + 1 + label.length,
-                            end,
-                        )
-                    } else {
-                        val pathStart = start + 1 + label.length + 1
-                        addStyle(SpanStyle(color = linkColor), pathStart, end)
-                    }
-                }
 
                 TokenType.LIST_ITEM -> {
                     var actualStart = start

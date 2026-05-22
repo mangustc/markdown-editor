@@ -673,7 +673,7 @@ fun MarkdownLinkOverlay(
     if (selection.start !in span.start..span.end) return
 
     val cursorRect = layoutResult.getCursorRect(selection.start)
-    val name = span.label ?: "[EMPTY]"
+    val name = span.label ?: stringResource(R.string.editor_link_empty)
     val path = span.payload ?: ""
 
     var surfaceHeight by remember { mutableIntStateOf(0) }
@@ -714,7 +714,7 @@ fun MarkdownLinkOverlay(
                     modifier = Modifier
                         .padding(start = 4.dp),
                 ) {
-                    Text("Open")
+                    Text(stringResource(R.string.open))
                 }
             }
         }

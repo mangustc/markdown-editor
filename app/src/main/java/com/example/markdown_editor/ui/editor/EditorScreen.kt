@@ -36,6 +36,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Redo
 import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AddLink
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Code
@@ -82,8 +83,10 @@ import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.paging.compose.collectAsLazyPagingItems
 import coil3.compose.AsyncImage
 import com.example.markdown_editor.R
 import com.example.markdown_editor.data.model.FrontMatter
@@ -94,6 +97,8 @@ import com.example.markdown_editor.domain.markdown.MarkdownParser
 import com.example.markdown_editor.domain.model.SpanInfo
 import com.example.markdown_editor.domain.model.TokenType
 import com.example.markdown_editor.domain.viewmodel.AppViewModel
+import com.example.markdown_editor.ui.components.NoteDrawerItem
+import com.example.markdown_editor.ui.components.NoteSearchBar
 import com.example.markdown_editor.ui.components.TooltipIconButton
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -213,6 +218,11 @@ fun EditorScreen(
                 tooltip = stringResource(R.string.attach_file),
             )
             TooltipIconButton(
+                onClick = { viewModel.editor.showLinkNoteDialog() },
+                icon = Icons.Default.AddLink,
+                tooltip = stringResource(R.string.link_note),
+            )
+            TooltipIconButton(
                 onClick = {
                     viewModel.editor.editorOnEvent(
                         EditorEvent.InsertSyntax(
@@ -315,6 +325,24 @@ fun EditorScreen(
                         }
                     }
                 }
+            }
+        }
+    }
+
+    if (uiState.isLinkNoteDialogVisible) {
+        Dialog(onDismissRequest = { viewModel.editor.dismissLinkNoteDialog() }) {
+            val linkSearchResults =
+                viewModel.editor.linkSearchResultsPaged.collectAsLazyPagingItems()
+            NoteSearchBar(
+                searchState = viewModel.editor.linkSearchState,
+                searchResults = linkSearchResults,
+                onSearchEvent = viewModel.editor::onLinkSearchEvent,
+            ) { note ->
+                NoteDrawerItem(
+                    name = note.name,
+                    supportingText = if (!note.tags.isNullOrEmpty()) note.tags.joinToString(", ") else null,
+                    onClick = { viewModel.editor.insertNoteLink(note) },
+                )
             }
         }
     }

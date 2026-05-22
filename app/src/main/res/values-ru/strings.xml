@@ -71,4 +71,5 @@
     <string name="redo">Повторить</string>
     <string name="reverse">Инверсия</string>
     <string name="add_property">Добавить свойство</string>
+    <string name="link_note">Прикрепить заметку</string>
 </resources>

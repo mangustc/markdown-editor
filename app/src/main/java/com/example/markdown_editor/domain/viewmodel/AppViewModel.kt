@@ -249,6 +249,42 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     @OptIn(FlowPreview::class)
     inner class EditorActions {
         val state = TextFieldState()
+        val linkSearchState = TextFieldState()
+
+        val linkSearchResultsPaged: Flow<PagingData<Note>> = combine(
+            _uiState.map { it.project }.distinctUntilChanged(),
+            snapshotFlow { linkSearchState.text },
+        ) { project, text -> project to text.toString() }
+            .flatMapLatest { (project, queryStr) ->
+                if (project == null) return@flatMapLatest emptyFlow()
+                projectRepository.syncDatabase(project)
+                val parsedInit = SearchQuery.parse(queryStr.trim())
+                val parsed = parsedInit.copy(
+                    negatedTagFilters = parsedInit.negatedTagFilters + "quick-note",
+                    pinnedFirst = true,
+                )
+                projectRepository.getNotesPaged(project, parsed)
+            }
+            .cachedIn(viewModelScope)
+
+        fun onLinkSearchEvent(event: SearchEvent) {
+            event.execute(linkSearchState)
+        }
+
+        fun showLinkNoteDialog() {
+            _uiState.update { it.copy(isLinkNoteDialogVisible = true) }
+        }
+
+        fun dismissLinkNoteDialog() {
+            _uiState.update { it.copy(isLinkNoteDialogVisible = false) }
+            linkSearchState.setTextAndPlaceCursorAtEnd("")
+        }
+
+        fun insertNoteLink(note: Note) {
+            val syntax = "[${note.name}](<${note.name}.md>)"
+            editorInsertSyntax(syntax, syntax.length)
+            dismissLinkNoteDialog()
+        }
 
         init {
             viewModelScope.launch {

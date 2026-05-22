@@ -21,6 +21,7 @@ data class AppUiState(
     val noteRenameInput: String = "",
     val dialogNote: Note? = null,
 
+    val isLinkNoteDialogVisible: Boolean = false,
     val editorFrontMatter: FrontMatter? = null,
     val editorCanUndo: Boolean = false,
     val editorCanRedo: Boolean = false,

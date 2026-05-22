@@ -24,6 +24,7 @@ class MarkdownOutputTransformation(
     private val widthProvider: () -> Int,
     private val spansProvider: () -> List<SpanInfo>,
     private val ratiosProvider: () -> Map<String, Float>,
+    private val linkColor: Color,
 ) : OutputTransformation {
     override fun TextFieldBuffer.transformOutput() {
         val textLength = this.length
@@ -84,7 +85,7 @@ class MarkdownOutputTransformation(
 
                 TokenType.LINK -> addStyle(
                     SpanStyle(
-                        color = Color(0xFF0055CC),
+                        color = linkColor,
                         textDecoration = TextDecoration.Underline,
                     ),
                     start,
@@ -100,11 +101,30 @@ class MarkdownOutputTransformation(
                     start, end,
                 )
 
-                TokenType.FILE -> addStyle(
-                    SpanStyle(fontWeight = FontWeight.Bold),
-                    start,
-                    end,
-                )
+                TokenType.FILE -> {
+                    val isSelected = currentSelection.start <= end && currentSelection.end >= start
+                    val label = span.label ?: ""
+
+                    if (!isSelected) {
+                        addStyle(SpanStyle(color = Color.Transparent), start, start + 1)
+                        addStyle(
+                            SpanStyle(
+                                color = linkColor,
+                                textDecoration = TextDecoration.Underline,
+                                fontWeight = FontWeight.Medium,
+                            ),
+                            start + 1, start + 1 + label.length,
+                        )
+                        addStyle(
+                            SpanStyle(color = Color.Transparent),
+                            start + 1 + label.length,
+                            end,
+                        )
+                    } else {
+                        val pathStart = start + 1 + label.length + 1
+                        addStyle(SpanStyle(color = linkColor), pathStart, end)
+                    }
+                }
 
                 TokenType.LIST_ITEM -> {
                     var actualStart = start

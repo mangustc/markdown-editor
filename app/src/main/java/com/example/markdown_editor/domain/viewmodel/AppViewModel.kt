@@ -6,14 +6,10 @@ import androidx.lifecycle.viewModelScope
 import androidx.room.Room
 import com.example.markdown_editor.data.database.NoteDb
 import com.example.markdown_editor.data.model.Note
-import com.example.markdown_editor.data.repository.LinkPreviewRepository
 import com.example.markdown_editor.data.repository.LinkPreviewRepositoryImpl
-import com.example.markdown_editor.data.repository.NoteRepository
 import com.example.markdown_editor.data.repository.NoteRepositoryImpl
-import com.example.markdown_editor.data.repository.ProjectRepository
 import com.example.markdown_editor.data.repository.ProjectRepositoryImpl
 import com.example.markdown_editor.domain.messenger.Attachment
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,27 +18,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-
-class AppDeps(
-    val scope: CoroutineScope,
-    val projectRepo: ProjectRepository,
-    val noteRepo: NoteRepository,
-    val linkRepo: LinkPreviewRepository,
-    val uiState: MutableStateFlow<AppUiState>,
-    val globalActions: AppGlobalActions,
-)
-
-interface AppGlobalActions {
-    fun updateNoteLists(
-        afterUpdateSearch: () -> Unit = {},
-        afterUpdateMessenger: () -> Unit = {},
-    )
-
-    fun goToEditor(note: Note)
-    fun goBack()
-    fun openDrawer()
-    fun closeDrawer()
-}
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class AppViewModel(application: Application) : AndroidViewModel(application), AppGlobalActions {

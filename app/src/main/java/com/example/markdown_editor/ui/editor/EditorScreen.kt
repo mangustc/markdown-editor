@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
@@ -55,8 +56,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.InputChip
 import androidx.compose.material3.InputChipDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TooltipDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -73,6 +76,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.focus.onFocusEvent
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
@@ -148,6 +152,8 @@ fun EditorScreen(
             }
         }
     }
+
+    val linkColor = MaterialTheme.colorScheme.primary
     val outputTransformation = remember {
         MarkdownOutputTransformation(
             state = viewModel.editor.state,
@@ -155,6 +161,7 @@ fun EditorScreen(
             widthProvider = { editorWidth },
             spansProvider = { editorSpans },
             ratiosProvider = { imageAspectRatios },
+            linkColor = linkColor,
         )
     }
 
@@ -320,6 +327,18 @@ fun EditorScreen(
                                             },
                                         )
                                     }
+                                }
+                            }
+
+                            val linkSpans = editorSpans.filter { it.type == TokenType.FILE }
+                            linkSpans.forEach { span ->
+                                key(span.payload ?: span.start) {
+                                    MarkdownLinkOverlay(
+                                        span = span,
+                                        state = viewModel.editor.state,
+                                        layoutResult = state.layout,
+                                        viewModel = viewModel,
+                                    )
                                 }
                             }
                         }
@@ -637,6 +656,67 @@ fun AsyncMarkdownImage(path: String, project: Project, onRatioMeasured: (Float) 
             contentAlignment = Alignment.Center,
         ) {
             CircularProgressIndicator()
+        }
+    }
+}
+
+@Composable
+fun MarkdownLinkOverlay(
+    span: SpanInfo,
+    state: TextFieldState,
+    layoutResult: TextLayoutResult,
+    viewModel: AppViewModel,
+) {
+    val context = LocalContext.current
+
+    val selection = state.selection
+    if (selection.start !in span.start..span.end) return
+
+    val cursorRect = layoutResult.getCursorRect(selection.start)
+    val name = span.label ?: "[EMPTY]"
+    val path = span.payload ?: ""
+
+    var surfaceHeight by remember { mutableIntStateOf(0) }
+
+    Box(
+        modifier = Modifier
+            .offset {
+                IntOffset(
+                    cursorRect.left.toInt(),
+                    (cursorRect.top - surfaceHeight).toInt()
+                )
+            },
+    ) {
+        Surface(
+            shape = TooltipDefaults.richTooltipContainerShape,
+            color = MaterialTheme.colorScheme.surfaceContainer,
+            shadowElevation = 2.dp,
+            modifier = Modifier
+                .onSizeChanged { surfaceHeight = it.height },
+        ) {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier
+                    .widthIn(max = TooltipDefaults.richTooltipMaxWidth)
+                    .padding(top = 12.dp),
+            ) {
+                Text(
+                    text = name,
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontWeight = FontWeight.Bold,
+                    ),
+                    modifier = Modifier
+                        .padding(start = 16.dp, end = 16.dp),
+                )
+                TextButton(
+                    onClick = { viewModel.editor.openLink(context = context, path = path) },
+                    modifier = Modifier
+                        .padding(start = 4.dp),
+                ) {
+                    Text("Open")
+                }
+            }
         }
     }
 }

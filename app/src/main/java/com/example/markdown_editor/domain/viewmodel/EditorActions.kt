@@ -1,5 +1,8 @@
 package com.example.markdown_editor.domain.viewmodel
 
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
@@ -65,7 +68,8 @@ class EditorActions(
     }
 
     fun insertNoteLink(note: Note) {
-        val syntax = "[${note.name}](<${note.name}.md>)"
+        val project = deps.uiState.value.project ?: return
+        val syntax = "[${note.name}](<${project.notesPath}/${note.name}.md>)"
         insertWithOffset(syntax, syntax.length)
         dismissLinkNoteDialog()
     }
@@ -121,6 +125,41 @@ class EditorActions(
             val start = selection.start
             replace(start, start, text)
             placeCursorAfterCharAt(start + offset - 1)
+        }
+    }
+
+    fun openLink(context: Context, path: String) {
+        val project = deps.uiState.value.project ?: return
+        val fileUri = project.getFileUri(path)
+        val isNote = path.endsWith(".md", ignoreCase = true) &&
+                (project.notesPath.isEmpty() || path.startsWith("${project.notesPath}/") || path == project.notesPath)
+
+        if (isNote) {
+            deps.scope.launch(Dispatchers.IO) {
+                try {
+                    val note = deps.noteRepo.getNoteByUri(fileUri)
+                    withContext(Dispatchers.Main) {
+                        deps.globalActions.goToEditor(note)
+                    }
+                } catch (_: Exception) {
+                    withContext(Dispatchers.Main) {
+                        openExternally(context, fileUri)
+                    }
+                }
+            }
+        } else {
+            openExternally(context, fileUri)
+        }
+    }
+
+    private fun openExternally(context: Context, uri: Uri) {
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(uri, context.contentResolver.getType(uri) ?: "*/*")
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        try {
+            context.startActivity(intent)
+        } catch (_: Exception) {
         }
     }
 

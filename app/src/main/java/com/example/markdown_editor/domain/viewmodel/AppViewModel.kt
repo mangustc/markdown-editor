@@ -136,53 +136,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             .cachedIn(viewModelScope)
 
         fun onSearchEvent(event: SearchEvent) {
-            when (event) {
-                is SearchEvent.AppendTag -> {
-                    val q = searchState.text
-                    val prefix = if (q.isEmpty() || q.last().isWhitespace()) "" else " "
-                    searchState.edit {
-                        append(prefix + "tag:\"\"")
-                        placeCursorAfterCharAt(length - 2)
-                    }
-                }
-
-                is SearchEvent.AppendName -> {
-                    val q = searchState.text
-                    val prefix = if (q.isEmpty() || q.last().isWhitespace()) "" else " "
-                    searchState.edit {
-                        append(prefix + "name:\"\"")
-                        placeCursorAfterCharAt(length - 2)
-                    }
-                }
-
-                is SearchEvent.ToggleNegation -> {
-                    searchState.edit {
-                        val cursor = selection.start
-                        if (cursor < 0) return@edit
-                        val textStr = toString()
-
-                        val tokenRegex = Regex("""(?:[^\s"]|"[^"]*")+""")
-                        val match = tokenRegex.findAll(textStr).find { matchResult ->
-                            cursor in matchResult.range.first..(matchResult.range.last + 1)
-                        }
-
-                        if (match != null) {
-                            val start = match.range.first
-                            val end = match.range.last + 1
-                            val token = match.value
-                            if (token.startsWith("-")) {
-                                replace(start, end, token.drop(1))
-                            } else {
-                                replace(start, end, "-$token")
-                            }
-                        }
-                    }
-                }
-
-                is SearchEvent.Clear -> {
-                    searchState.setTextAndPlaceCursorAtEnd("")
-                }
-            }
+            event.execute(searchState = searchState)
         }
 
         fun openDrawer() {

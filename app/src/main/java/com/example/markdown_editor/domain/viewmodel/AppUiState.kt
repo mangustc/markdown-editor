@@ -19,8 +19,6 @@ data class AppUiState(
     val noteRenameInput: String = "",
     val dialogNote: Note? = null,
 
-    val searchQuery: String = "",
-
     val editorCanUndo: Boolean = false,
     val editorCanRedo: Boolean = false,
     val editorVersion: Int = 0,

@@ -4,20 +4,26 @@ import android.content.ClipData
 import android.text.format.DateUtils
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.material.icons.Icons
@@ -31,6 +37,7 @@ import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PushPin
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Tag
 import androidx.compose.material.icons.outlined.ContentCopy
@@ -58,6 +65,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SearchBarDefaults
+import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Text
 import androidx.compose.material3.TooltipAnchorPosition
 import androidx.compose.material3.TopAppBar
@@ -96,6 +104,7 @@ import com.example.markdown_editor.R
 import com.example.markdown_editor.data.model.Note
 import com.example.markdown_editor.domain.navigation.EditorDestination
 import com.example.markdown_editor.domain.navigation.MessengerDestination
+import com.example.markdown_editor.domain.navigation.SearchEvent
 import com.example.markdown_editor.domain.viewmodel.AppViewModel
 import com.example.markdown_editor.ui.components.MenuPopup
 import com.example.markdown_editor.ui.components.MenuPopupGroup
@@ -172,26 +181,24 @@ fun AppScaffold() {
                             Text(stringResource(R.string.create_new_note))
                         }
 
+                        val searchInteractionSource = remember { MutableInteractionSource() }
+                        val isSearchFocused by searchInteractionSource.collectIsFocusedAsState()
+
                         DockedSearchBar(
                             inputField = {
                                 SearchBarDefaults.InputField(
-                                    query = uiState.searchQuery,
-                                    onQueryChange = {
-                                        appViewModel.navigation.onSearchQueryChanged(
-                                            it,
-                                        )
-                                    },
+                                    state = appViewModel.navigation.searchState,
                                     onSearch = {},
                                     expanded = true,
                                     onExpandedChange = {},
                                     placeholder = { Text(stringResource(R.string.search_notes)) },
                                     leadingIcon = { Icon(Icons.Default.Search, null) },
                                     trailingIcon = {
-                                        if (uiState.searchQuery.isNotEmpty()) {
+                                        if (appViewModel.navigation.searchState.text.isNotEmpty()) {
                                             TooltipIconButton(
                                                 onClick = {
-                                                    appViewModel.navigation.onSearchQueryChanged(
-                                                        "",
+                                                    appViewModel.navigation.onSearchEvent(
+                                                        SearchEvent.Clear,
                                                     )
                                                 },
                                                 icon = Icons.Default.Close,
@@ -199,12 +206,62 @@ fun AppScaffold() {
                                             )
                                         }
                                     },
+                                    interactionSource = searchInteractionSource,
                                 )
                             },
                             expanded = true,
                             onExpandedChange = {},
                             modifier = Modifier.fillMaxWidth(),
                         ) {
+                            AnimatedVisibility(visible = isSearchFocused) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .horizontalScroll(rememberScrollState())
+                                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                ) {
+                                    SuggestionChip(
+                                        onClick = {
+                                            appViewModel.navigation.onSearchEvent(SearchEvent.AppendTag)
+                                        },
+                                        label = { Text("tag:") },
+                                        icon = {
+                                            Icon(
+                                                Icons.Default.Tag,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(18.dp),
+                                            )
+                                        },
+                                    )
+                                    SuggestionChip(
+                                        onClick = {
+                                            appViewModel.navigation.onSearchEvent(SearchEvent.AppendName)
+                                        },
+                                        label = { Text("name:") },
+                                        icon = {
+                                            Icon(
+                                                Icons.Default.Abc,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(18.dp),
+                                            )
+                                        },
+                                    )
+                                    SuggestionChip(
+                                        onClick = {
+                                            appViewModel.navigation.onSearchEvent(SearchEvent.ToggleNegation)
+                                        },
+                                        label = { Text("−keyword") },
+                                        icon = {
+                                            Icon(
+                                                Icons.Default.Remove,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(18.dp),
+                                            )
+                                        },
+                                    )
+                                }
+                            }
                             if (searchResults.itemCount == 0) {
                                 Text(
                                     stringResource(R.string.no_matches),
@@ -635,6 +692,20 @@ fun DeleteNoteDialog(
             OutlinedButton(onClick = onDismissRequest) { Text(stringResource(R.string.cancel)) }
         },
     )
+}
+
+private fun toggleNegateLastToken(query: String): String {
+    if (query.isBlank()) return query
+    val trimmed = query.trimEnd()
+    val lastSpaceIdx = trimmed.lastIndexOf(' ')
+    return if (lastSpaceIdx == -1) {
+        if (trimmed.startsWith("-")) trimmed.removePrefix("-") else "-$trimmed"
+    } else {
+        val before = trimmed.substring(0, lastSpaceIdx + 1)
+        val lastToken = trimmed.substring(lastSpaceIdx + 1)
+        val toggled = if (lastToken.startsWith("-")) lastToken.removePrefix("-") else "-$lastToken"
+        "$before$toggled"
+    }
 }
 
 @Composable

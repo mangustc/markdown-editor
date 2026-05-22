@@ -21,26 +21,35 @@ data class SearchQuery(
 
     fun buildFtsMatchQuery(): String? {
         if (bodyTerms.isEmpty()) return null
-        return bodyTerms.joinToString(" AND ") { "${sanitizeFtsTerm(it)}*" }
+        return bodyTerms.joinToString(" AND ") { term ->
+            val sanitized = sanitizeFtsTerm(term)
+            if (sanitized.contains(" ")) "\"$sanitized\"*" else "$sanitized*"
+        }
     }
 
     fun positiveTagLikes(): List<String> = tagFilters
     fun negatedTagLikes(): List<String> = negatedTagFilters
 
     companion object {
-        private val NEG_TAG_REGEX = Regex("""-tag:(\S+)""")
-        private val TAG_REGEX = Regex("""(?<!-)tag:(\S+)""")
-        private val PROP_REGEX = Regex("""\[(\w+):([^\]]+)]""")
-        private val NEG_NAME_REGEX = Regex("""-name:(\S+)""")
-        private val NAME_REGEX = Regex("""(?<!-)name:(\S+)""")
+        private val NEG_TAG_REGEX = Regex("""-tag:(?:"([^"]*)"|(\S+))""")
+        private val TAG_REGEX = Regex("""(?<!-)tag:(?:"([^"]*)"|(\S+))""")
+        private val PROP_REGEX = Regex("""\[(\w+):([^]]+)]""")
+        private val NEG_NAME_REGEX = Regex("""-name:(?:"([^"]*)"|(\S+))""")
+        private val NAME_REGEX = Regex("""(?<!-)name:(?:"([^"]*)"|(\S+))""")
 
         fun parse(raw: String): SearchQuery {
             var remainder = raw
 
-            val negatedTags = NEG_TAG_REGEX.findAll(remainder).map { it.groupValues[1] }.toList()
+            val negatedTags = NEG_TAG_REGEX.findAll(remainder)
+                .map { it.groupValues[1].ifEmpty { it.groupValues[2] } }
+                .filter { it.isNotBlank() }
+                .toList()
             remainder = NEG_TAG_REGEX.replace(remainder, "")
 
-            val tags = TAG_REGEX.findAll(remainder).map { it.groupValues[1] }.toList()
+            val tags = TAG_REGEX.findAll(remainder)
+                .map { it.groupValues[1].ifEmpty { it.groupValues[2] } }
+                .filter { it.isNotBlank() }
+                .toList()
             remainder = TAG_REGEX.replace(remainder, "")
 
             val props = PROP_REGEX.findAll(remainder)
@@ -48,17 +57,33 @@ data class SearchQuery(
             remainder = PROP_REGEX.replace(remainder, "")
 
             val negatedNameMatch = NEG_NAME_REGEX.find(remainder)
-            val negatedName = negatedNameMatch?.groupValues?.get(1)
+            val negatedName = negatedNameMatch?.let {
+                it.groupValues[1].ifEmpty { it.groupValues[2] }
+            }?.takeIf { it.isNotBlank() }
             remainder = NEG_NAME_REGEX.replace(remainder, "")
 
             val nameMatch = NAME_REGEX.find(remainder)
-            val name = nameMatch?.groupValues?.get(1)
+            val name = nameMatch?.let {
+                it.groupValues[1].ifEmpty { it.groupValues[2] }
+            }?.takeIf { it.isNotBlank() }
             remainder = NAME_REGEX.replace(remainder, "")
 
+            val negatedBodyQuotes = Regex("""-"([^"]*)"""").findAll(remainder)
+                .map { it.groupValues[1] }
+                .filter { it.isNotBlank() }
+                .toList()
+            remainder = Regex("""-"([^"]*)"""").replace(remainder, "")
+
+            val positiveBodyQuotes = Regex("""(?<!-)"([^"]*)"""").findAll(remainder)
+                .map { it.groupValues[1] }
+                .filter { it.isNotBlank() }
+                .toList()
+            remainder = Regex("""(?<!-)"([^"]*)"""").replace(remainder, "")
+
             val allTokens = remainder.trim().split(Regex("""\s+""")).filter { it.isNotBlank() }
-            val bodyTerms = allTokens.filter { !it.startsWith("-") }
-            val negatedBodyTerms =
-                allTokens.filter { it.startsWith("-") }.map { it.removePrefix("-") }
+            val bodyTerms = positiveBodyQuotes + allTokens.filter { !it.startsWith("-") }
+            val negatedBodyTerms = negatedBodyQuotes + allTokens.filter { it.startsWith("-") }
+                .map { it.removePrefix("-") }
 
             return SearchQuery(
                 bodyTerms = bodyTerms,
@@ -72,6 +97,6 @@ data class SearchQuery(
         }
 
         fun sanitizeFtsTerm(term: String): String =
-            term.replace(Regex("""[\"'*\-^]"""), "")
+            term.replace(Regex("""["'*\-^]"""), "")
     }
 }

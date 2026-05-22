@@ -4,6 +4,7 @@ import android.app.Application
 import android.net.Uri
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.runtime.snapshotFlow
 import androidx.core.net.toUri
 import androidx.lifecycle.AndroidViewModel
@@ -23,6 +24,7 @@ import com.example.markdown_editor.domain.editor.EditorEvent
 import com.example.markdown_editor.domain.markdown.MarkdownParser
 import com.example.markdown_editor.domain.messenger.Attachment
 import com.example.markdown_editor.domain.messenger.AttachmentType
+import com.example.markdown_editor.domain.navigation.SearchEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
@@ -31,6 +33,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emptyFlow
@@ -110,14 +113,18 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     val navigation = NavigationActions()
 
     inner class NavigationActions {
+        val searchState = TextFieldState()
+
         private val _navigationEvents = Channel<NavigationEvent>(Channel.BUFFERED)
         val navigationEvents = _navigationEvents.receiveAsFlow()
 
-        val searchResultsPaged: Flow<PagingData<Note>> = _uiState
-            .map { it.project to it.searchQuery }
-            .distinctUntilChanged()
+        val searchResultsPaged: Flow<PagingData<Note>> = combine(
+            _uiState.map { it.project }.distinctUntilChanged(),
+            snapshotFlow { searchState.text },
+        ) { project, text -> project to text.toString() }
             .flatMapLatest { (project, queryStr) ->
                 if (project == null) return@flatMapLatest emptyFlow()
+                projectRepository.syncDatabase(project)
                 val parsedInit = SearchQuery.parse(queryStr.trim())
                 val parsed = parsedInit.copy(
                     negatedTagFilters = parsedInit.negatedTagFilters + "quick-note",
@@ -126,6 +133,56 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 projectRepository.getNotesPaged(project, parsed)
             }
             .cachedIn(viewModelScope)
+
+        fun onSearchEvent(event: SearchEvent) {
+            when (event) {
+                is SearchEvent.AppendTag -> {
+                    val q = searchState.text
+                    val prefix = if (q.isEmpty() || q.last().isWhitespace()) "" else " "
+                    searchState.edit {
+                        append(prefix + "tag:\"\"")
+                        placeCursorAfterCharAt(length - 2)
+                    }
+                }
+
+                is SearchEvent.AppendName -> {
+                    val q = searchState.text
+                    val prefix = if (q.isEmpty() || q.last().isWhitespace()) "" else " "
+                    searchState.edit {
+                        append(prefix + "name:\"\"")
+                        placeCursorAfterCharAt(length - 2)
+                    }
+                }
+
+                is SearchEvent.ToggleNegation -> {
+                    searchState.edit {
+                        val cursor = selection.start
+                        if (cursor < 0) return@edit
+                        val textStr = toString()
+
+                        val tokenRegex = Regex("""(?:[^\s"]|"[^"]*")+""")
+                        val match = tokenRegex.findAll(textStr).find { matchResult ->
+                            cursor in matchResult.range.first..(matchResult.range.last + 1)
+                        }
+
+                        if (match != null) {
+                            val start = match.range.first
+                            val end = match.range.last + 1
+                            val token = match.value
+                            if (token.startsWith("-")) {
+                                replace(start, end, token.drop(1))
+                            } else {
+                                replace(start, end, "-$token")
+                            }
+                        }
+                    }
+                }
+
+                is SearchEvent.Clear -> {
+                    searchState.setTextAndPlaceCursorAtEnd("")
+                }
+            }
+        }
 
         fun openDrawer() {
             viewModelScope.launch { _navigationEvents.send(NavigationEvent.OpenDrawer) }
@@ -163,15 +220,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                     projectRepository.syncDatabase(project)
                     updateNoteLists()
                 }
-            }
-        }
-
-        fun onSearchQueryChanged(raw: String? = null, afterUpdate: () -> Unit = {}) {
-            if (raw != null) _uiState.update { it.copy(searchQuery = raw) }
-            val project = _uiState.value.project ?: return
-            viewModelScope.launch {
-                projectRepository.syncDatabase(project)
-                afterUpdate()
             }
         }
 
@@ -575,7 +623,10 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     fun updateNoteLists(afterUpdateSearch: () -> Unit = {}, afterUpdateMessenger: () -> Unit = {}) {
         val project = _uiState.value.project ?: return
-        navigation.onSearchQueryChanged(afterUpdate = afterUpdateSearch)
+        viewModelScope.launch {
+            projectRepository.syncDatabase(project)
+            afterUpdateSearch()
+        }
         messenger.onMessengerOpened(project, afterUpdate = afterUpdateMessenger)
     }
 

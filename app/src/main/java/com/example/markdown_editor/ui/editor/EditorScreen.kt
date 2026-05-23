@@ -85,6 +85,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntOffset
@@ -602,6 +603,9 @@ fun MarkdownEditorField(
             color = MaterialTheme.colorScheme.onSurface,
             lineHeight = androidx.compose.ui.unit.TextUnit.Unspecified,
             lineBreak = LineBreak.Paragraph,
+        ),
+        keyboardOptions = KeyboardOptions(
+            capitalization = KeyboardCapitalization.Sentences,
         ),
         outputTransformation = transformation,
         onTextLayout = { layoutProvider ->

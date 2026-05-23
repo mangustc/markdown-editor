@@ -304,12 +304,14 @@ fun MessengerScreen(viewModel: AppViewModel) {
                     val snapshot = attachments.toList()
                     attachments.clear()
                     if (uiState.messengerEditingNote != null) {
-                        viewModel.messenger.onSaveEditedNote(
+                        viewModel.messenger.onSendNote(
+                            isEditedNote = true,
                             attachments = snapshot,
                             afterUpdate = {},
                         )
                     } else {
                         viewModel.messenger.onSendNote(
+                            isEditedNote = false,
                             attachments = snapshot,
                             afterUpdate = {
                                 scope.launch {

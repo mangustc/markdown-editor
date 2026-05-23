@@ -1,22 +1,23 @@
 package com.example.markdown_editor.domain.model
 
+import androidx.compose.ui.text.TextRange
 import java.net.URI
 
 sealed interface SpanInfo {
-    val start: Int
-    val end: Int
+    val range: TextRange
 
-    data class Heading(override val start: Int, override val end: Int, val level: Int) : SpanInfo
-    data class Bold(override val start: Int, override val end: Int) : SpanInfo
-    data class Italic(override val start: Int, override val end: Int) : SpanInfo
-    data class CodeInline(override val start: Int, override val end: Int) : SpanInfo
-    data class CodeBlock(override val start: Int, override val end: Int) : SpanInfo
-    data class Image(override val start: Int, override val end: Int, val payload: String) : SpanInfo
+    data class Heading(override val range: TextRange, val level: Int) : SpanInfo
+    data class Bold(override val range: TextRange) : SpanInfo
+    data class Italic(override val range: TextRange) : SpanInfo
+    data class CodeInline(override val range: TextRange) : SpanInfo
+    data class CodeBlock(override val range: TextRange) : SpanInfo
+    data class Image(override val range: TextRange, val payload: String) : SpanInfo
     data class Link(
-        override val start: Int,
-        override val end: Int,
+        override val range: TextRange,
         val payload: String,
         val label: String,
+        val payloadRange: TextRange,
+        val labelRange: TextRange,
     ) : SpanInfo {
         enum class LinkType { FILE, NOTE, HTTP }
 
@@ -25,15 +26,12 @@ sealed interface SpanInfo {
                 val isHttp = (payload.startsWith("http://", ignoreCase = true) ||
                         payload.startsWith("https://", ignoreCase = true)) &&
                         runCatching { URI(payload) }.isSuccess
-
                 if (isHttp) return LinkType.HTTP
-
                 if (payload.endsWith(".md", ignoreCase = true)) return LinkType.NOTE
-
                 return LinkType.FILE
             }
     }
 
-    data class ListItem(override val start: Int, override val end: Int) : SpanInfo
-    data class Blockquote(override val start: Int, override val end: Int) : SpanInfo
+    data class ListItem(override val range: TextRange) : SpanInfo
+    data class Blockquote(override val range: TextRange) : SpanInfo
 }

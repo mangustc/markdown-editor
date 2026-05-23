@@ -45,5 +45,3 @@ data class ParsedNoteBody(
         }
     }
 }
-
-

@@ -36,8 +36,8 @@ class MarkdownOutputTransformation(
         val isViewing = isViewingModeProvider()
 
         for (span in spans) {
-            val start = span.start.coerceIn(0, textLength)
-            val end = span.end.coerceIn(0, textLength)
+            val start = span.range.start.coerceIn(0, textLength)
+            val end = span.range.end.coerceIn(0, textLength)
             if (start >= end) continue
 
             when (span) {
@@ -75,27 +75,28 @@ class MarkdownOutputTransformation(
                 )
 
                 is SpanInfo.Link -> {
-                    val rawText = this.originalText.subSequence(start, end).toString()
-                    val rightBracketIndex = rawText.indexOf(']')
                     val nameStyle = SpanStyle(
                         color = linkColor,
                         textDecoration = TextDecoration.Underline,
                         fontWeight = FontWeight.Medium,
                     )
+                    val lStart = span.labelRange.start.coerceIn(0, textLength)
+                    val lEnd = span.labelRange.end.coerceIn(0, textLength)
+
                     if (isViewingModeProvider()) {
-                        if (rightBracketIndex != -1) {
-                            addStyle(nameStyle, start + 1, start + rightBracketIndex)
+                        if (lStart < lEnd) {
+                            addStyle(nameStyle, lStart, lEnd)
                         } else {
                             addStyle(nameStyle, start, end)
                         }
                     } else {
-                        if (rightBracketIndex != -1) {
+                        if (lStart < lEnd) {
                             val dimStyle = SpanStyle(
                                 color = dimmedTextColor,
                             )
-                            addStyle(dimStyle, start, start + 1)
-                            addStyle(nameStyle, start + 1, start + rightBracketIndex)
-                            addStyle(dimStyle, start + rightBracketIndex, end)
+                            addStyle(dimStyle, start, lStart)
+                            addStyle(nameStyle, lStart, lEnd)
+                            addStyle(dimStyle, lEnd, end)
                         } else {
                             addStyle(
                                 SpanStyle(
@@ -181,8 +182,8 @@ class MarkdownOutputTransformation(
     }
 
     private fun TextFieldBuffer.hideViewModeSyntax(span: SpanInfo, textLength: Int) {
-        val start = span.start.coerceIn(0, textLength)
-        val end = span.end.coerceIn(0, textLength)
+        val start = span.range.start.coerceIn(0, textLength)
+        val end = span.range.end.coerceIn(0, textLength)
         if (start >= end) return
 
         fun hide(s: Int, e: Int) {
@@ -232,12 +233,14 @@ class MarkdownOutputTransformation(
                 if (lastNl > start) hide(lastNl, end)
             }
 
-            is SpanInfo.Link, is SpanInfo.Link -> {
-                val rawText = originalText.subSequence(start, end).toString()
-                val bracketIdx = rawText.indexOf(']')
-                if (bracketIdx != -1) {
-                    hide(start, start + 1)
-                    hide(start + bracketIdx, end)
+            is SpanInfo.Link -> {
+                val lStart = span.labelRange.start.coerceIn(0, textLength)
+                val lEnd = span.labelRange.end.coerceIn(0, textLength)
+                if (lStart > start) {
+                    hide(start, lStart)
+                }
+                if (end > lEnd) {
+                    hide(lEnd, end)
                 }
             }
 

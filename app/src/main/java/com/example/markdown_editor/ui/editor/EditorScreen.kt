@@ -640,7 +640,7 @@ fun MarkdownImageOverlay(
     isViewingMode: Boolean,
 ) {
     val selection = state.selection
-    val isSelected = selection.start <= span.end && selection.end >= span.start
+    val isSelected = selection.start <= span.range.end && selection.end >= span.range.start
 
     if (isSelected && !isViewingMode) return
 
@@ -649,7 +649,7 @@ fun MarkdownImageOverlay(
     val exactHeightPx = if (editorWidth > 0) editorWidth / ratio else 400f
 
     val layoutTextLength = layoutResult.layoutInput.text.length
-    val offsetToUse = span.start.coerceIn(0, (layoutTextLength - 1).coerceAtLeast(0))
+    val offsetToUse = span.range.start.coerceIn(0, (layoutTextLength - 1).coerceAtLeast(0))
 
     val topPx = if (layoutTextLength > 0) {
         val lineIndex = layoutResult.getLineForOffset(offsetToUse)
@@ -715,7 +715,7 @@ fun MarkdownLinkOverlay(
     val uriHandler = LocalUriHandler.current
 
     val selection = state.selection
-    if (selection.start !in span.start..span.end) return
+    if (selection.start !in span.range.start..span.range.end) return
     if (selection.start !in 0..layoutResult.layoutInput.text.length) return
 
     val cursorRect = layoutResult.getCursorRect(selection.start)

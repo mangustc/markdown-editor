@@ -83,24 +83,50 @@ class MessengerActions(
         }
     }
 
-    fun onSaveEditedNote(
+    fun onSendNote(
+        isEditedNote: Boolean,
         attachments: List<Attachment> = emptyList(),
         afterUpdate: () -> Unit = {},
     ) {
         val project = deps.uiState.value.project ?: return
-        val note = deps.uiState.value.messengerEditingNote ?: return
-        val newBodyText = deps.uiState.value.messengerNewNoteText.trim()
+        val text = deps.uiState.value.messengerNewNoteText.trim()
+
+        // Pre-checks
+        val editNote = if (isEditedNote) {
+            deps.uiState.value.messengerEditingNote ?: return
+        } else {
+            if (text.isBlank() && attachments.isEmpty()) return
+            null
+        }
 
         deps.scope.launch(Dispatchers.IO) {
-            val fullText = deps.noteRepo.getNoteText(note, includeFrontMatter = true)
-            val frontMatterEnd = run {
-                if (!fullText.trimStart().startsWith("---")) return@run 0
-                val lines = fullText.lines()
-                val closeIdx = lines.drop(1).indexOfFirst { it.trim() == "---" }
-                if (closeIdx < 0) 0
-                else lines.take(closeIdx + 2).joinToString("\n").length
+            val targetNote = if (isEditedNote) {
+                editNote!!
+            } else {
+                val timestamp = DateTimeFormatter
+                    .ofPattern("yyyyMMdd_HHmmss")
+                    .withZone(ZoneId.systemDefault())
+                    .format(Instant.now())
+                val name = "quick-note-$timestamp"
+                val tags = listOf("quick-note")
+                val uri = deps.noteRepo.createNote(project, name, tags) ?: return@launch
+                deps.noteRepo.getNoteByUri(uri)
             }
-            val frontMatter = fullText.substring(0, frontMatterEnd).trimEnd()
+
+            val baseText = deps.noteRepo.getNoteText(targetNote, includeFrontMatter = true)
+
+            val parentContent = if (isEditedNote) {
+                val frontMatterEnd = run {
+                    if (!baseText.trimStart().startsWith("---")) return@run 0
+                    val lines = baseText.lines()
+                    val closeIdx = lines.drop(1).indexOfFirst { it.trim() == "---" }
+                    if (closeIdx < 0) 0
+                    else lines.take(closeIdx + 2).joinToString("\n").length
+                }
+                baseText.substring(0, frontMatterEnd).trimEnd()
+            } else {
+                baseText
+            }
 
             val attachmentLines = buildString {
                 attachments.forEach { attachment ->
@@ -113,101 +139,49 @@ class MessengerActions(
                         AttachmentType.PENDING_FILE -> {
                             val path = deps.projectRepo.copyToAssets(project, attachment.uri)
                             val label = attachment.displayName
+                                .replace("[", "\\[")
+                                .replace("]", "\\]")
                             append("\n[$label](<$path>)")
                         }
 
-                        AttachmentType.IMAGE -> append("\n![image](<${attachment.path}>)")
-                        AttachmentType.FILE -> append("\n[${attachment.displayName}](<${attachment.path}>)")
+                        AttachmentType.IMAGE -> {
+                            if (isEditedNote) append("\n![image](<${attachment.path}>)")
+                        }
+
+                        AttachmentType.FILE -> {
+                            val label = attachment.displayName
+                                .replace("[", "\\[")
+                                .replace("]", "\\]")
+                            if (isEditedNote) append("\n[${label}](<${attachment.path}>)")
+                        }
                     }
                 }
             }
-            val newFullContent = when {
-                newBodyText.isNotEmpty() && attachmentLines.isNotEmpty() ->
-                    "$frontMatter\n\n$newBodyText$attachmentLines"
 
-                newBodyText.isNotEmpty() ->
-                    "$frontMatter\n\n$newBodyText"
+            val finalContent = when {
+                text.isNotEmpty() && attachmentLines.isNotEmpty() ->
+                    "$parentContent\n\n$text$attachmentLines"
+
+                text.isNotEmpty() ->
+                    "$parentContent\n\n$text"
 
                 attachmentLines.isNotEmpty() ->
-                    "$frontMatter\n$attachmentLines"
+                    "$parentContent\n$attachmentLines"
 
-                else -> frontMatter
+                else -> parentContent
             }
 
-            deps.noteRepo.saveNoteText(note, newFullContent)
+            deps.noteRepo.saveNoteText(targetNote, finalContent)
+
             withContext(Dispatchers.Main) {
-                deps.uiState.update {
-                    it.copy(
+                deps.uiState.update { state ->
+                    state.copy(
                         messengerNewNoteText = "",
-                        messengerEditingNote = null,
+                        messengerEditingNote = if (isEditedNote) null else state.messengerEditingNote,
                     )
                 }
             }
             deps.globalActions.updateNoteLists(afterUpdateMessenger = afterUpdate)
-        }
-    }
-
-    fun onSendNote(
-        attachments: List<Attachment> = emptyList(),
-        afterUpdate: () -> Unit = {},
-    ) {
-        val project = deps.uiState.value.project ?: return
-        val text = deps.uiState.value.messengerNewNoteText.trim()
-        if (text.isBlank() && attachments.isEmpty()) return
-
-        val timestamp = DateTimeFormatter
-            .ofPattern("yyyyMMdd_HHmmss")
-            .withZone(ZoneId.systemDefault())
-            .format(Instant.now())
-        val name = "quick-note-$timestamp"
-        val tags = listOf("quick-note")
-
-        deps.scope.launch(Dispatchers.IO) {
-            val uri = deps.noteRepo.createNote(project, name, tags)
-            if (uri != null) {
-                val newNote = deps.noteRepo.getNoteByUri(uri)
-                val currentContent =
-                    deps.noteRepo.getNoteText(newNote, includeFrontMatter = true)
-
-                val attachmentLines = buildString {
-                    attachments.forEach { attachment ->
-                        when (attachment.type) {
-                            AttachmentType.PENDING_IMAGE -> {
-                                val path =
-                                    deps.projectRepo.copyToAssets(project, attachment.uri)
-                                append("\n![image](<$path>)")
-                            }
-
-                            AttachmentType.PENDING_FILE -> {
-                                val path =
-                                    deps.projectRepo.copyToAssets(project, attachment.uri)
-                                val label =
-                                    attachment.displayName
-                                append("\n[$label](<$path>)")
-                            }
-
-                            else -> {}
-                        }
-                    }
-                }
-
-                val fullContent = when {
-                    text.isNotEmpty() && attachmentLines.isNotEmpty() ->
-                        "$currentContent\n\n$text$attachmentLines"
-
-                    text.isNotEmpty() ->
-                        "$currentContent\n\n$text"
-
-                    else ->
-                        "$currentContent\n$attachmentLines"
-                }
-
-                deps.noteRepo.saveNoteText(newNote, fullContent)
-                withContext(Dispatchers.Main) {
-                    deps.uiState.update { it.copy(messengerNewNoteText = "") }
-                }
-                deps.globalActions.updateNoteLists(afterUpdateMessenger = afterUpdate)
-            }
         }
     }
 

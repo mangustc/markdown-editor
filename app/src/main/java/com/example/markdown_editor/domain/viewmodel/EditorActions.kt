@@ -5,8 +5,10 @@ import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.text.input.insert
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.text.TextRange
 import androidx.core.net.toUri
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
@@ -122,9 +124,24 @@ class EditorActions(
 
     private fun insertWithOffset(text: String, offset: Int) {
         state.edit {
-            val start = selection.start
-            replace(start, start, text)
-            placeCursorAfterCharAt(start + offset - 1)
+            val sel = selection
+            if (sel.collapsed) {
+                val start = sel.start
+                replace(start, start, text)
+                placeCursorAfterCharAt(start + offset - 1)
+            } else {
+                val selStart = selection.min
+                val selEnd = selection.max
+                val selLength = selection.length
+                val prefix = text.substring(0, offset)
+                val suffix = text.substring(offset)
+                insert(selEnd, suffix)
+                insert(selStart, prefix)
+                selection = TextRange(
+                    selStart + prefix.length,
+                    selStart + prefix.length + selLength,
+                )
+            }
         }
     }
 

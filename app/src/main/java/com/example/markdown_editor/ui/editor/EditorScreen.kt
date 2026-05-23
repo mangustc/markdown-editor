@@ -405,13 +405,15 @@ fun FrontMatterProperties(
         verticalArrangement = Arrangement.spacedBy(8.dp),
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp)
+            .padding(all = 16.dp)
             .background(MaterialTheme.colorScheme.surfaceContainer, MaterialTheme.shapes.medium)
-            .padding(16.dp),
+            .padding(top = 16.dp, bottom = 8.dp),
     ) {
         frontMatter.fields.forEach { (key, value) ->
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 var localKey by remember(key) { mutableStateOf(key) }
@@ -480,7 +482,10 @@ fun FrontMatterProperties(
             }
         }
 
-        TextButton(onClick = onAddProperty) {
+        TextButton(
+            onClick = onAddProperty,
+            modifier = Modifier.padding(horizontal = 2.dp),
+        ) {
             Icon(
                 Icons.Default.Add,
                 contentDescription = null,
@@ -693,6 +698,7 @@ fun MarkdownLinkOverlay(
 
     val selection = state.selection
     if (selection.start !in span.start..span.end) return
+    if (selection.start !in 0..layoutResult.layoutInput.text.length) return
 
     val cursorRect = layoutResult.getCursorRect(selection.start)
     val name = span.label ?: stringResource(R.string.editor_link_empty)

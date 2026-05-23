@@ -1,7 +1,6 @@
 package com.example.markdown_editor.ui.editor
 
 import android.net.Uri
-import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -71,7 +70,6 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -104,7 +102,6 @@ import com.example.markdown_editor.data.model.Project
 import com.example.markdown_editor.domain.editor.EditorEvent
 import com.example.markdown_editor.domain.markdown.MarkdownParser
 import com.example.markdown_editor.domain.model.SpanInfo
-import com.example.markdown_editor.domain.model.TokenType
 import com.example.markdown_editor.domain.viewmodel.AppViewModel
 import com.example.markdown_editor.ui.components.NoteDrawerItem
 import com.example.markdown_editor.ui.components.NoteSearchBar
@@ -112,7 +109,7 @@ import com.example.markdown_editor.ui.components.TooltipIconButton
 
 data class EditorLayoutState(
     val layout: TextLayoutResult,
-    val imageSpans: List<SpanInfo>,
+    val imageSpans: List<SpanInfo.Image>,
 )
 
 @OptIn(
@@ -126,8 +123,6 @@ fun EditorScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val density = LocalDensity.current
-    LocalContext.current
-    rememberCoroutineScope()
     val scrollState = rememberScrollState()
     val isViewingMode by rememberUpdatedState(uiState.isViewingMode)
 
@@ -146,7 +141,7 @@ fun EditorScreen(
     val onLayoutChange = remember(editorSpans) {
         { layoutResult: TextLayoutResult? ->
             if (layoutResult != null) {
-                val images = editorSpans.filter { it.type == TokenType.IMAGE }
+                val images = editorSpans.filterIsInstance<SpanInfo.Image>()
                 layoutState = EditorLayoutState(layoutResult, images)
                 if (editorWidth != layoutResult.size.width) {
                     editorWidth = layoutResult.size.width
@@ -347,7 +342,7 @@ fun EditorScreen(
                         layoutState?.let { state ->
                             if (state.imageSpans.isNotEmpty() && uiState.project != null) {
                                 state.imageSpans.forEach { span ->
-                                    key(span.payload ?: span.start) {
+                                    key(span.payload) {
                                         MarkdownImageOverlay(
                                             span = span,
                                             state = viewModel.editor.state,
@@ -367,10 +362,9 @@ fun EditorScreen(
                             }
 
                             editorSpans
-                                .filter { it.type == TokenType.FILE }
+                                .filterIsInstance<SpanInfo.File>()
                                 .forEach { span ->
-                                    Log.d("debug", "${span.payload}")
-                                    key(span.payload ?: span.start) {
+                                    key(span.payload) {
                                         MarkdownLinkOverlay(
                                             span = span,
                                             state = viewModel.editor.state,
@@ -634,7 +628,7 @@ fun MarkdownEditorField(
 
 @Composable
 fun MarkdownImageOverlay(
-    span: SpanInfo,
+    span: SpanInfo.Image,
     state: TextFieldState,
     layoutResult: TextLayoutResult,
     project: Project,
@@ -649,7 +643,7 @@ fun MarkdownImageOverlay(
 
     if (isSelected && !isViewingMode) return
 
-    val path = span.payload ?: return
+    val path = span.payload
     val ratio = imageAspectRatios[path] ?: 1.777f
     val exactHeightPx = if (editorWidth > 0) editorWidth / ratio else 400f
 
@@ -711,7 +705,7 @@ fun AsyncMarkdownImage(path: String, project: Project, onRatioMeasured: (Float) 
 
 @Composable
 fun MarkdownLinkOverlay(
-    span: SpanInfo,
+    span: SpanInfo.File,
     state: TextFieldState,
     layoutResult: TextLayoutResult,
     viewModel: AppViewModel,
@@ -723,8 +717,8 @@ fun MarkdownLinkOverlay(
     if (selection.start !in 0..layoutResult.layoutInput.text.length) return
 
     val cursorRect = layoutResult.getCursorRect(selection.start)
-    val name = span.label ?: stringResource(R.string.editor_link_empty)
-    val path = span.payload ?: ""
+    val name = span.label.ifEmpty { stringResource(R.string.editor_link_empty) }
+    val path = span.payload
 
     var surfaceHeight by remember { mutableIntStateOf(0) }
 

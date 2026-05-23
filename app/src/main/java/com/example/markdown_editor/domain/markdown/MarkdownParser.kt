@@ -1,7 +1,6 @@
 package com.example.markdown_editor.domain.markdown
 
 import com.example.markdown_editor.domain.model.SpanInfo
-import com.example.markdown_editor.domain.model.TokenType
 import org.commonmark.node.AbstractVisitor
 import org.commonmark.node.BlockQuote
 import org.commonmark.node.Code
@@ -44,59 +43,62 @@ object MarkdownParser {
         document.accept(
             object : AbstractVisitor() {
                 override fun visit(heading: Heading) {
-                    val type = when (heading.level) {
-                        1 -> TokenType.H1
-                        2 -> TokenType.H2
-                        else -> TokenType.H3
-                    }
-                    heading.spanInfo(lineOffsets, type)?.let { spans.add(it) }
+                    heading.bounds(lineOffsets)
+                        ?.let { (s, e) -> spans.add(SpanInfo.Heading(s, e, heading.level)) }
                     visitChildren(heading)
                 }
 
                 override fun visit(strongEmphasis: StrongEmphasis) {
-                    strongEmphasis.spanInfo(lineOffsets, TokenType.BOLD)?.let { spans.add(it) }
+                    strongEmphasis.bounds(lineOffsets)
+                        ?.let { (s, e) -> spans.add(SpanInfo.Bold(s, e)) }
                     visitChildren(strongEmphasis)
                 }
 
                 override fun visit(emphasis: Emphasis) {
-                    emphasis.spanInfo(lineOffsets, TokenType.ITALIC)?.let { spans.add(it) }
+                    emphasis.bounds(lineOffsets)?.let { (s, e) -> spans.add(SpanInfo.Italic(s, e)) }
                     visitChildren(emphasis)
                 }
 
                 override fun visit(code: Code) {
-                    code.spanInfo(lineOffsets, TokenType.CODE_INLINE)?.let { spans.add(it) }
+                    code.bounds(lineOffsets)?.let { (s, e) -> spans.add(SpanInfo.CodeInline(s, e)) }
                 }
 
                 override fun visit(fencedCodeBlock: FencedCodeBlock) {
-                    fencedCodeBlock.spanInfo(lineOffsets, TokenType.CODE_BLOCK)
-                        ?.let { spans.add(it) }
+                    fencedCodeBlock.bounds(lineOffsets)
+                        ?.let { (s, e) -> spans.add(SpanInfo.CodeBlock(s, e)) }
                 }
 
                 override fun visit(indentedCodeBlock: IndentedCodeBlock) {
-                    indentedCodeBlock.spanInfo(lineOffsets, TokenType.CODE_BLOCK)
-                        ?.let { spans.add(it) }
+                    indentedCodeBlock.bounds(lineOffsets)
+                        ?.let { (s, e) -> spans.add(SpanInfo.CodeBlock(s, e)) }
                 }
 
                 override fun visit(image: Image) {
-                    image.spanInfo(lineOffsets, TokenType.IMAGE, image.destination)
-                        ?.let { spans.add(it) }
+                    image.bounds(lineOffsets)
+                        ?.let { (s, e) -> spans.add(SpanInfo.Image(s, e, image.destination)) }
                 }
 
                 override fun visit(link: Link) {
                     val label = (link.firstChild as? Text)?.literal ?: link.destination
-                    val type =
-                        if (link.destination.startsWith("http")) TokenType.LINK else TokenType.FILE
-                    link.spanInfo(lineOffsets, type, link.destination, label)?.let { spans.add(it) }
+                    link.bounds(lineOffsets)?.let { (s, e) ->
+                        if (link.destination.startsWith("http")) {
+                            spans.add(SpanInfo.Link(s, e, link.destination, label))
+                        } else {
+                            spans.add(SpanInfo.File(s, e, link.destination, label))
+                        }
+                    }
                     visitChildren(link)
                 }
 
                 override fun visit(listItem: ListItem) {
-                    listItem.spanInfo(lineOffsets, TokenType.LIST_ITEM)?.let { spans.add(it) }
+                    listItem.bounds(lineOffsets)
+                        ?.let { (s, e) -> spans.add(SpanInfo.ListItem(s, e)) }
                     visitChildren(listItem)
                 }
 
                 override fun visit(blockQuote: BlockQuote) {
-                    blockQuote.spanInfo(lineOffsets, TokenType.BLOCKQUOTE)?.let { spans.add(it) }
+                    blockQuote.bounds(lineOffsets)
+                        ?.let { (s, e) -> spans.add(SpanInfo.Blockquote(s, e)) }
                     visitChildren(blockQuote)
                 }
             },
@@ -105,7 +107,7 @@ object MarkdownParser {
     }
 
     fun stripAttachments(text: String, spans: List<SpanInfo>): String {
-        val toRemove = spans.filter { it.type == TokenType.IMAGE || it.type == TokenType.FILE }
+        val toRemove = spans.filter { it is SpanInfo.Image || it is SpanInfo.File }
             .sortedByDescending { it.start }
         var res = text
         for (span in toRemove) {
@@ -123,23 +125,15 @@ object MarkdownParser {
         return offsets.toIntArray()
     }
 
-    private fun Node.spanInfo(
-        lineOffsets: IntArray,
-        type: TokenType,
-        payload: String? = null,
-        label: String? = null,
-    ): SpanInfo? {
+    private fun Node.bounds(lineOffsets: IntArray): Pair<Int, Int>? {
         val srcSpans = sourceSpans
         if (srcSpans.isEmpty()) return null
-
         val first = srcSpans.first()
         val last = srcSpans.last()
-
         val start = lineOffsets.getOrNull(first.lineIndex)?.plus(first.columnIndex) ?: return null
         val end = lineOffsets.getOrNull(last.lineIndex)?.plus(last.columnIndex + last.length)
             ?: return null
-
         if (start >= end) return null
-        return SpanInfo(start, end, type, payload, label)
+        return start to end
     }
 }

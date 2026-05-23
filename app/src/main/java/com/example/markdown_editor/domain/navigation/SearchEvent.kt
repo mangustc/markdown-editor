@@ -3,11 +3,11 @@ package com.example.markdown_editor.domain.navigation
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 
-sealed class SearchEvent {
-    object AppendTag : SearchEvent()
-    object AppendName : SearchEvent()
-    object ToggleNegation : SearchEvent()
-    object Clear : SearchEvent()
+sealed interface SearchEvent {
+    data object AppendTag : SearchEvent
+    data object AppendName : SearchEvent
+    data object ToggleNegation : SearchEvent
+    data object Clear : SearchEvent
 
     fun execute(searchState: TextFieldState) {
         when (this) {

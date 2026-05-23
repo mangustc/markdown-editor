@@ -16,7 +16,6 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import com.example.markdown_editor.domain.model.SpanInfo
-import com.example.markdown_editor.domain.model.TokenType
 
 class MarkdownOutputTransformation(
     private val state: TextFieldState,
@@ -41,44 +40,33 @@ class MarkdownOutputTransformation(
             val end = span.end.coerceIn(0, textLength)
             if (start >= end) continue
 
-            when (span.type) {
-                TokenType.H1 -> addStyle(
-                    SpanStyle(
-                        fontSize = 2.em,
-                        fontWeight = FontWeight.Bold,
-                    ),
-                    start, end,
-                )
+            when (span) {
+                is SpanInfo.Heading -> {
+                    val size = when (span.level) {
+                        1 -> 2.em
+                        2 -> 1.5.em
+                        else -> 1.2.em
+                    }
+                    addStyle(
+                        SpanStyle(
+                            fontSize = size,
+                            fontWeight = FontWeight.Bold,
+                        ),
+                        start, end,
+                    )
+                }
 
-                TokenType.H2 -> addStyle(
-                    SpanStyle(
-                        fontSize = 1.5.em,
-                        fontWeight = FontWeight.Bold,
-                    ),
-                    start, end,
-                )
-
-                TokenType.H3 -> addStyle(
-                    SpanStyle(
-                        fontSize = 1.2.em,
-                        fontWeight = FontWeight.Bold,
-                    ),
-                    start, end,
-                )
-
-                TokenType.BOLD -> addStyle(
+                is SpanInfo.Bold -> addStyle(
                     SpanStyle(fontWeight = FontWeight.Bold),
-                    start,
-                    end,
+                    start, end,
                 )
 
-                TokenType.ITALIC -> addStyle(
+                is SpanInfo.Italic -> addStyle(
                     SpanStyle(fontStyle = FontStyle.Italic),
-                    start,
-                    end,
+                    start, end,
                 )
 
-                TokenType.CODE_INLINE, TokenType.CODE_BLOCK -> addStyle(
+                is SpanInfo.CodeInline, is SpanInfo.CodeBlock -> addStyle(
                     SpanStyle(
                         fontFamily = FontFamily.Monospace,
                         background = Color.Gray.copy(alpha = 0.2f),
@@ -86,7 +74,7 @@ class MarkdownOutputTransformation(
                     start, end,
                 )
 
-                TokenType.LINK, TokenType.FILE -> {
+                is SpanInfo.Link, is SpanInfo.File -> {
                     val rawText = this.originalText.subSequence(start, end).toString()
                     val rightBracketIndex = rawText.indexOf(']')
                     val nameStyle = SpanStyle(
@@ -120,7 +108,7 @@ class MarkdownOutputTransformation(
                     }
                 }
 
-                TokenType.BLOCKQUOTE -> addStyle(
+                is SpanInfo.Blockquote -> addStyle(
                     SpanStyle(
                         color = Color.Gray,
                         fontStyle = FontStyle.Italic,
@@ -129,7 +117,7 @@ class MarkdownOutputTransformation(
                     start, end,
                 )
 
-                TokenType.LIST_ITEM -> {
+                is SpanInfo.ListItem -> {
                     var actualStart = start
                     while (actualStart > 0 && this.originalText[actualStart - 1] != '\n') {
                         actualStart--
@@ -153,7 +141,7 @@ class MarkdownOutputTransformation(
                     addStyle(SpanStyle(), start, end)
                 }
 
-                TokenType.IMAGE -> {
+                is SpanInfo.Image -> {
                     val isSelected = currentSelection.start <= end && currentSelection.end >= start
                     if (isSelected && !isViewing) {
                         addStyle(
@@ -166,8 +154,7 @@ class MarkdownOutputTransformation(
                         continue
                     }
 
-                    val path = span.payload ?: continue
-                    val ratio = ratios[path] ?: 1.777f
+                    val ratio = ratios[span.payload] ?: 1.777f
                     val heightPx = if (currentWidth > 0) currentWidth / ratio else 400f
                     val heightSp = with(density) { heightPx.toSp() }
 
@@ -204,31 +191,29 @@ class MarkdownOutputTransformation(
             if (cs < ce) addStyle(HIDDEN_STYLE, cs, ce)
         }
 
-        when (span.type) {
-            TokenType.H1 -> hide(start, start + 2)
-            TokenType.H2 -> hide(start, start + 3)
-            TokenType.H3 -> {
+        when (span) {
+            is SpanInfo.Heading -> {
                 var markerLen = 0
                 while (start + markerLen < end && originalText[start + markerLen] == '#') markerLen++
                 if (start + markerLen < end && originalText[start + markerLen] == ' ') markerLen++
                 hide(start, start + markerLen)
             }
 
-            TokenType.BOLD -> {
+            is SpanInfo.Bold -> {
                 if (end - start >= 4) {
                     hide(start, start + 2)
                     hide(end - 2, end)
                 }
             }
 
-            TokenType.ITALIC -> {
+            is SpanInfo.Italic -> {
                 if (end - start >= 2) {
                     hide(start, start + 1)
                     hide(end - 1, end)
                 }
             }
 
-            TokenType.CODE_INLINE -> {
+            is SpanInfo.CodeInline -> {
                 var markerLen = 0
                 while (start + markerLen < end && originalText[start + markerLen] == '`') markerLen++
                 if (markerLen > 0 && end - start >= markerLen * 2) {
@@ -237,7 +222,7 @@ class MarkdownOutputTransformation(
                 }
             }
 
-            TokenType.CODE_BLOCK -> {
+            is SpanInfo.CodeBlock -> {
                 var firstNl = start
                 while (firstNl < end && originalText[firstNl] != '\n') firstNl++
                 if (firstNl < end) hide(start, firstNl + 1)
@@ -247,7 +232,7 @@ class MarkdownOutputTransformation(
                 if (lastNl > start) hide(lastNl, end)
             }
 
-            TokenType.LINK, TokenType.FILE -> {
+            is SpanInfo.Link, is SpanInfo.File -> {
                 val rawText = originalText.subSequence(start, end).toString()
                 val bracketIdx = rawText.indexOf(']')
                 if (bracketIdx != -1) {
@@ -256,7 +241,7 @@ class MarkdownOutputTransformation(
                 }
             }
 
-            TokenType.BLOCKQUOTE -> {
+            is SpanInfo.Blockquote -> {
                 var pos = start
                 while (pos < end) {
                     if (pos + 1 < end && originalText[pos] == '>' && originalText[pos + 1] == ' ') {

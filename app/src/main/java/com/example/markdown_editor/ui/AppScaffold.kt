@@ -398,20 +398,6 @@ fun DeleteNoteDialog(
     )
 }
 
-private fun toggleNegateLastToken(query: String): String {
-    if (query.isBlank()) return query
-    val trimmed = query.trimEnd()
-    val lastSpaceIdx = trimmed.lastIndexOf(' ')
-    return if (lastSpaceIdx == -1) {
-        if (trimmed.startsWith("-")) trimmed.removePrefix("-") else "-$trimmed"
-    } else {
-        val before = trimmed.substring(0, lastSpaceIdx + 1)
-        val lastToken = trimmed.substring(lastSpaceIdx + 1)
-        val toggled = if (lastToken.startsWith("-")) lastToken.removePrefix("-") else "-$lastToken"
-        "$before$toggled"
-    }
-}
-
 @Composable
 fun ShowInfoDialog(
     onDismissRequest: () -> Unit,

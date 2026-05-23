@@ -14,10 +14,11 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.imeNestedScroll
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -104,8 +105,6 @@ import com.example.markdown_editor.domain.viewmodel.AppViewModel
 import com.example.markdown_editor.ui.components.NoteDrawerItem
 import com.example.markdown_editor.ui.components.NoteSearchBar
 import com.example.markdown_editor.ui.components.TooltipIconButton
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 data class EditorLayoutState(
     val layout: TextLayoutResult,
@@ -123,15 +122,12 @@ fun EditorScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val density = LocalDensity.current
-    val scope = rememberCoroutineScope()
+    rememberCoroutineScope()
     val scrollState = rememberScrollState()
 
     LaunchedEffect(noteUriString) {
         viewModel.editor.onNoteOpened(noteUriString)
     }
-
-    val bringIntoViewRequester = remember { BringIntoViewRequester() }
-    var toolbarHeightDp by remember { mutableStateOf(0.dp) }
 
     val editorSpans by remember {
         derivedStateOf {
@@ -183,8 +179,35 @@ fun EditorScreen(
         }
     }
 
+
+    val bringIntoViewRequester = remember { BringIntoViewRequester() }
+    var toolbarHeightDp by remember { mutableStateOf(0.dp) }
+    val imeBottom = WindowInsets.ime.getBottom(density)
+    LaunchedEffect(viewModel.editor.state.selection, layoutState, toolbarHeightDp, imeBottom) {
+        val layoutResult = layoutState?.layout ?: return@LaunchedEffect
+        val selection = viewModel.editor.state.selection
+        if (selection.collapsed) {
+            val cursor = selection.start.coerceIn(0, layoutResult.layoutInput.text.length)
+            val cursorRect = layoutResult.getCursorRect(cursor)
+            val lineIndex = layoutResult.getLineForOffset(cursor)
+            val lineHeight =
+                layoutResult.getLineBottom(lineIndex) - layoutResult.getLineTop(lineIndex)
+            val toolbarHeightPx = with(density) { toolbarHeightDp.toPx() }
+
+            bringIntoViewRequester.bringIntoView(
+                androidx.compose.ui.geometry.Rect(
+                    left = cursorRect.left,
+                    top = cursorRect.top,
+                    right = cursorRect.right,
+                    bottom = cursorRect.bottom + toolbarHeightPx + lineHeight,
+                ),
+            )
+        }
+    }
+
     Box(
         modifier = Modifier
+            .fillMaxSize()
             .imePadding(),
     ) {
         HorizontalFloatingToolbar(
@@ -276,7 +299,6 @@ fun EditorScreen(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
-                    .imeNestedScroll()
                     .verticalScroll(scrollState),
             ) {
                 Column {
@@ -301,14 +323,7 @@ fun EditorScreen(
                                 .fillMaxWidth()
                                 .bringIntoViewRequester(bringIntoViewRequester)
                                 .padding(start = 16.dp, end = 16.dp, bottom = toolbarHeightDp)
-                                .onFocusEvent { focusState ->
-                                    if (focusState.isFocused) {
-                                        scope.launch {
-                                            delay(300)
-                                            bringIntoViewRequester.bringIntoView()
-                                        }
-                                    }
-                                },
+                                .onFocusEvent {},
                         )
 
                         layoutState?.let { state ->

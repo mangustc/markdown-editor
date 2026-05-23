@@ -7,6 +7,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -210,10 +211,12 @@ fun EditorScreen(
             .fillMaxSize()
             .imePadding(),
     ) {
+        val toolbarScrollState = rememberScrollState()
         HorizontalFloatingToolbar(
             expanded = true,
             expandedShadowElevation = 8.dp,
             modifier = Modifier
+                .padding(horizontal = 16.dp)
                 .align(Alignment.BottomCenter)
                 .offset(y = -ScreenOffset)
                 .zIndex(1f)
@@ -221,75 +224,77 @@ fun EditorScreen(
                     toolbarHeightDp = with(density) { it.height.toDp() + ScreenOffset * 3 }
                 },
         ) {
-            TooltipIconButton(
-                onClick = { viewModel.editor.onEvent(EditorEvent.Undo) },
-                icon = Icons.AutoMirrored.Filled.Undo,
-                tooltip = stringResource(R.string.undo),
-                enabled = viewModel.editor.state.undoState.canUndo,
-            )
-            TooltipIconButton(
-                onClick = { viewModel.editor.onEvent(EditorEvent.Redo) },
-                icon = Icons.AutoMirrored.Filled.Redo,
-                tooltip = stringResource(R.string.redo),
-                enabled = viewModel.editor.state.undoState.canRedo,
-            )
-            TooltipIconButton(
-                onClick = {
-                    photoPickerLauncher.launch(
-                        PickVisualMediaRequest(
-                            ActivityResultContracts.PickVisualMedia.ImageOnly,
-                        ),
-                    )
-                },
-                icon = Icons.Default.Image,
-                tooltip = stringResource(R.string.attach_photo),
-            )
-            TooltipIconButton(
-                onClick = { filePickerLauncher.launch(arrayOf("*/*")) },
-                icon = Icons.Default.AttachFile,
-                tooltip = stringResource(R.string.attach_file),
-            )
-            TooltipIconButton(
-                onClick = { viewModel.editor.showLinkNoteDialog() },
-                icon = Icons.Default.AddLink,
-                tooltip = stringResource(R.string.link_note),
-            )
-            TooltipIconButton(
-                onClick = {
-                    viewModel.editor.onEvent(
-                        EditorEvent.InsertSyntax(
-                            "****",
-                            2,
-                        ),
-                    )
-                },
-                icon = Icons.Default.FormatBold,
-                tooltip = stringResource(R.string.bold),
-            )
-            TooltipIconButton(
-                onClick = {
-                    viewModel.editor.onEvent(
-                        EditorEvent.InsertSyntax(
-                            "**",
-                            1,
-                        ),
-                    )
-                },
-                icon = Icons.Default.FormatItalic,
-                tooltip = stringResource(R.string.italic),
-            )
-            TooltipIconButton(
-                onClick = {
-                    viewModel.editor.onEvent(
-                        EditorEvent.InsertSyntax(
-                            "``",
-                            1,
-                        ),
-                    )
-                },
-                icon = Icons.Default.Code,
-                tooltip = stringResource(R.string.inline_code),
-            )
+            Row(modifier = Modifier.horizontalScroll(toolbarScrollState)) {
+                TooltipIconButton(
+                    onClick = { viewModel.editor.onEvent(EditorEvent.Undo) },
+                    icon = Icons.AutoMirrored.Filled.Undo,
+                    tooltip = stringResource(R.string.undo),
+                    enabled = viewModel.editor.state.undoState.canUndo,
+                )
+                TooltipIconButton(
+                    onClick = { viewModel.editor.onEvent(EditorEvent.Redo) },
+                    icon = Icons.AutoMirrored.Filled.Redo,
+                    tooltip = stringResource(R.string.redo),
+                    enabled = viewModel.editor.state.undoState.canRedo,
+                )
+                TooltipIconButton(
+                    onClick = {
+                        photoPickerLauncher.launch(
+                            PickVisualMediaRequest(
+                                ActivityResultContracts.PickVisualMedia.ImageOnly,
+                            ),
+                        )
+                    },
+                    icon = Icons.Default.Image,
+                    tooltip = stringResource(R.string.attach_photo),
+                )
+                TooltipIconButton(
+                    onClick = { filePickerLauncher.launch(arrayOf("*/*")) },
+                    icon = Icons.Default.AttachFile,
+                    tooltip = stringResource(R.string.attach_file),
+                )
+                TooltipIconButton(
+                    onClick = { viewModel.editor.showLinkNoteDialog() },
+                    icon = Icons.Default.AddLink,
+                    tooltip = stringResource(R.string.link_note),
+                )
+                TooltipIconButton(
+                    onClick = {
+                        viewModel.editor.onEvent(
+                            EditorEvent.InsertSyntax(
+                                "****",
+                                2,
+                            ),
+                        )
+                    },
+                    icon = Icons.Default.FormatBold,
+                    tooltip = stringResource(R.string.bold),
+                )
+                TooltipIconButton(
+                    onClick = {
+                        viewModel.editor.onEvent(
+                            EditorEvent.InsertSyntax(
+                                "**",
+                                1,
+                            ),
+                        )
+                    },
+                    icon = Icons.Default.FormatItalic,
+                    tooltip = stringResource(R.string.italic),
+                )
+                TooltipIconButton(
+                    onClick = {
+                        viewModel.editor.onEvent(
+                            EditorEvent.InsertSyntax(
+                                "``",
+                                1,
+                            ),
+                        )
+                    },
+                    icon = Icons.Default.Code,
+                    tooltip = stringResource(R.string.inline_code),
+                )
+            }
         }
         Column(
             modifier = Modifier

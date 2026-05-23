@@ -8,6 +8,7 @@ import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.insert
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.platform.UriHandler
 import androidx.compose.ui.text.TextRange
 import androidx.core.net.toUri
 import androidx.paging.PagingData
@@ -17,6 +18,7 @@ import com.example.markdown_editor.data.model.FrontMatterValue
 import com.example.markdown_editor.data.model.Note
 import com.example.markdown_editor.data.model.SearchQuery
 import com.example.markdown_editor.domain.editor.EditorEvent
+import com.example.markdown_editor.domain.model.SpanInfo
 import com.example.markdown_editor.domain.navigation.SearchEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -145,31 +147,39 @@ class EditorActions(
         }
     }
 
-    fun openFile(context: Context, path: String) {
-        val project = deps.uiState.value.project ?: return
-        val fileUri = project.getFileUri(path)
-        val isNote = path.endsWith(".md", ignoreCase = true) &&
-                (project.notesPath.isEmpty() || path.startsWith("${project.notesPath}/") || path == project.notesPath)
+    fun openLink(context: Context, uriHandler: UriHandler, span: SpanInfo.Link) {
+        when (val linkType = span.linkType) {
+            SpanInfo.Link.LinkType.NOTE, SpanInfo.Link.LinkType.FILE -> {
+                val project = deps.uiState.value.project ?: return
+                val fileUri = project.getFileUri(span.payload)
+                val isNote =
+                    linkType == SpanInfo.Link.LinkType.NOTE && span.payload.startsWith("${project.notesPath}/")
 
-        if (isNote) {
-            deps.scope.launch(Dispatchers.IO) {
-                try {
-                    val note = deps.noteRepo.getNoteByUri(fileUri)
-                    withContext(Dispatchers.Main) {
-                        deps.globalActions.goToEditor(note)
+                if (isNote) {
+                    deps.scope.launch(Dispatchers.IO) {
+                        try {
+                            val note = deps.noteRepo.getNoteByUri(fileUri)
+                            withContext(Dispatchers.Main) {
+                                deps.globalActions.goToEditor(note)
+                            }
+                        } catch (_: Exception) {
+                            withContext(Dispatchers.Main) {
+                                openFileExternally(context, fileUri)
+                            }
+                        }
                     }
-                } catch (_: Exception) {
-                    withContext(Dispatchers.Main) {
-                        openExternally(context, fileUri)
-                    }
+                } else {
+                    openFileExternally(context, fileUri)
                 }
             }
-        } else {
-            openExternally(context, fileUri)
+
+            SpanInfo.Link.LinkType.HTTP -> {
+                uriHandler.openUri(span.payload)
+            }
         }
     }
 
-    private fun openExternally(context: Context, uri: Uri) {
+    private fun openFileExternally(context: Context, uri: Uri) {
         val intent = Intent(Intent.ACTION_VIEW).apply {
             setDataAndType(uri, context.contentResolver.getType(uri) ?: "*/*")
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)

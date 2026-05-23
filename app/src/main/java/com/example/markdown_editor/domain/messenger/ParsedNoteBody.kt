@@ -24,7 +24,8 @@ data class ParsedNoteBody(
                 )
             }
 
-            val fileAttachments = spans.filterIsInstance<SpanInfo.File>().map { span ->
+            val fileAttachments = spans.filterIsInstance<SpanInfo.Link>().mapNotNull { span ->
+                if (span.linkType != SpanInfo.Link.LinkType.FILE) return@mapNotNull null
                 Attachment(
                     uri = project.getFileUri(span.payload),
                     displayName = span.label,

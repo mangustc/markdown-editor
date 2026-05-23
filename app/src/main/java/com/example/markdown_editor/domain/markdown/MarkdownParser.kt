@@ -81,11 +81,7 @@ object MarkdownParser {
                 override fun visit(link: Link) {
                     val label = (link.firstChild as? Text)?.literal ?: link.destination
                     link.bounds(lineOffsets)?.let { (s, e) ->
-                        if (link.destination.startsWith("http")) {
-                            spans.add(SpanInfo.Link(s, e, link.destination, label))
-                        } else {
-                            spans.add(SpanInfo.File(s, e, link.destination, label))
-                        }
+                        spans.add(SpanInfo.Link(s, e, link.destination, label))
                     }
                     visitChildren(link)
                 }
@@ -107,7 +103,7 @@ object MarkdownParser {
     }
 
     fun stripAttachments(text: String, spans: List<SpanInfo>): String {
-        val toRemove = spans.filter { it is SpanInfo.Image || it is SpanInfo.File }
+        val toRemove = spans.filter { it is SpanInfo.Image || it is SpanInfo.Link }
             .sortedByDescending { it.start }
         var res = text
         for (span in toRemove) {

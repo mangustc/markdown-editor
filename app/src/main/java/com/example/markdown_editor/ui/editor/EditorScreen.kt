@@ -81,6 +81,7 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.font.FontWeight
@@ -362,7 +363,7 @@ fun EditorScreen(
                             }
 
                             editorSpans
-                                .filterIsInstance<SpanInfo.File>()
+                                .filterIsInstance<SpanInfo.Link>()
                                 .forEach { span ->
                                     key(span.payload) {
                                         MarkdownLinkOverlay(
@@ -705,12 +706,13 @@ fun AsyncMarkdownImage(path: String, project: Project, onRatioMeasured: (Float) 
 
 @Composable
 fun MarkdownLinkOverlay(
-    span: SpanInfo.File,
+    span: SpanInfo.Link,
     state: TextFieldState,
     layoutResult: TextLayoutResult,
     viewModel: AppViewModel,
 ) {
     val context = LocalContext.current
+    val uriHandler = LocalUriHandler.current
 
     val selection = state.selection
     if (selection.start !in span.start..span.end) return
@@ -718,7 +720,7 @@ fun MarkdownLinkOverlay(
 
     val cursorRect = layoutResult.getCursorRect(selection.start)
     val name = span.label.ifEmpty { stringResource(R.string.editor_link_empty) }
-    val path = span.payload
+    span.payload
 
     var surfaceHeight by remember { mutableIntStateOf(0) }
 
@@ -754,7 +756,13 @@ fun MarkdownLinkOverlay(
                         .padding(start = 16.dp, end = 16.dp),
                 )
                 TextButton(
-                    onClick = { viewModel.editor.openFile(context = context, path = path) },
+                    onClick = {
+                        viewModel.editor.openLink(
+                            context = context,
+                            uriHandler = uriHandler,
+                            span = span,
+                        )
+                    },
                     modifier = Modifier
                         .padding(start = 4.dp),
                 ) {

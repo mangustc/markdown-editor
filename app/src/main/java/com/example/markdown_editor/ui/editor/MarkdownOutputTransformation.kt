@@ -74,7 +74,7 @@ class MarkdownOutputTransformation(
                     start, end,
                 )
 
-                is SpanInfo.Link, is SpanInfo.File -> {
+                is SpanInfo.Link -> {
                     val rawText = this.originalText.subSequence(start, end).toString()
                     val rightBracketIndex = rawText.indexOf(']')
                     val nameStyle = SpanStyle(
@@ -232,7 +232,7 @@ class MarkdownOutputTransformation(
                 if (lastNl > start) hide(lastNl, end)
             }
 
-            is SpanInfo.Link, is SpanInfo.File -> {
+            is SpanInfo.Link, is SpanInfo.Link -> {
                 val rawText = originalText.subSequence(start, end).toString()
                 val bracketIdx = rawText.indexOf(']')
                 if (bracketIdx != -1) {

@@ -52,7 +52,7 @@
     <string name="name">Название</string>
     <string name="last_modified">Последнее изменение</string>
     <string name="created_at">Создано</string>
-    <string name="tags">Теги</string>
+    <string name="tags">Метки</string>
     <string name="none">Нет</string>
     <string name="n_a">Н/Д</string>
     <string name="close">Закрыть</string>

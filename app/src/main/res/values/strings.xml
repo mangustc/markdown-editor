@@ -74,4 +74,7 @@
     <string name="editor_link_empty">[EMPTY]</string>
     <string name="read_editor">Read</string>
     <string name="edit_editor">Edit</string>
+    <string name="take_photo">Take photo</string>
+    <string name="failed_to_start_camera">Failed to start camera</string>
+    <string name="failed_to_create_photo_container">Failed to add photo</string>
 </resources>

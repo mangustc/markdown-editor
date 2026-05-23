@@ -1,8 +1,10 @@
 package com.example.markdown_editor.ui.messenger
 
 import android.content.ClipData
+import android.content.ContentValues
 import android.content.Intent
 import android.net.Uri
+import android.provider.MediaStore
 import android.text.format.DateFormat
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
@@ -55,6 +57,7 @@ import androidx.compose.material.icons.automirrored.outlined.OpenInNew
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.Delete
@@ -198,6 +201,30 @@ fun MessengerScreen(viewModel: AppViewModel) {
         }
     }
 
+    var tempCameraUri by remember { mutableStateOf<Uri?>(null) }
+    val cameraLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.TakePicture(),
+    ) { success ->
+        if (success) {
+            tempCameraUri?.let { uri ->
+                val displayName = "Camera_${System.currentTimeMillis()}.jpg"
+                attachments.add(
+                    Attachment(
+                        uri = uri,
+                        displayName = displayName,
+                        type = AttachmentType.PENDING_IMAGE,
+                    ),
+                )
+            }
+        } else {
+            tempCameraUri?.let { uri ->
+                try {
+                    context.contentResolver.delete(uri, null, null)
+                } catch (_: Exception) {
+                }
+            }
+        }
+    }
     LaunchedEffect(uiState.project) {
         uiState.project?.let { viewModel.messenger.onMessengerOpened(it) }
     }
@@ -263,6 +290,37 @@ fun MessengerScreen(viewModel: AppViewModel) {
                     viewModel.messenger.cancelEditNote()
                     attachments.clear()
                     carouselExpanded = false
+                },
+                onTakePhoto = {
+                    try {
+                        val contentValues = ContentValues().apply {
+                            put(
+                                MediaStore.Images.Media.DISPLAY_NAME,
+                                "Camera_${System.currentTimeMillis()}.jpg",
+                            )
+                            put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
+                        }
+                        val uri = context.contentResolver.insert(
+                            MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                            contentValues,
+                        )
+                        if (uri != null) {
+                            tempCameraUri = uri
+                            cameraLauncher.launch(uri)
+                        } else {
+                            Toast.makeText(
+                                context,
+                                resources.getString(R.string.failed_to_create_photo_container),
+                                Toast.LENGTH_SHORT,
+                            ).show()
+                        }
+                    } catch (e: Exception) {
+                        Toast.makeText(
+                            context,
+                            resources.getString(R.string.failed_to_start_camera),
+                            Toast.LENGTH_SHORT,
+                        ).show()
+                    }
                 },
                 onAddImage = {
                     imagePickerLauncher.launch(
@@ -472,6 +530,7 @@ private fun MessengerInputBar(
     attachments: List<Attachment>,
     isEditing: Boolean,
     onCancelEdit: () -> Unit,
+    onTakePhoto: () -> Unit,
     onAddImage: () -> Unit,
     onAddFile: () -> Unit,
     onImageClick: (Uri) -> Unit,
@@ -540,6 +599,7 @@ private fun MessengerInputBar(
         ) {
             AttachmentCarouselStrip(
                 attachments = attachments,
+                onTakePhoto = onTakePhoto,
                 onAddImage = onAddImage,
                 onAddFile = onAddFile,
                 onRemove = onRemoveAttachment,
@@ -614,6 +674,7 @@ private fun MessengerInputBar(
 private fun AttachmentCarouselStrip(
     modifier: Modifier = Modifier,
     attachments: List<Attachment>,
+    onTakePhoto: (() -> Unit)? = null,
     onAddImage: (() -> Unit)? = null,
     onAddFile: (() -> Unit)? = null,
     onRemove: ((Int) -> Unit)? = null,
@@ -621,7 +682,7 @@ private fun AttachmentCarouselStrip(
     onFileClick: (Uri) -> Unit,
     isViewing: Boolean,
 ) {
-    val state = rememberCarouselState { if (isViewing) attachments.size else attachments.size + 2 }
+    val state = rememberCarouselState { if (isViewing) attachments.size else attachments.size + 3 }
     val resources = LocalResources.current
     HorizontalUncontainedCarousel(
         state = state,
@@ -639,13 +700,23 @@ private fun AttachmentCarouselStrip(
                 AttachmentIconButton(
                     attachment = Attachment(
                         uri = Uri.EMPTY,
+                        displayName = resources.getString(R.string.take_photo),
+                        type = AttachmentType.FILE,
+                    ),
+                    icon = Icons.Default.PhotoCamera,
+                    onClick = onTakePhoto ?: {},
+                )
+            } else if (!isViewing && page == 1) {
+                AttachmentIconButton(
+                    attachment = Attachment(
+                        uri = Uri.EMPTY,
                         displayName = resources.getString(R.string.attach_images),
                         type = AttachmentType.FILE,
                     ),
                     icon = Icons.Default.Image,
                     onClick = onAddImage ?: {},
                 )
-            } else if (!isViewing && page == 1) {
+            } else if (!isViewing && page == 2) {
                 AttachmentIconButton(
                     attachment = Attachment(
                         uri = Uri.EMPTY,
@@ -656,7 +727,7 @@ private fun AttachmentCarouselStrip(
                     onClick = onAddFile ?: {},
                 )
             } else {
-                val attachment = attachments[if (isViewing) page else page - 2]
+                val attachment = attachments[if (isViewing) page else page - 3]
                 AttachmentIconButton(
                     attachment = attachment,
                     onClick = when (attachment.type) {
@@ -678,7 +749,7 @@ private fun AttachmentCarouselStrip(
                             .fillMaxSize(),
                     ) {
                         TooltipIconButton(
-                            onClick = { onRemove(page - 2) },
+                            onClick = { onRemove(page - 3) },
                             icon = Icons.Default.Close,
                             tooltip = resources.getString(R.string.remove_attachment),
                             colors = IconButtonDefaults.iconButtonColors(

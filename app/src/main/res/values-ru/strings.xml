@@ -75,4 +75,7 @@
     <string name="editor_link_empty">[БЕЗ ИМЕНИ]</string>
     <string name="read_editor">Просмотр</string>
     <string name="edit_editor">Редактирование</string>
+    <string name="take_photo">Сделать фото</string>
+    <string name="failed_to_start_camera">Не удалось запустить камеру</string>
+    <string name="failed_to_create_photo_container">Не удалось добавить фото</string>
 </resources>

@@ -1,6 +1,7 @@
 package com.example.markdown_editor.ui.editor
 
 import android.net.Uri
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -71,6 +72,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -124,8 +126,10 @@ fun EditorScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val density = LocalDensity.current
+    LocalContext.current
     rememberCoroutineScope()
     val scrollState = rememberScrollState()
+    val isViewingMode by rememberUpdatedState(uiState.isViewingMode)
 
     LaunchedEffect(noteUriString) {
         viewModel.editor.onNoteOpened(noteUriString)
@@ -162,6 +166,7 @@ fun EditorScreen(
             ratiosProvider = { imageAspectRatios },
             linkColor = linkColor,
             dimmedTextColor = dimmedTextColor,
+            isViewingModeProvider = { isViewingMode },
         )
     }
 
@@ -213,88 +218,90 @@ fun EditorScreen(
             .imePadding(),
     ) {
         val toolbarScrollState = rememberScrollState()
-        HorizontalFloatingToolbar(
-            expanded = true,
-            expandedShadowElevation = 8.dp,
-            modifier = Modifier
-                .padding(horizontal = 16.dp)
-                .align(Alignment.BottomCenter)
-                .offset(y = -ScreenOffset)
-                .zIndex(1f)
-                .onSizeChanged {
-                    toolbarHeightDp = with(density) { it.height.toDp() + ScreenOffset * 3 }
-                },
-        ) {
-            Row(modifier = Modifier.horizontalScroll(toolbarScrollState)) {
-                TooltipIconButton(
-                    onClick = { viewModel.editor.onEvent(EditorEvent.Undo) },
-                    icon = Icons.AutoMirrored.Filled.Undo,
-                    tooltip = stringResource(R.string.undo),
-                    enabled = viewModel.editor.state.undoState.canUndo,
-                )
-                TooltipIconButton(
-                    onClick = { viewModel.editor.onEvent(EditorEvent.Redo) },
-                    icon = Icons.AutoMirrored.Filled.Redo,
-                    tooltip = stringResource(R.string.redo),
-                    enabled = viewModel.editor.state.undoState.canRedo,
-                )
-                TooltipIconButton(
-                    onClick = {
-                        photoPickerLauncher.launch(
-                            PickVisualMediaRequest(
-                                ActivityResultContracts.PickVisualMedia.ImageOnly,
-                            ),
-                        )
+        if (!isViewingMode) {
+            HorizontalFloatingToolbar(
+                expanded = true,
+                expandedShadowElevation = 8.dp,
+                modifier = Modifier
+                    .padding(horizontal = 16.dp)
+                    .align(Alignment.BottomCenter)
+                    .offset(y = -ScreenOffset)
+                    .zIndex(1f)
+                    .onSizeChanged {
+                        toolbarHeightDp = with(density) { it.height.toDp() + ScreenOffset * 3 }
                     },
-                    icon = Icons.Default.Image,
-                    tooltip = stringResource(R.string.attach_photo),
-                )
-                TooltipIconButton(
-                    onClick = { filePickerLauncher.launch(arrayOf("*/*")) },
-                    icon = Icons.Default.AttachFile,
-                    tooltip = stringResource(R.string.attach_file),
-                )
-                TooltipIconButton(
-                    onClick = { viewModel.editor.showLinkNoteDialog() },
-                    icon = Icons.Default.AddLink,
-                    tooltip = stringResource(R.string.link_note),
-                )
-                TooltipIconButton(
-                    onClick = {
-                        viewModel.editor.onEvent(
-                            EditorEvent.InsertSyntax(
-                                "****",
-                                2,
-                            ),
-                        )
-                    },
-                    icon = Icons.Default.FormatBold,
-                    tooltip = stringResource(R.string.bold),
-                )
-                TooltipIconButton(
-                    onClick = {
-                        viewModel.editor.onEvent(
-                            EditorEvent.InsertSyntax(
-                                "**",
-                                1,
-                            ),
-                        )
-                    },
-                    icon = Icons.Default.FormatItalic,
-                    tooltip = stringResource(R.string.italic),
-                )
-                TooltipIconButton(
-                    onClick = {
-                        viewModel.editor.onEvent(
-                            EditorEvent.InsertSyntax(
-                                "``",
-                                1,
-                            ),
-                        )
-                    },
-                    icon = Icons.Default.Code,
-                    tooltip = stringResource(R.string.inline_code),
-                )
+            ) {
+                Row(modifier = Modifier.horizontalScroll(toolbarScrollState)) {
+                    TooltipIconButton(
+                        onClick = { viewModel.editor.onEvent(EditorEvent.Undo) },
+                        icon = Icons.AutoMirrored.Filled.Undo,
+                        tooltip = stringResource(R.string.undo),
+                        enabled = viewModel.editor.state.undoState.canUndo,
+                    )
+                    TooltipIconButton(
+                        onClick = { viewModel.editor.onEvent(EditorEvent.Redo) },
+                        icon = Icons.AutoMirrored.Filled.Redo,
+                        tooltip = stringResource(R.string.redo),
+                        enabled = viewModel.editor.state.undoState.canRedo,
+                    )
+                    TooltipIconButton(
+                        onClick = {
+                            photoPickerLauncher.launch(
+                                PickVisualMediaRequest(
+                                    ActivityResultContracts.PickVisualMedia.ImageOnly,
+                                ),
+                            )
+                        },
+                        icon = Icons.Default.Image,
+                        tooltip = stringResource(R.string.attach_photo),
+                    )
+                    TooltipIconButton(
+                        onClick = { filePickerLauncher.launch(arrayOf("*/*")) },
+                        icon = Icons.Default.AttachFile,
+                        tooltip = stringResource(R.string.attach_file),
+                    )
+                    TooltipIconButton(
+                        onClick = { viewModel.editor.showLinkNoteDialog() },
+                        icon = Icons.Default.AddLink,
+                        tooltip = stringResource(R.string.link_note),
+                    )
+                    TooltipIconButton(
+                        onClick = {
+                            viewModel.editor.onEvent(
+                                EditorEvent.InsertSyntax(
+                                    "****",
+                                    2,
+                                ),
+                            )
+                        },
+                        icon = Icons.Default.FormatBold,
+                        tooltip = stringResource(R.string.bold),
+                    )
+                    TooltipIconButton(
+                        onClick = {
+                            viewModel.editor.onEvent(
+                                EditorEvent.InsertSyntax(
+                                    "**",
+                                    1,
+                                ),
+                            )
+                        },
+                        icon = Icons.Default.FormatItalic,
+                        tooltip = stringResource(R.string.italic),
+                    )
+                    TooltipIconButton(
+                        onClick = {
+                            viewModel.editor.onEvent(
+                                EditorEvent.InsertSyntax(
+                                    "``",
+                                    1,
+                                ),
+                            )
+                        },
+                        icon = Icons.Default.Code,
+                        tooltip = stringResource(R.string.inline_code),
+                    )
+                }
             }
         }
         Column(
@@ -325,10 +332,15 @@ fun EditorScreen(
                             state = viewModel.editor.state,
                             transformation = outputTransformation,
                             onTextLayout = onLayoutChange,
+                            readOnly = isViewingMode,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .bringIntoViewRequester(bringIntoViewRequester)
-                                .padding(start = 16.dp, end = 16.dp, bottom = toolbarHeightDp)
+                                .padding(
+                                    start = 16.dp,
+                                    end = 16.dp,
+                                    bottom = if (isViewingMode) 0.dp else toolbarHeightDp,
+                                )
                                 .onFocusEvent {},
                         )
 
@@ -348,22 +360,25 @@ fun EditorScreen(
                                                 imageAspectRatios =
                                                     imageAspectRatios + (path to ratio)
                                             },
+                                            isViewingMode = uiState.isViewingMode,
                                         )
                                     }
                                 }
                             }
 
-                            val linkSpans = editorSpans.filter { it.type == TokenType.FILE }
-                            linkSpans.forEach { span ->
-                                key(span.payload ?: span.start) {
-                                    MarkdownLinkOverlay(
-                                        span = span,
-                                        state = viewModel.editor.state,
-                                        layoutResult = state.layout,
-                                        viewModel = viewModel,
-                                    )
+                            editorSpans
+                                .filter { it.type == TokenType.FILE }
+                                .forEach { span ->
+                                    Log.d("debug", "${span.payload}")
+                                    key(span.payload ?: span.start) {
+                                        MarkdownLinkOverlay(
+                                            span = span,
+                                            state = viewModel.editor.state,
+                                            layoutResult = state.layout,
+                                            viewModel = viewModel,
+                                        )
+                                    }
                                 }
-                            }
                         }
                     }
                 }
@@ -595,10 +610,12 @@ fun MarkdownEditorField(
     transformation: OutputTransformation,
     onTextLayout: (TextLayoutResult?) -> Unit,
     modifier: Modifier = Modifier,
+    readOnly: Boolean = false,
     textStyle: androidx.compose.ui.text.TextStyle = MaterialTheme.typography.bodyLarge,
 ) {
     BasicTextField(
         state = state,
+        readOnly = readOnly,
         textStyle = textStyle.copy(
             color = MaterialTheme.colorScheme.onSurface,
             lineHeight = androidx.compose.ui.unit.TextUnit.Unspecified,
@@ -625,11 +642,12 @@ fun MarkdownImageOverlay(
     editorWidth: Int,
     imageAspectRatios: Map<String, Float>,
     onRatioMeasured: (String, Float) -> Unit,
+    isViewingMode: Boolean,
 ) {
     val selection = state.selection
     val isSelected = selection.start <= span.end && selection.end >= span.start
 
-    if (isSelected) return
+    if (isSelected && !isViewingMode) return
 
     val path = span.payload ?: return
     val ratio = imageAspectRatios[path] ?: 1.777f
@@ -742,7 +760,7 @@ fun MarkdownLinkOverlay(
                         .padding(start = 16.dp, end = 16.dp),
                 )
                 TextButton(
-                    onClick = { viewModel.editor.openLink(context = context, path = path) },
+                    onClick = { viewModel.editor.openFile(context = context, path = path) },
                     modifier = Modifier
                         .padding(start = 4.dp),
                 ) {

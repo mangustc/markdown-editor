@@ -72,4 +72,6 @@
     <string name="add_property">Add property</string>
     <string name="link_note">Link Note</string>
     <string name="editor_link_empty">[EMPTY]</string>
+    <string name="read_editor">Read</string>
+    <string name="edit_editor">Edit</string>
 </resources>

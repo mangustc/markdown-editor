@@ -145,7 +145,7 @@ class EditorActions(
         }
     }
 
-    fun openLink(context: Context, path: String) {
+    fun openFile(context: Context, path: String) {
         val project = deps.uiState.value.project ?: return
         val fileUri = project.getFileUri(path)
         val isNote = path.endsWith(".md", ignoreCase = true) &&
@@ -192,6 +192,7 @@ class EditorActions(
                         it.copy(
                             activeNote = note,
                             editorFrontMatter = frontMatter,
+                            isViewingMode = true,
                         )
                     }
                     state.edit {
@@ -266,6 +267,10 @@ class EditorActions(
         onSave()
     }
 
+    fun toggleViewingMode() {
+        deps.uiState.update { it.copy(isViewingMode = !it.isViewingMode) }
+    }
+
     fun onSave() {
         val project = deps.uiState.value.project ?: return
         val note = deps.uiState.value.activeNote ?: return
@@ -287,4 +292,3 @@ class EditorActions(
         }
     }
 }
-

@@ -73,4 +73,6 @@
     <string name="add_property">Добавить свойство</string>
     <string name="link_note">Прикрепить заметку</string>
     <string name="editor_link_empty">[БЕЗ ИМЕНИ]</string>
+    <string name="read_editor">Просмотр</string>
+    <string name="edit_editor">Редактирование</string>
 </resources>

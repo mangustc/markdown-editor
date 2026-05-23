@@ -17,10 +17,12 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Abc
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Tag
+import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.AlertDialog
@@ -238,6 +240,26 @@ fun AppScaffold() {
                                 tooltip = stringResource(R.string.delete_selected),
                                 tooltipAnchorPosition = TooltipAnchorPosition.Below,
                             )
+                        }
+
+                        if (!isSelectionMode &&
+                            navBackStackEntry?.destination?.route != MessengerDestination::class.qualifiedName
+                        ) {
+                            if (uiState.isViewingMode) {
+                                TooltipIconButton(
+                                    onClick = { appViewModel.editor.toggleViewingMode() },
+                                    icon = Icons.Default.Edit,
+                                    tooltip = stringResource(R.string.edit_editor),
+                                    tooltipAnchorPosition = TooltipAnchorPosition.Below,
+                                )
+                            } else {
+                                TooltipIconButton(
+                                    onClick = { appViewModel.editor.toggleViewingMode() },
+                                    icon = Icons.Default.Visibility,
+                                    tooltip = stringResource(R.string.read_editor),
+                                    tooltipAnchorPosition = TooltipAnchorPosition.Below,
+                                )
+                            }
                         }
                     },
                 )

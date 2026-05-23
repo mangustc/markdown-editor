@@ -27,6 +27,7 @@ data class AppUiState(
     val editorCanRedo: Boolean = false,
     val editorVersion: Int = 0,
     val editorSavedVersion: Int = 0,
+    val isViewingMode: Boolean = true,
 
     val messengerIsLoading: Boolean = true,
     val messengerNewNoteText: String = "",

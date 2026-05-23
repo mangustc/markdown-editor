@@ -26,6 +26,7 @@ class MarkdownOutputTransformation(
     private val ratiosProvider: () -> Map<String, Float>,
     private val linkColor: Color,
     private val dimmedTextColor: Color,
+    private val isViewingModeProvider: () -> Boolean = { false },
 ) : OutputTransformation {
     override fun TextFieldBuffer.transformOutput() {
         val textLength = this.length
@@ -33,6 +34,7 @@ class MarkdownOutputTransformation(
         val currentWidth = widthProvider()
         val spans = spansProvider()
         val ratios = ratiosProvider()
+        val isViewing = isViewingModeProvider()
 
         for (span in spans) {
             val start = span.start.coerceIn(0, textLength)
@@ -87,26 +89,34 @@ class MarkdownOutputTransformation(
                 TokenType.LINK, TokenType.FILE -> {
                     val rawText = this.originalText.subSequence(start, end).toString()
                     val rightBracketIndex = rawText.indexOf(']')
-                    if (rightBracketIndex != -1) {
-                        val dimStyle = SpanStyle(
-                            color = dimmedTextColor,
-                        )
-                        val nameStyle = SpanStyle(
-                            color = linkColor,
-                            textDecoration = TextDecoration.Underline,
-                            fontWeight = FontWeight.Medium,
-                        )
-                        addStyle(dimStyle, start, start + 1)
-                        addStyle(nameStyle, start + 1, start + rightBracketIndex)
-                        addStyle(dimStyle, start + rightBracketIndex, end)
+                    val nameStyle = SpanStyle(
+                        color = linkColor,
+                        textDecoration = TextDecoration.Underline,
+                        fontWeight = FontWeight.Medium,
+                    )
+                    if (isViewingModeProvider()) {
+                        if (rightBracketIndex != -1) {
+                            addStyle(nameStyle, start + 1, start + rightBracketIndex)
+                        } else {
+                            addStyle(nameStyle, start, end)
+                        }
                     } else {
-                        addStyle(
-                            SpanStyle(
-                                color = linkColor,
-                                textDecoration = TextDecoration.Underline,
-                            ),
-                            start, end,
-                        )
+                        if (rightBracketIndex != -1) {
+                            val dimStyle = SpanStyle(
+                                color = dimmedTextColor,
+                            )
+                            addStyle(dimStyle, start, start + 1)
+                            addStyle(nameStyle, start + 1, start + rightBracketIndex)
+                            addStyle(dimStyle, start + rightBracketIndex, end)
+                        } else {
+                            addStyle(
+                                SpanStyle(
+                                    color = linkColor,
+                                    textDecoration = TextDecoration.Underline,
+                                ),
+                                start, end,
+                            )
+                        }
                     }
                 }
 
@@ -145,7 +155,7 @@ class MarkdownOutputTransformation(
 
                 TokenType.IMAGE -> {
                     val isSelected = currentSelection.start <= end && currentSelection.end >= start
-                    if (isSelected) {
+                    if (isSelected && !isViewing) {
                         addStyle(
                             SpanStyle(
                                 fontWeight = FontWeight.Bold,
@@ -175,5 +185,98 @@ class MarkdownOutputTransformation(
                 }
             }
         }
+
+        if (isViewing) {
+            for (span in spans) {
+                hideViewModeSyntax(span, textLength)
+            }
+        }
+    }
+
+    private fun TextFieldBuffer.hideViewModeSyntax(span: SpanInfo, textLength: Int) {
+        val start = span.start.coerceIn(0, textLength)
+        val end = span.end.coerceIn(0, textLength)
+        if (start >= end) return
+
+        fun hide(s: Int, e: Int) {
+            val cs = s.coerceIn(0, textLength)
+            val ce = e.coerceIn(0, textLength)
+            if (cs < ce) addStyle(HIDDEN_STYLE, cs, ce)
+        }
+
+        when (span.type) {
+            TokenType.H1 -> hide(start, start + 2)
+            TokenType.H2 -> hide(start, start + 3)
+            TokenType.H3 -> {
+                var markerLen = 0
+                while (start + markerLen < end && originalText[start + markerLen] == '#') markerLen++
+                if (start + markerLen < end && originalText[start + markerLen] == ' ') markerLen++
+                hide(start, start + markerLen)
+            }
+
+            TokenType.BOLD -> {
+                if (end - start >= 4) {
+                    hide(start, start + 2)
+                    hide(end - 2, end)
+                }
+            }
+
+            TokenType.ITALIC -> {
+                if (end - start >= 2) {
+                    hide(start, start + 1)
+                    hide(end - 1, end)
+                }
+            }
+
+            TokenType.CODE_INLINE -> {
+                var markerLen = 0
+                while (start + markerLen < end && originalText[start + markerLen] == '`') markerLen++
+                if (markerLen > 0 && end - start >= markerLen * 2) {
+                    hide(start, start + markerLen)
+                    hide(end - markerLen, end)
+                }
+            }
+
+            TokenType.CODE_BLOCK -> {
+                var firstNl = start
+                while (firstNl < end && originalText[firstNl] != '\n') firstNl++
+                if (firstNl < end) hide(start, firstNl + 1)
+
+                var lastNl = end - 1
+                while (lastNl > start && originalText[lastNl] != '\n') lastNl--
+                if (lastNl > start) hide(lastNl, end)
+            }
+
+            TokenType.LINK, TokenType.FILE -> {
+                val rawText = originalText.subSequence(start, end).toString()
+                val bracketIdx = rawText.indexOf(']')
+                if (bracketIdx != -1) {
+                    hide(start, start + 1)
+                    hide(start + bracketIdx, end)
+                }
+            }
+
+            TokenType.BLOCKQUOTE -> {
+                var pos = start
+                while (pos < end) {
+                    if (pos + 1 < end && originalText[pos] == '>' && originalText[pos + 1] == ' ') {
+                        hide(pos, pos + 2)
+                    } else if (originalText[pos] == '>') {
+                        hide(pos, pos + 1)
+                    }
+                    while (pos < end && originalText[pos] != '\n') pos++
+                    if (pos < end) pos++
+                }
+            }
+
+            else -> {}
+        }
+    }
+
+    companion object {
+        private val HIDDEN_STYLE = SpanStyle(
+            color = Color.Transparent,
+            fontSize = 0.1.sp,
+        )
     }
 }

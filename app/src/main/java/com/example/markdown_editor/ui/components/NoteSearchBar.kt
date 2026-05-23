@@ -1,6 +1,7 @@
 package com.example.markdown_editor.ui.components
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -50,7 +51,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.PlaceholderVerticalAlign
@@ -74,6 +78,9 @@ fun NoteSearchBar(
     modifier: Modifier = Modifier,
     itemContent: @Composable (Note) -> Unit,
 ) {
+    val focusManager = LocalFocusManager.current
+    var isUserClick by remember { mutableStateOf(false) }
+
     DockedSearchBar(
         inputField = {
             SearchBarDefaults.InputField(
@@ -92,6 +99,23 @@ fun NoteSearchBar(
                         )
                     }
                 },
+                modifier = Modifier
+                    .pointerInput(Unit) {
+                        awaitPointerEventScope {
+                            while (true) {
+                                awaitFirstDown(requireUnconsumed = false)
+                                isUserClick = true
+                            }
+                        }
+                    }
+                    .onFocusChanged { focusState ->
+                        if (focusState.isFocused && !isUserClick) {
+                            focusManager.clearFocus()
+                        }
+                        if (!focusState.isFocused) {
+                            isUserClick = false
+                        }
+                    },
             )
         },
         expanded = true,

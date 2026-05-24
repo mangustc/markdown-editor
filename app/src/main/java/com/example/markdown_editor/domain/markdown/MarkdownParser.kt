@@ -1,7 +1,6 @@
 package com.example.markdown_editor.domain.markdown
 
 import androidx.compose.ui.text.TextRange
-import com.example.markdown_editor.domain.model.SpanInfo
 import org.commonmark.node.AbstractVisitor
 import org.commonmark.node.BlockQuote
 import org.commonmark.node.Code

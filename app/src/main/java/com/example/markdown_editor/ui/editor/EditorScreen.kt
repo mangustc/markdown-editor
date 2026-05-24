@@ -102,7 +102,7 @@ import com.example.markdown_editor.data.model.FrontMatterValue
 import com.example.markdown_editor.data.model.Project
 import com.example.markdown_editor.domain.editor.EditorEvent
 import com.example.markdown_editor.domain.markdown.MarkdownParser
-import com.example.markdown_editor.domain.model.SpanInfo
+import com.example.markdown_editor.domain.markdown.SpanInfo
 import com.example.markdown_editor.domain.viewmodel.AppViewModel
 import com.example.markdown_editor.ui.components.NoteDrawerItem
 import com.example.markdown_editor.ui.components.NoteSearchBar

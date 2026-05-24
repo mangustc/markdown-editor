@@ -2,7 +2,7 @@ package com.example.markdown_editor.domain.messenger
 
 import com.example.markdown_editor.data.model.Project
 import com.example.markdown_editor.domain.markdown.MarkdownParser
-import com.example.markdown_editor.domain.model.SpanInfo
+import com.example.markdown_editor.domain.markdown.SpanInfo
 
 private val URL_PATTERN = Regex("""https?://[^\s<>"')]+""")
 

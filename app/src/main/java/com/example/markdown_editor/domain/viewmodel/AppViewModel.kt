@@ -62,6 +62,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application), Ap
     val drawer = DrawerActions(deps)
     val editor = EditorActions(deps)
     val messenger = MessengerActions(deps)
+    val settings = SettingsActions(deps)
 
     sealed class NavigationEvent {
         data class GoToEditor(val note: Note) : NavigationEvent()

@@ -1,4 +1,4 @@
-package com.example.markdown_editor.domain.model
+package com.example.markdown_editor.domain.markdown
 
 import androidx.compose.ui.text.TextRange
 import java.net.URI

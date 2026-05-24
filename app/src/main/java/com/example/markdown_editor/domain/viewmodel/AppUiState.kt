@@ -36,5 +36,9 @@ data class AppUiState(
     val messengerPinnedNotes: List<Note> = emptyList(),
     val messengerSelectedNotes: Set<String> = emptySet(),
 
+    val isSettingsDialogVisible: Boolean = false,
+    val syncProvider: String = "None",
+    val yandexOauthToken: String = "",
+
     val pendingIntentAttachments: List<Attachment> = emptyList(),
 )

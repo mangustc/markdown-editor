@@ -18,7 +18,7 @@ import com.example.markdown_editor.data.model.FrontMatterValue
 import com.example.markdown_editor.data.model.Note
 import com.example.markdown_editor.data.model.SearchQuery
 import com.example.markdown_editor.domain.editor.EditorEvent
-import com.example.markdown_editor.domain.model.SpanInfo
+import com.example.markdown_editor.domain.markdown.SpanInfo
 import com.example.markdown_editor.domain.navigation.SearchEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi

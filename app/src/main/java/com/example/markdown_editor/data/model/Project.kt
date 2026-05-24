@@ -5,9 +5,9 @@ import android.provider.DocumentsContract
 
 data class Project(
     val name: String,
-    val uri: Uri,           // the root directory URI from the picker
-    val notesPath: String,      // notes
-    val assetsPath: String,      // assets
+    val uri: Uri,
+    val notesPath: String,
+    val assetsPath: String,
 ) {
     val notesUri: Uri get() = buildChildUri(notesPath)
     val assetsUri: Uri get() = buildChildUri(assetsPath)

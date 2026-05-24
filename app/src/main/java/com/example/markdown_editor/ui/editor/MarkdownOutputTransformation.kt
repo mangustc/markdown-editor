@@ -15,7 +15,7 @@ import androidx.compose.ui.text.style.TextIndent
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
-import com.example.markdown_editor.domain.model.SpanInfo
+import com.example.markdown_editor.domain.markdown.SpanInfo
 
 class MarkdownOutputTransformation(
     private val state: TextFieldState,

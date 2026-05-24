@@ -27,11 +27,11 @@ class SyncEngine(
             lastSyncTimestamp = System.currentTimeMillis() / 1000,
             files = snapshotLocal(project),
         )
-        val baseManifest = readLocalFile(project, SyncManifest.MANIFEST_PATH)?.let {
-            runCatching {
+        val baseManifest = runCatching {
+            readLocalFile(project, SyncManifest.MANIFEST_PATH)?.let {
                 json.decodeFromString<SyncManifest>(it.decodeToString())
-            }.getOrNull() ?: SyncManifest.EMPTY
-        } ?: SyncManifest.EMPTY
+            }
+        }.getOrNull() ?: SyncManifest.EMPTY
         val remoteManifest = loadRemoteManifest(remoteRoot) ?: SyncManifest.EMPTY
 
         if (localManifest.files == baseManifest.files && remoteManifest.files == baseManifest.files) {

@@ -22,7 +22,7 @@ interface ProjectRepository {
         includeFrontMatter: Boolean = true,
     ): Flow<PagingData<Note>>
 
-    fun buildProject(rootUri: Uri, name: String): Project
+    fun buildProject(rootUri: Uri): Project
     suspend fun saveProject(project: Project)
     suspend fun loadSavedProject(): Project?
     suspend fun syncDatabase(project: Project)

@@ -9,6 +9,7 @@ import com.example.markdown_editor.data.model.Note
 import com.example.markdown_editor.data.repository.LinkPreviewRepositoryImpl
 import com.example.markdown_editor.data.repository.NoteRepositoryImpl
 import com.example.markdown_editor.data.repository.ProjectRepositoryImpl
+import com.example.markdown_editor.data.sync.SyncRepositoryImpl
 import com.example.markdown_editor.domain.messenger.Attachment
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
@@ -32,37 +33,37 @@ class AppViewModel(application: Application) : AndroidViewModel(application), Ap
         context = application,
         noteDao = db.noteDao(),
     )
-    private val noteRepo = NoteRepositoryImpl(
-        context = application,
-    )
-    private val linkRepo = LinkPreviewRepositoryImpl(
-        linkPreviewDao = db.linkPreviewDao(),
-    )
+    private val noteRepo = NoteRepositoryImpl(context = application)
+    private val linkRepo = LinkPreviewRepositoryImpl(linkPreviewDao = db.linkPreviewDao())
+    private val syncRepo = SyncRepositoryImpl(context = application)   // NEW
 
     private val _uiState = MutableStateFlow(AppUiState())
     val uiState: StateFlow<AppUiState> = _uiState.asStateFlow()
 
     private val deps by lazy {
         AppDeps(
+            context = application,
             scope = viewModelScope,
             projectRepo = projectRepo,
             noteRepo = noteRepo,
             linkRepo = linkRepo,
+            syncRepo = syncRepo,               // NEW
             uiState = _uiState,
             globalActions = this,
         )
     }
 
     val project = ProjectActions(deps)
+    val settings = SettingsActions(deps)
 
     init {
         project.loadSavedProject()
+        settings.loadSavedSettings()
     }
 
     val drawer = DrawerActions(deps)
     val editor = EditorActions(deps)
     val messenger = MessengerActions(deps)
-    val settings = SettingsActions(deps)
 
     sealed class NavigationEvent {
         data class GoToEditor(val note: Note) : NavigationEvent()

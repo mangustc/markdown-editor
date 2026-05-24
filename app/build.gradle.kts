@@ -58,6 +58,7 @@ dependencies {
     implementation(libs.androidx.compose.ui.text)
     implementation(libs.commonmark)
     implementation(libs.kotlinx.serialization.json)
+    implementation(libs.okhttp)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

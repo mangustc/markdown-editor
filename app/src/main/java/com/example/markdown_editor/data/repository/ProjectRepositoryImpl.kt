@@ -120,12 +120,12 @@ class ProjectRepositoryImpl(
         }
     }
 
-    override fun buildProject(rootUri: Uri, name: String): Project {
+    override fun buildProject(rootUri: Uri): Project {
         val root = DocumentFile.fromTreeUri(context, rootUri)
         val notesDir = root?.findFile("notes") ?: root?.createDirectory("notes")
         val assetsDir = root?.findFile("assets") ?: root?.createDirectory("assets")
         return Project(
-            name = name,
+            name = root?.name ?: "Project",
             uri = rootUri,
             notesPath = if (notesDir != null) "notes" else "",
             assetsPath = if (assetsDir != null) "assets" else "",
@@ -139,14 +139,12 @@ class ProjectRepositoryImpl(
         )
         prefs.edit {
             putString(KEY_PROJECT_URI, project.uri.toString())
-                .putString(KEY_PROJECT_NAME, project.name)
         }
     }
 
     override suspend fun loadSavedProject(): Project? = withContext(Dispatchers.IO) {
         val uriString = prefs.getString(KEY_PROJECT_URI, null) ?: return@withContext null
-        val name = prefs.getString(KEY_PROJECT_NAME, null) ?: return@withContext null
-        buildProject(uriString.toUri(), name)
+        buildProject(uriString.toUri())
     }
 
     override suspend fun copyToAssets(project: Project, assetUri: Uri): String =
@@ -236,6 +234,5 @@ class ProjectRepositoryImpl(
 
     companion object {
         private const val KEY_PROJECT_URI = "project_uri"
-        private const val KEY_PROJECT_NAME = "project_name"
     }
 }

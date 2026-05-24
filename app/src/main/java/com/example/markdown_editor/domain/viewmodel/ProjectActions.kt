@@ -9,8 +9,7 @@ class ProjectActions(
 ) {
     fun onProjectSelected(uri: Uri) {
         deps.scope.launch {
-            val name = uri.lastPathSegment?.substringAfterLast(":") ?: "Project"
-            val project = deps.projectRepo.buildProject(uri, name)
+            val project = deps.projectRepo.buildProject(uri)
             deps.projectRepo.saveProject(project)
             deps.uiState.update { it.copy(project = project) }
             deps.projectRepo.syncDatabase(project)
@@ -29,4 +28,13 @@ class ProjectActions(
             }
         }
     }
+
+    fun syncNow() {
+        val project = deps.uiState.value.project ?: return
+        deps.scope.launch {
+            deps.syncRepo.sync(project)
+            deps.globalActions.updateNoteLists()
+        }
+    }
+
 }

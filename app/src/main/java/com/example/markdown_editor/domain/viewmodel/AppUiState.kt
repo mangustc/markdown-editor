@@ -39,6 +39,7 @@ data class AppUiState(
     val isSettingsDialogVisible: Boolean = false,
     val syncProvider: String = "None",
     val yandexOauthToken: String = "",
+    val isSyncInProgress: Boolean = false,
 
     val pendingIntentAttachments: List<Attachment> = emptyList(),
 )

@@ -69,7 +69,7 @@ import com.example.markdown_editor.data.model.Note
 import com.example.markdown_editor.domain.navigation.SearchEvent
 import com.example.markdown_editor.ui.util.scrollbar
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun NoteSearchBar(
     searchState: TextFieldState,

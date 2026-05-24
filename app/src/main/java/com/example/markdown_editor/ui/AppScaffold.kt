@@ -4,21 +4,25 @@ import android.content.ClipData
 import android.text.format.DateUtils
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Abc
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Create
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.History
@@ -37,26 +41,36 @@ import androidx.compose.material3.DropdownMenuGroup
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.DropdownMenuPopup
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SplitButtonDefaults
+import androidx.compose.material3.SplitButtonLayout
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TooltipAnchorPosition
+import androidx.compose.material3.TooltipBox
+import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberDrawerState
+import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -64,10 +78,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -94,7 +110,7 @@ import com.example.markdown_editor.ui.editor.EditorScreen
 import com.example.markdown_editor.ui.messenger.MessengerScreen
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun AppScaffold() {
     val navController = rememberNavController()
@@ -126,6 +142,7 @@ fun AppScaffold() {
     val searchResults = appViewModel.drawer.searchResultsPaged.collectAsLazyPagingItems()
 
     val clipboard = LocalClipboard.current
+    val resources = LocalResources.current
     val isSelectionMode = uiState.messengerSelectedNotes.isNotEmpty()
 
     ModalNavigationDrawer(
@@ -135,54 +152,104 @@ fun AppScaffold() {
                 modifier = Modifier.imePadding(),
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp),
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    Button(
-                        onClick = { folderPicker.launch(null) },
-                        modifier = Modifier
-                            .fillMaxWidth(),
+                    Row(
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth(),
                     ) {
-                        Icon(Icons.Default.FolderOpen, contentDescription = null)
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            uiState.project?.name ?: stringResource(R.string.select_project_folder),
+                        SplitButtonLayout(
+                            leadingButton = {
+                                val projectName = uiState.project?.name
+                                    ?: resources.getString(R.string.select_project_folder)
+                                TooltipBox(
+                                    positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
+                                        TooltipAnchorPosition.Below,
+                                    ),
+                                    tooltip = { PlainTooltip { Text(projectName) } },
+                                    state = rememberTooltipState(),
+                                ) {
+                                    val content = @Composable {
+                                        Icon(
+                                            Icons.Default.FolderOpen,
+                                            modifier = Modifier.size(SplitButtonDefaults.LeadingIconSize),
+                                            contentDescription = projectName,
+                                        )
+                                        Spacer(Modifier.size(ButtonDefaults.IconSpacing))
+                                        Text(projectName)
+                                    }
+                                    if (uiState.project != null) {
+                                        SplitButtonDefaults.TonalLeadingButton(
+                                            onClick = { folderPicker.launch(null) },
+                                        ) { content() }
+                                    } else {
+                                        Button(
+                                            onClick = { folderPicker.launch(null) },
+                                            shapes = ButtonDefaults.shapes(),
+                                        ) { content() }
+                                    }
+                                }
+                            },
+                            trailingButton = {
+                                if (uiState.project != null) {
+                                    TooltipBox(
+                                        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
+                                            TooltipAnchorPosition.Below,
+                                        ),
+                                        tooltip = { PlainTooltip { Text("Settings") } },
+                                        state = rememberTooltipState(),
+                                    ) {
+                                        SplitButtonDefaults.TonalTrailingButton(
+                                            checked = false,
+                                            onCheckedChange = {
+                                                appViewModel.settings.showSettings()
+                                            },
+                                        ) {
+                                            Icon(
+                                                Icons.Default.Settings,
+                                                modifier = Modifier.size(SplitButtonDefaults.TrailingIconSize),
+                                                contentDescription = "Settings",
+                                            )
+                                        }
+                                    }
+                                }
+                            },
                         )
-                    }
-
-                    Button(
-                        onClick = {
-                            scope.launch { drawerState.close() }
-                            appViewModel.settings.showSettings()
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Icon(Icons.Default.Settings, contentDescription = null)
-                        Spacer(Modifier.width(8.dp))
-                        Text("Settings")
-                    }
-
-                    Button(
-                        onClick = {
-                            appViewModel.project.syncNow()
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Icon(Icons.Default.Sync, contentDescription = null)
-                        Spacer(Modifier.width(8.dp))
-                        Text("Sync")
-                    }
-
-                    HorizontalDivider()
-
-                    if (uiState.project != null) {
-                        Button(
-                            onClick = { appViewModel.drawer.showCreateNoteDialog() },
-                            modifier = Modifier.fillMaxWidth(),
+                        TooltipBox(
+                            positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
+                                TooltipAnchorPosition.Below,
+                            ),
+                            tooltip = { PlainTooltip { Text("Sync") } },
+                            state = rememberTooltipState(),
                         ) {
-                            Text(stringResource(R.string.create_new_note))
+                            OutlinedIconButton(
+                                onClick = {
+                                    appViewModel.project.syncNow()
+                                },
+                                border = BorderStroke(
+                                    width = IconButtonDefaults.outlinedIconButtonBorder(true).width,
+                                    color = MaterialTheme.colorScheme.outlineVariant,
+                                ),
+                                shapes = IconButtonDefaults.shapes(
+                                    shape = IconButtonDefaults.mediumSquareShape,
+                                ),
+                                modifier = Modifier.size(
+                                    IconButtonDefaults.mediumContainerSize(),
+                                ),
+                            ) {
+                                if (uiState.isSyncInProgress) {
+                                    LoadingIndicator()
+                                } else {
+                                    Icon(Icons.Default.Sync, contentDescription = "Sync")
+                                }
+                            }
                         }
-
+                    }
+                    if (uiState.project != null) {
                         NoteSearchBar(
                             searchState = appViewModel.drawer.searchState,
                             searchResults = searchResults,
@@ -201,6 +268,24 @@ fun AppScaffold() {
                                 onRename = { appViewModel.drawer.showNoteRenameDialog(note) },
                                 onShowInfo = { appViewModel.drawer.showNoteShowInfoDialog(note) },
                                 onPin = { appViewModel.drawer.onPinNote(note) },
+                            )
+                        }
+
+                        Spacer(Modifier.weight(1f))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.End,
+                        ) {
+                            ExtendedFloatingActionButton(
+                                onClick = { appViewModel.drawer.showCreateNoteDialog() },
+                                icon = {
+                                    Icon(
+                                        Icons.Default.Create,
+                                        contentDescription = stringResource(R.string.create_new_note),
+                                    )
+                                },
+                                text = { Text(text = stringResource(R.string.create_new_note)) },
                             )
                         }
                     } else {
@@ -593,7 +678,7 @@ fun SettingsDialog(
                 ) {
                     Text(
                         text = "Synchronization",
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                     )
 

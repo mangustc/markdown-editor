@@ -30,10 +30,13 @@ class ProjectActions(
     }
 
     fun syncNow() {
+        if (deps.uiState.value.isSyncInProgress) return
         val project = deps.uiState.value.project ?: return
         deps.scope.launch {
+            deps.uiState.update { it.copy(isSyncInProgress = true) }
             deps.syncRepo.sync(project)
             deps.globalActions.updateNoteLists()
+            deps.uiState.update { it.copy(isSyncInProgress = false) }
         }
     }
 

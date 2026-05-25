@@ -1,4 +1,4 @@
-package com.example.markdown_editor.domain.viewmodel
+package com.example.markdown_editor.domain.viewmodel.actions
 
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.runtime.snapshotFlow
@@ -7,6 +7,8 @@ import androidx.paging.cachedIn
 import com.example.markdown_editor.data.model.Note
 import com.example.markdown_editor.data.model.SearchQuery
 import com.example.markdown_editor.domain.navigation.SearchEvent
+import com.example.markdown_editor.domain.viewmodel.AppDeps
+import com.example.markdown_editor.domain.viewmodel.events.NavigationEvent
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -44,8 +46,8 @@ class DrawerActions(
     }
 
     fun onNoteSelected(note: Note) {
-        deps.globalActions.navigationEvent(NavigationEvent.CloseDrawer)
-        deps.globalActions.navigationEvent(NavigationEvent.GoToEditor(note = note))
+        deps.globalActions.onEvent(NavigationEvent.CloseDrawer)
+        deps.globalActions.onEvent(NavigationEvent.GoToEditor(note = note))
     }
 
     fun showCreateNoteDialog() {
@@ -88,7 +90,7 @@ class DrawerActions(
             deps.projectRepo.syncDatabase(project)
             deps.globalActions.updateNoteLists()
             if (note.uri == activeNote?.uri)
-                deps.globalActions.navigationEvent(NavigationEvent.GoBack)
+                deps.globalActions.onEvent(NavigationEvent.GoBack)
 
         }
     }

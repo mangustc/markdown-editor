@@ -1,4 +1,4 @@
-package com.example.markdown_editor.domain.viewmodel
+package com.example.markdown_editor.domain.viewmodel.actions
 
 import android.net.Uri
 import android.util.Log
@@ -10,6 +10,8 @@ import com.example.markdown_editor.data.sync.SyncServerException
 import com.example.markdown_editor.data.sync.SyncStateException
 import com.example.markdown_editor.data.sync.ValidSyncProvider
 import com.example.markdown_editor.data.sync.YandexDiskProvider
+import com.example.markdown_editor.domain.viewmodel.AppDeps
+import com.example.markdown_editor.domain.viewmodel.events.NotificationEvent
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -53,27 +55,27 @@ class ProjectActions(
                     }
 
                     ValidSyncProvider.NONE -> {
-                        deps.globalActions.showToast(NotificationEvent.SyncServiceIsNone)
+                        deps.globalActions.onEvent(NotificationEvent.SyncServiceIsNone)
                         deps.uiState.update { it.copy(isSyncInProgress = false) }
                         return@launch
                     }
                 }
                 deps.syncRepo.sync(project, syncProvider)
             } catch (_: SyncAuthException) {
-                deps.globalActions.showToast(NotificationEvent.SyncAuthException)
+                deps.globalActions.onEvent(NotificationEvent.SyncAuthException)
             } catch (_: SyncNetworkException) {
-                deps.globalActions.showToast(NotificationEvent.SyncNetworkException)
+                deps.globalActions.onEvent(NotificationEvent.SyncNetworkException)
             } catch (_: SyncServerException) {
-                deps.globalActions.showToast(NotificationEvent.SyncServerException)
+                deps.globalActions.onEvent(NotificationEvent.SyncServerException)
             } catch (_: SyncLocalIoException) {
-                deps.globalActions.showToast(NotificationEvent.SyncLocalIoException)
+                deps.globalActions.onEvent(NotificationEvent.SyncLocalIoException)
             } catch (_: SyncStateException) {
-                deps.globalActions.showToast(NotificationEvent.SyncStateException)
+                deps.globalActions.onEvent(NotificationEvent.SyncStateException)
             } catch (_: SyncQuotaException) {
-                deps.globalActions.showToast(NotificationEvent.SyncQuotaException)
+                deps.globalActions.onEvent(NotificationEvent.SyncQuotaException)
             } catch (e: Exception) {
                 Log.e("debug", e.toString())
-                deps.globalActions.showToast(
+                deps.globalActions.onEvent(
                     NotificationEvent.CustomMessage(
                         message = e.localizedMessage ?: "Unknown error",
                     ),

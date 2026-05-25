@@ -1,11 +1,9 @@
 package com.example.markdown_editor.domain.viewmodel
 
-interface AppGlobalActions {
-    fun updateNoteLists(
-        afterUpdateSearch: () -> Unit = {},
-        afterUpdateMessenger: () -> Unit = {},
-    )
+import com.example.markdown_editor.domain.viewmodel.events.AppEvent
 
-    fun navigationEvent(navigationEvent: NavigationEvent)
-    fun showToast(notificationEvent: NotificationEvent)
+interface AppGlobalActions {
+    suspend fun updateNoteLists()
+
+    fun onEvent(event: AppEvent)
 }

@@ -92,8 +92,8 @@ import com.example.markdown_editor.data.model.Note
 import com.example.markdown_editor.domain.navigation.EditorDestination
 import com.example.markdown_editor.domain.navigation.MessengerDestination
 import com.example.markdown_editor.domain.viewmodel.AppViewModel
-import com.example.markdown_editor.domain.viewmodel.NavigationEvent
-import com.example.markdown_editor.domain.viewmodel.NotificationEvent
+import com.example.markdown_editor.domain.viewmodel.events.NavigationEvent
+import com.example.markdown_editor.domain.viewmodel.events.NotificationEvent
 import com.example.markdown_editor.ui.components.NoteDrawerItem
 import com.example.markdown_editor.ui.components.NoteSearchBar
 import com.example.markdown_editor.ui.components.TooltipIconButton
@@ -403,7 +403,7 @@ fun AppScaffold() {
                             TooltipIconButton(
                                 onClick = {
                                     scope.launch {
-                                        appViewModel.navigationEvent(
+                                        appViewModel.onEvent(
                                             NavigationEvent.GoBack,
                                         )
                                     }
@@ -416,7 +416,7 @@ fun AppScaffold() {
                             TooltipIconButton(
                                 onClick = {
                                     scope.launch {
-                                        appViewModel.navigationEvent(
+                                        appViewModel.onEvent(
                                             NavigationEvent.OpenDrawer,
                                         )
                                     }

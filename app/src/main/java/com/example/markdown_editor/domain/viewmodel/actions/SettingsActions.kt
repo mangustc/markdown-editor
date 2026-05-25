@@ -1,7 +1,8 @@
-package com.example.markdown_editor.domain.viewmodel
+package com.example.markdown_editor.domain.viewmodel.actions
 
 import com.example.markdown_editor.data.model.Settings
 import com.example.markdown_editor.data.sync.ValidSyncProvider
+import com.example.markdown_editor.domain.viewmodel.AppDeps
 import kotlinx.coroutines.flow.update
 
 class SettingsActions(

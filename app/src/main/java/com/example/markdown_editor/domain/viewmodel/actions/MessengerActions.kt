@@ -1,4 +1,4 @@
-package com.example.markdown_editor.domain.viewmodel
+package com.example.markdown_editor.domain.viewmodel.actions
 
 import androidx.core.net.toUri
 import androidx.paging.PagingData
@@ -10,6 +10,7 @@ import com.example.markdown_editor.data.model.SortBy
 import com.example.markdown_editor.domain.markdown.MarkdownParser
 import com.example.markdown_editor.domain.messenger.Attachment
 import com.example.markdown_editor.domain.messenger.AttachmentType
+import com.example.markdown_editor.domain.viewmodel.AppDeps
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -181,7 +182,8 @@ class MessengerActions(
                     )
                 }
             }
-            deps.globalActions.updateNoteLists(afterUpdateMessenger = afterUpdate)
+            deps.globalActions.updateNoteLists()
+            afterUpdate()
         }
     }
 
@@ -237,4 +239,3 @@ class MessengerActions(
         }.joinToString("\n\n")
     }
 }
-

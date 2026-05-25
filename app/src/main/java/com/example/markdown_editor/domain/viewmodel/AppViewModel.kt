@@ -11,6 +11,14 @@ import com.example.markdown_editor.data.repository.ProjectRepositoryImpl
 import com.example.markdown_editor.data.repository.SettingsRepositoryImpl
 import com.example.markdown_editor.data.sync.SyncRepositoryImpl
 import com.example.markdown_editor.domain.messenger.Attachment
+import com.example.markdown_editor.domain.viewmodel.actions.DrawerActions
+import com.example.markdown_editor.domain.viewmodel.actions.EditorActions
+import com.example.markdown_editor.domain.viewmodel.actions.MessengerActions
+import com.example.markdown_editor.domain.viewmodel.actions.ProjectActions
+import com.example.markdown_editor.domain.viewmodel.actions.SettingsActions
+import com.example.markdown_editor.domain.viewmodel.events.AppEvent
+import com.example.markdown_editor.domain.viewmodel.events.NavigationEvent
+import com.example.markdown_editor.domain.viewmodel.events.NotificationEvent
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -68,26 +76,23 @@ class AppViewModel(application: Application) : AndroidViewModel(application), Ap
 
     private val _navigationEvents = Channel<NavigationEvent>(Channel.BUFFERED)
     val navigationEvents = _navigationEvents.receiveAsFlow()
-    override fun navigationEvent(navigationEvent: NavigationEvent) {
-        deps.scope.launch { _navigationEvents.send(navigationEvent) }
-    }
-
     private val _toastEvents = Channel<NotificationEvent>(Channel.BUFFERED)
     val toastEvents = _toastEvents.receiveAsFlow()
-    override fun showToast(notificationEvent: NotificationEvent) {
-        viewModelScope.launch {
-            _toastEvents.send(notificationEvent)
+
+    override fun onEvent(event: AppEvent) {
+        deps.scope.launch {
+            when (event) {
+                is NavigationEvent -> _navigationEvents.send(event)
+                is NotificationEvent -> _toastEvents.send(event)
+            }
         }
     }
 
-    override fun updateNoteLists(afterUpdateSearch: () -> Unit, afterUpdateMessenger: () -> Unit) {
+    override suspend fun updateNoteLists() {
         val project = _uiState.value.project ?: return
-        viewModelScope.launch {
-            projectRepo.syncDatabase(project)
-            _uiState.update { it.copy(allProjectTags = projectRepo.getAllTags()) }
-            afterUpdateSearch()
-        }
-        messenger.onMessengerOpened(project, afterUpdate = afterUpdateMessenger)
+        projectRepo.syncDatabase(project)
+        _uiState.update { it.copy(allProjectTags = projectRepo.getAllTags()) }
+        messenger.onMessengerOpened(project)
     }
 
     fun onShareIntent(text: String?, attachments: List<Attachment>) {

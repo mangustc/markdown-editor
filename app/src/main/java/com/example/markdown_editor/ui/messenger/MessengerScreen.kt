@@ -144,7 +144,7 @@ import com.example.markdown_editor.domain.messenger.AttachmentType
 import com.example.markdown_editor.domain.messenger.LinkPreviewFetcher
 import com.example.markdown_editor.domain.messenger.ParsedNoteBody
 import com.example.markdown_editor.domain.viewmodel.AppViewModel
-import com.example.markdown_editor.domain.viewmodel.NotificationEvent
+import com.example.markdown_editor.domain.viewmodel.events.NotificationEvent
 import com.example.markdown_editor.ui.components.MenuPopup
 import com.example.markdown_editor.ui.components.MenuPopupGroup
 import com.example.markdown_editor.ui.components.MenuPopupItem
@@ -308,10 +308,10 @@ fun MessengerScreen(viewModel: AppViewModel) {
                             tempCameraUri = uri
                             cameraLauncher.launch(uri)
                         } else {
-                            viewModel.showToast(NotificationEvent.FailedToAddPhoto)
+                            viewModel.onEvent(NotificationEvent.FailedToAddPhoto)
                         }
                     } catch (_: Exception) {
-                        viewModel.showToast(NotificationEvent.FailedToStartCamera)
+                        viewModel.onEvent(NotificationEvent.FailedToStartCamera)
                     }
                 },
                 onAddImage = {
@@ -343,7 +343,7 @@ fun MessengerScreen(viewModel: AppViewModel) {
                             Intent.createChooser(intent, null),
                         )
                     } catch (_: Exception) {
-                        viewModel.showToast(NotificationEvent.NoAppFoundToOpenThisFile)
+                        viewModel.onEvent(NotificationEvent.NoAppFoundToOpenThisFile)
                     }
                 },
                 onRemoveAttachment = { index -> attachments.removeAt(index) },
@@ -493,10 +493,10 @@ fun MessengerScreen(viewModel: AppViewModel) {
                                             )
                                         },
                                         onNoAppFound = {
-                                            viewModel.showToast(NotificationEvent.NoAppFoundToOpenThisFile)
+                                            viewModel.onEvent(NotificationEvent.NoAppFoundToOpenThisFile)
                                         },
                                         onLinkCopied = {
-                                            viewModel.showToast(NotificationEvent.LinkCopied)
+                                            viewModel.onEvent(NotificationEvent.LinkCopied)
                                         },
                                     )
                                 }

@@ -1,4 +1,4 @@
-package com.example.markdown_editor.domain.viewmodel
+package com.example.markdown_editor.domain.viewmodel.actions
 
 import android.content.Context
 import android.content.Intent
@@ -20,6 +20,8 @@ import com.example.markdown_editor.data.model.SearchQuery
 import com.example.markdown_editor.domain.editor.EditorEvent
 import com.example.markdown_editor.domain.markdown.SpanInfo
 import com.example.markdown_editor.domain.navigation.SearchEvent
+import com.example.markdown_editor.domain.viewmodel.AppDeps
+import com.example.markdown_editor.domain.viewmodel.events.NavigationEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
@@ -160,7 +162,7 @@ class EditorActions(
                         try {
                             val note = deps.noteRepo.getNoteByUri(fileUri)
                             withContext(Dispatchers.Main) {
-                                deps.globalActions.navigationEvent(NavigationEvent.GoToEditor(note = note))
+                                deps.globalActions.onEvent(NavigationEvent.GoToEditor(note = note))
                             }
                         } catch (_: Exception) {
                             withContext(Dispatchers.Main) {
@@ -211,7 +213,7 @@ class EditorActions(
                     state.undoState.clearHistory()
                 }
             } catch (_: Exception) {
-                deps.globalActions.navigationEvent(NavigationEvent.GoBack)
+                deps.globalActions.onEvent(NavigationEvent.GoBack)
             }
         }
     }

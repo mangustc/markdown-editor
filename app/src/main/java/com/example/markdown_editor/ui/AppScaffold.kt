@@ -12,13 +12,11 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -39,24 +37,16 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DrawerValue
-import androidx.compose.material3.DropdownMenuGroup
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.DropdownMenuPopup
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.ExposedDropdownMenuAnchorType
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.OutlinedButton
@@ -66,7 +56,6 @@ import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SplitButtonDefaults
 import androidx.compose.material3.SplitButtonLayout
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TooltipAnchorPosition
 import androidx.compose.material3.TooltipBox
@@ -77,10 +66,7 @@ import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -93,8 +79,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
@@ -105,8 +89,6 @@ import androidx.navigation.toRoute
 import androidx.paging.compose.collectAsLazyPagingItems
 import com.example.markdown_editor.R
 import com.example.markdown_editor.data.model.Note
-import com.example.markdown_editor.data.model.Settings
-import com.example.markdown_editor.data.sync.ValidSyncProvider
 import com.example.markdown_editor.domain.navigation.EditorDestination
 import com.example.markdown_editor.domain.navigation.MessengerDestination
 import com.example.markdown_editor.domain.viewmodel.AppViewModel
@@ -117,6 +99,7 @@ import com.example.markdown_editor.ui.components.NoteSearchBar
 import com.example.markdown_editor.ui.components.TooltipIconButton
 import com.example.markdown_editor.ui.editor.EditorScreen
 import com.example.markdown_editor.ui.messenger.MessengerScreen
+import com.example.markdown_editor.ui.settings.SettingsDialog
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
@@ -726,134 +709,4 @@ fun ShowInfoDialog(
             OutlinedButton(onClick = onDismissRequest) { Text(stringResource(R.string.close)) }
         },
     )
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun SettingsDialog(
-    onDismissRequest: () -> Unit,
-    settings: Settings,
-    onSyncProviderChange: (ValidSyncProvider) -> Unit,
-    onOauthTokenChange: (String) -> Unit,
-) {
-    var dropdownExpanded by remember { mutableStateOf(false) }
-    val currentProviderString = getStringFromValidSyncProvider(settings.syncProvider)
-
-    Dialog(
-        onDismissRequest = onDismissRequest,
-        properties = DialogProperties(
-            usePlatformDefaultWidth = false,
-            decorFitsSystemWindows = false,
-        ),
-    ) {
-        Surface(
-            modifier = Modifier.fillMaxSize(),
-            color = MaterialTheme.colorScheme.background,
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .statusBarsPadding(),
-            ) {
-                TopAppBar(
-                    title = { Text("Settings") },
-                    navigationIcon = {
-                        IconButton(onClick = onDismissRequest) {
-                            Icon(
-                                imageVector = Icons.Default.Close,
-                                contentDescription = "Close",
-                            )
-                        }
-                    },
-                )
-
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
-                ) {
-                    Text(
-                        text = "Synchronization",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                    )
-
-                    ExposedDropdownMenuBox(
-                        expanded = dropdownExpanded,
-                        onExpandedChange = { dropdownExpanded = it },
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        OutlinedTextField(
-                            value = currentProviderString,
-                            onValueChange = {},
-                            readOnly = true,
-                            label = { Text("Provider") },
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = dropdownExpanded) },
-                            modifier = Modifier
-                                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
-                                .fillMaxWidth(),
-                        )
-
-                        DropdownMenuPopup(
-                            expanded = dropdownExpanded,
-                            onDismissRequest = { dropdownExpanded = false },
-                            modifier = Modifier.exposedDropdownSize(matchAnchorWidth = true),
-                        ) {
-                            DropdownMenuGroup(
-                                shapes = MenuDefaults.groupShape(index = 0, count = 1),
-                            ) {
-                                DropdownMenuItem(
-                                    selected = settings.syncProvider == ValidSyncProvider.NONE,
-                                    text = { Text(getStringFromValidSyncProvider(ValidSyncProvider.NONE)) },
-                                    shapes = MenuDefaults.itemShape(index = 0, count = 2),
-                                    onClick = {
-                                        onSyncProviderChange(ValidSyncProvider.NONE)
-                                        dropdownExpanded = false
-                                    },
-                                )
-                                DropdownMenuItem(
-                                    selected = settings.syncProvider == ValidSyncProvider.YANDEX,
-                                    text = { Text(getStringFromValidSyncProvider(ValidSyncProvider.YANDEX)) },
-                                    shapes = MenuDefaults.itemShape(index = 1, count = 2),
-                                    onClick = {
-                                        onSyncProviderChange(ValidSyncProvider.YANDEX)
-                                        dropdownExpanded = false
-                                    },
-                                )
-                            }
-                        }
-                    }
-
-                    when (settings.syncProvider) {
-                        ValidSyncProvider.YANDEX -> {
-                            Button(
-                                onClick = {},
-                                modifier = Modifier.fillMaxWidth(),
-                            ) {
-                                Text("Get token")
-                            }
-
-                            OutlinedTextField(
-                                value = settings.yandexOauthToken,
-                                onValueChange = onOauthTokenChange,
-                                label = { Text("Oauth Token") },
-                                modifier = Modifier.fillMaxWidth(),
-                            )
-                        }
-
-                        ValidSyncProvider.NONE -> {}
-                    }
-                }
-            }
-        }
-    }
-}
-
-fun getStringFromValidSyncProvider(provider: ValidSyncProvider): String {
-    val result = when (provider) {
-        ValidSyncProvider.NONE -> "None"
-        ValidSyncProvider.YANDEX -> "Yandex"
-    }
-    return result
 }

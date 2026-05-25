@@ -22,4 +22,5 @@ sealed interface NotificationEvent {
     data object SyncLocalIoException : NotificationEvent
     data object SyncStateException : NotificationEvent
     data object SyncQuotaException : NotificationEvent
+    data object SyncServiceIsNone : NotificationEvent
 }

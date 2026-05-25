@@ -204,6 +204,10 @@ fun AppScaffold() {
                     toast(resources.getString(R.string.cloud_storage_full_free_up_space))
                 }
 
+                is NotificationEvent.SyncServiceIsNone -> {
+                    toast(resources.getString(R.string.no_sync_service_configured_configure_one_in_settings))
+                }
+
                 is NotificationEvent.CustomMessage -> {
                     toast(it.message)
                 }

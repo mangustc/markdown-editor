@@ -83,4 +83,5 @@
     <string name="local_file_error_check_storage_space_and_permissions">Local storage access error. Check storage space and permissions</string>
     <string name="sync_data_corrupted_please_reset_sync">Sync data corrupted. Please restart sync</string>
     <string name="cloud_storage_full_free_up_space">Cloud storage is full. Please free up space</string>
+    <string name="no_sync_service_configured_configure_one_in_settings">No sync service configured. Configure one in settings</string>
 </resources>

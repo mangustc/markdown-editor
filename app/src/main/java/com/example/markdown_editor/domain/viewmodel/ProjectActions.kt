@@ -47,16 +47,18 @@ class ProjectActions(
         deps.scope.launch {
             deps.uiState.update { it.copy(isSyncInProgress = true) }
             try {
-                when (settings.syncProvider) {
+                val syncProvider = when (settings.syncProvider) {
                     ValidSyncProvider.YANDEX -> {
-                        deps.syncRepo.configure(YandexDiskProvider(oauthToken = settings.yandexOauthToken))
+                        YandexDiskProvider(oauthToken = settings.yandexOauthToken)
                     }
 
                     ValidSyncProvider.NONE -> {
+                        deps.globalActions.showToast(NotificationEvent.SyncServiceIsNone)
+                        deps.uiState.update { it.copy(isSyncInProgress = false) }
                         return@launch
                     }
                 }
-                deps.syncRepo.sync(project)
+                deps.syncRepo.sync(project, syncProvider)
             } catch (_: SyncAuthException) {
                 deps.globalActions.showToast(NotificationEvent.SyncAuthException)
             } catch (_: SyncNetworkException) {

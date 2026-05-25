@@ -388,19 +388,24 @@ fun EditorScreen(
             Surface(
                 shape = SearchBarDefaults.dockedShape,
             ) {
-                val linkSearchResults =
-                    viewModel.editor.linkSearchResultsPaged.collectAsLazyPagingItems()
-                NoteSearchBar(
-                    searchState = viewModel.editor.linkSearchState,
-                    searchResults = linkSearchResults,
-                    onSearchEvent = viewModel.editor::onLinkSearchEvent,
-                    paddingValues = PaddingValues(16.dp),
-                ) { note, clearFocus ->
-                    NoteDrawerItem(
-                        name = note.name,
-                        supportingText = if (!note.tags.isNullOrEmpty()) note.tags.joinToString(", ") else null,
-                        onClick = { viewModel.editor.insertNoteLink(note); clearFocus() },
-                    )
+                Box(modifier = Modifier.padding(vertical = 8.dp)) {
+                    val linkSearchResults =
+                        viewModel.editor.linkSearchResultsPaged.collectAsLazyPagingItems()
+                    NoteSearchBar(
+                        searchState = viewModel.editor.linkSearchState,
+                        searchResults = linkSearchResults,
+                        onSearchEvent = viewModel.editor::onLinkSearchEvent,
+                        paddingValues = PaddingValues(horizontal = 16.dp),
+                        reverseLayout = true,
+                    ) { note, clearFocus ->
+                        NoteDrawerItem(
+                            name = note.name,
+                            supportingText = if (!note.tags.isNullOrEmpty()) note.tags.joinToString(
+                                ", ",
+                            ) else null,
+                            onClick = { viewModel.editor.insertNoteLink(note); clearFocus() },
+                        )
+                    }
                 }
             }
         }

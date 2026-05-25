@@ -6,7 +6,6 @@ import android.content.Intent
 import android.net.Uri
 import android.provider.MediaStore
 import android.text.format.DateFormat
-import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -145,6 +144,7 @@ import com.example.markdown_editor.domain.messenger.AttachmentType
 import com.example.markdown_editor.domain.messenger.LinkPreviewFetcher
 import com.example.markdown_editor.domain.messenger.ParsedNoteBody
 import com.example.markdown_editor.domain.viewmodel.AppViewModel
+import com.example.markdown_editor.domain.viewmodel.NotificationEvent
 import com.example.markdown_editor.ui.components.MenuPopup
 import com.example.markdown_editor.ui.components.MenuPopupGroup
 import com.example.markdown_editor.ui.components.MenuPopupItem
@@ -308,18 +308,10 @@ fun MessengerScreen(viewModel: AppViewModel) {
                             tempCameraUri = uri
                             cameraLauncher.launch(uri)
                         } else {
-                            Toast.makeText(
-                                context,
-                                resources.getString(R.string.failed_to_create_photo_container),
-                                Toast.LENGTH_SHORT,
-                            ).show()
+                            viewModel.showToast(NotificationEvent.FailedToAddPhoto)
                         }
-                    } catch (e: Exception) {
-                        Toast.makeText(
-                            context,
-                            resources.getString(R.string.failed_to_start_camera),
-                            Toast.LENGTH_SHORT,
-                        ).show()
+                    } catch (_: Exception) {
+                        viewModel.showToast(NotificationEvent.FailedToStartCamera)
                     }
                 },
                 onAddImage = {
@@ -351,10 +343,7 @@ fun MessengerScreen(viewModel: AppViewModel) {
                             Intent.createChooser(intent, null),
                         )
                     } catch (_: Exception) {
-                        Toast.makeText(
-                            context, resources.getString(R.string.no_app_found_to_open_this_file),
-                            Toast.LENGTH_SHORT,
-                        ).show()
+                        viewModel.showToast(NotificationEvent.NoAppFoundToOpenThisFile)
                     }
                 },
                 onRemoveAttachment = { index -> attachments.removeAt(index) },
@@ -502,6 +491,12 @@ fun MessengerScreen(viewModel: AppViewModel) {
                                             viewModel.messenger.toggleNoteSelection(
                                                 it.uri.toString(),
                                             )
+                                        },
+                                        onNoAppFound = {
+                                            viewModel.showToast(NotificationEvent.NoAppFoundToOpenThisFile)
+                                        },
+                                        onLinkCopied = {
+                                            viewModel.showToast(NotificationEvent.LinkCopied)
                                         },
                                     )
                                 }
@@ -842,6 +837,8 @@ private fun MessageBubble(
     isSelected: Boolean = false,
     isSelectionMode: Boolean = false,
     onToggleSelect: (Note) -> Unit,
+    onLinkCopied: () -> Unit,
+    onNoAppFound: () -> Unit,
 ) {
     val context = LocalContext.current
     val density = LocalDensity.current
@@ -976,11 +973,7 @@ private fun MessageBubble(
                                         }
                                         context.startActivity(Intent.createChooser(intent, null))
                                     } catch (_: Exception) {
-                                        Toast.makeText(
-                                            context,
-                                            resources.getString(R.string.no_app_found_to_open_this_file),
-                                            Toast.LENGTH_SHORT,
-                                        ).show()
+                                        onNoAppFound()
                                     }
                                 },
                                 isViewing = true,
@@ -1038,11 +1031,7 @@ private fun MessageBubble(
                                                                         ),
                                                                     ),
                                                                 )
-                                                                Toast.makeText(
-                                                                    context,
-                                                                    resources.getString(R.string.link_copied),
-                                                                    Toast.LENGTH_SHORT,
-                                                                ).show()
+                                                                onLinkCopied()
                                                                 focusManager.clearFocus()
                                                             }
                                                         }

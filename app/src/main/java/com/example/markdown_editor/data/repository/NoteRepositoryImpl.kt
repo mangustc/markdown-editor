@@ -42,8 +42,8 @@ class NoteRepositoryImpl(
 
             val isoDate = Instant.now().toString()
             var frontMatterBuilder = "---\ncreatedAt: $isoDate"
+            frontMatterBuilder += "\ntags:"
             if (!tags.isNullOrEmpty()) {
-                frontMatterBuilder += "\ntags:"
                 tags.forEach { tag -> frontMatterBuilder += "\n- $tag" }
             }
             val initialContent = "$frontMatterBuilder\n---"

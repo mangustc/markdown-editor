@@ -44,8 +44,8 @@ class DrawerActions(
     }
 
     fun onNoteSelected(note: Note) {
-        deps.globalActions.closeDrawer()
-        deps.globalActions.goToEditor(note)
+        deps.globalActions.navigationEvent(NavigationEvent.CloseDrawer)
+        deps.globalActions.navigationEvent(NavigationEvent.GoToEditor(note = note))
     }
 
     fun showCreateNoteDialog() {
@@ -87,7 +87,9 @@ class DrawerActions(
             deps.noteRepo.deleteNote(note)
             deps.projectRepo.syncDatabase(project)
             deps.globalActions.updateNoteLists()
-            if (note.uri == activeNote?.uri) deps.globalActions.goBack()
+            if (note.uri == activeNote?.uri)
+                deps.globalActions.navigationEvent(NavigationEvent.GoBack)
+
         }
     }
 

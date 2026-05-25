@@ -160,7 +160,7 @@ class EditorActions(
                         try {
                             val note = deps.noteRepo.getNoteByUri(fileUri)
                             withContext(Dispatchers.Main) {
-                                deps.globalActions.goToEditor(note)
+                                deps.globalActions.navigationEvent(NavigationEvent.GoToEditor(note = note))
                             }
                         } catch (_: Exception) {
                             withContext(Dispatchers.Main) {
@@ -211,7 +211,7 @@ class EditorActions(
                     state.undoState.clearHistory()
                 }
             } catch (_: Exception) {
-                deps.globalActions.goBack()
+                deps.globalActions.navigationEvent(NavigationEvent.GoBack)
             }
         }
     }

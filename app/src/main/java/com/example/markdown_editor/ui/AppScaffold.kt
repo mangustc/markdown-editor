@@ -2,8 +2,10 @@ package com.example.markdown_editor.ui
 
 import android.content.ClipData
 import android.text.format.DateUtils
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.StringRes
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -85,6 +87,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
@@ -106,6 +109,8 @@ import com.example.markdown_editor.data.model.Note
 import com.example.markdown_editor.domain.navigation.EditorDestination
 import com.example.markdown_editor.domain.navigation.MessengerDestination
 import com.example.markdown_editor.domain.viewmodel.AppViewModel
+import com.example.markdown_editor.domain.viewmodel.NavigationEvent
+import com.example.markdown_editor.domain.viewmodel.NotificationEvent
 import com.example.markdown_editor.ui.components.NoteDrawerItem
 import com.example.markdown_editor.ui.components.NoteSearchBar
 import com.example.markdown_editor.ui.components.TooltipIconButton
@@ -133,20 +138,51 @@ fun AppScaffold() {
     LaunchedEffect(Unit) {
         appViewModel.navigationEvents.collect { event ->
             when (event) {
-                is AppViewModel.NavigationEvent.GoToEditor ->
+                is NavigationEvent.GoToEditor ->
                     navController.navigate(EditorDestination(event.note.uri.toString()))
 
-                is AppViewModel.NavigationEvent.GoBack -> navController.popBackStack()
-                is AppViewModel.NavigationEvent.OpenDrawer -> scope.launch { drawerState.open() }
-                is AppViewModel.NavigationEvent.CloseDrawer -> scope.launch { drawerState.close() }
+                is NavigationEvent.GoBack -> navController.popBackStack()
+                is NavigationEvent.OpenDrawer -> scope.launch { drawerState.open() }
+                is NavigationEvent.CloseDrawer -> scope.launch { drawerState.close() }
             }
         }
     }
-    val searchResults = appViewModel.drawer.searchResultsPaged.collectAsLazyPagingItems()
 
     val clipboard = LocalClipboard.current
     val resources = LocalResources.current
     val focusManager = LocalFocusManager.current
+    val context = LocalContext.current
+
+    LaunchedEffect(Unit) {
+        fun showToastById(@StringRes id: Int) {
+            Toast.makeText(
+                context,
+                resources.getString(id),
+                Toast.LENGTH_SHORT,
+            ).show()
+        }
+        appViewModel.toastEvents.collect { notificationEvent ->
+            when (notificationEvent) {
+                is NotificationEvent.LinkCopied -> {
+                    showToastById(R.string.link_copied)
+                }
+
+                is NotificationEvent.FailedToAddPhoto -> {
+                    showToastById(R.string.failed_to_create_photo_container)
+                }
+
+                is NotificationEvent.FailedToStartCamera -> {
+                    showToastById(R.string.failed_to_start_camera)
+                }
+
+                is NotificationEvent.NoAppFoundToOpenThisFile -> {
+                    showToastById(R.string.no_app_found_to_open_this_file)
+                }
+            }
+        }
+    }
+
+    val searchResults = appViewModel.drawer.searchResultsPaged.collectAsLazyPagingItems()
 
     val isSelectionMode = uiState.messengerSelectedNotes.isNotEmpty()
 
@@ -349,14 +385,26 @@ fun AppScaffold() {
                             )
                         } else if (navBackStackEntry?.destination?.route != MessengerDestination::class.qualifiedName) {
                             TooltipIconButton(
-                                onClick = { scope.launch { appViewModel.goBack() } },
+                                onClick = {
+                                    scope.launch {
+                                        appViewModel.navigationEvent(
+                                            NavigationEvent.GoBack,
+                                        )
+                                    }
+                                },
                                 icon = Icons.AutoMirrored.Filled.ArrowBack,
                                 tooltip = stringResource(R.string.go_back),
                                 tooltipAnchorPosition = TooltipAnchorPosition.Below,
                             )
                         } else {
                             TooltipIconButton(
-                                onClick = { scope.launch { appViewModel.openDrawer() } },
+                                onClick = {
+                                    scope.launch {
+                                        appViewModel.navigationEvent(
+                                            NavigationEvent.OpenDrawer,
+                                        )
+                                    }
+                                },
                                 icon = Icons.Default.Menu,
                                 tooltip = stringResource(R.string.open_menu),
                                 tooltipAnchorPosition = TooltipAnchorPosition.Below,

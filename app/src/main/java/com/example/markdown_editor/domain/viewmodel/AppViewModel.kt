@@ -5,7 +5,6 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.room.Room
 import com.example.markdown_editor.data.database.NoteDb
-import com.example.markdown_editor.data.model.Note
 import com.example.markdown_editor.data.repository.LinkPreviewRepositoryImpl
 import com.example.markdown_editor.data.repository.NoteRepositoryImpl
 import com.example.markdown_editor.data.repository.ProjectRepositoryImpl
@@ -65,30 +64,18 @@ class AppViewModel(application: Application) : AndroidViewModel(application), Ap
     val editor = EditorActions(deps)
     val messenger = MessengerActions(deps)
 
-    sealed class NavigationEvent {
-        data class GoToEditor(val note: Note) : NavigationEvent()
-        object GoBack : NavigationEvent()
-        object OpenDrawer : NavigationEvent()
-        object CloseDrawer : NavigationEvent()
-    }
-
     private val _navigationEvents = Channel<NavigationEvent>(Channel.BUFFERED)
     val navigationEvents = _navigationEvents.receiveAsFlow()
-
-    override fun goToEditor(note: Note) {
-        deps.scope.launch { _navigationEvents.send(NavigationEvent.GoToEditor(note)) }
+    override fun navigationEvent(navigationEvent: NavigationEvent) {
+        deps.scope.launch { _navigationEvents.send(navigationEvent) }
     }
 
-    override fun goBack() {
-        deps.scope.launch { _navigationEvents.send(NavigationEvent.GoBack) }
-    }
-
-    override fun openDrawer() {
-        deps.scope.launch { _navigationEvents.send(NavigationEvent.OpenDrawer) }
-    }
-
-    override fun closeDrawer() {
-        deps.scope.launch { _navigationEvents.send(NavigationEvent.CloseDrawer) }
+    private val _toastEvents = Channel<NotificationEvent>(Channel.BUFFERED)
+    val toastEvents = _toastEvents.receiveAsFlow()
+    override fun showToast(notificationEvent: NotificationEvent) {
+        viewModelScope.launch {
+            _toastEvents.send(notificationEvent)
+        }
     }
 
     override fun updateNoteLists(afterUpdateSearch: () -> Unit, afterUpdateMessenger: () -> Unit) {

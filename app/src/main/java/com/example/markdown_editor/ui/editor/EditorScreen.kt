@@ -760,8 +760,8 @@ fun MarkdownLinkOverlay(
     layoutResult: TextLayoutResult,
     viewModel: AppViewModel,
 ) {
-    val context = LocalContext.current
-    val uriHandler = LocalUriHandler.current
+    LocalContext.current
+    LocalUriHandler.current
 
     val selection = state.selection
     if (selection.start !in span.range.start..span.range.end) return
@@ -807,8 +807,6 @@ fun MarkdownLinkOverlay(
                 TextButton(
                     onClick = {
                         viewModel.editor.openLink(
-                            context = context,
-                            uriHandler = uriHandler,
                             span = span,
                         )
                     },

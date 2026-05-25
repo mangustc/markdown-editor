@@ -1,14 +1,10 @@
 package com.example.markdown_editor.domain.viewmodel.actions
 
-import android.content.Context
-import android.content.Intent
-import android.net.Uri
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.insert
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.runtime.snapshotFlow
-import androidx.compose.ui.platform.UriHandler
 import androidx.compose.ui.text.TextRange
 import androidx.core.net.toUri
 import androidx.paging.PagingData
@@ -149,7 +145,7 @@ class EditorActions(
         }
     }
 
-    fun openLink(context: Context, uriHandler: UriHandler, span: SpanInfo.Link) {
+    fun openLink(span: SpanInfo.Link) {
         when (val linkType = span.linkType) {
             SpanInfo.Link.LinkType.NOTE, SpanInfo.Link.LinkType.FILE -> {
                 val project = deps.uiState.value.project ?: return
@@ -166,29 +162,18 @@ class EditorActions(
                             }
                         } catch (_: Exception) {
                             withContext(Dispatchers.Main) {
-                                openFileExternally(context, fileUri)
+                                deps.globalActions.onEvent(NavigationEvent.OpenFile(fileUri))
                             }
                         }
                     }
                 } else {
-                    openFileExternally(context, fileUri)
+                    deps.globalActions.onEvent(NavigationEvent.OpenFile(fileUri))
                 }
             }
 
             SpanInfo.Link.LinkType.HTTP -> {
-                uriHandler.openUri(span.payload)
+                deps.globalActions.onEvent(NavigationEvent.OpenUrl(span.payload))
             }
-        }
-    }
-
-    private fun openFileExternally(context: Context, uri: Uri) {
-        val intent = Intent(Intent.ACTION_VIEW).apply {
-            setDataAndType(uri, context.contentResolver.getType(uri) ?: "*/*")
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        }
-        try {
-            context.startActivity(intent)
-        } catch (_: Exception) {
         }
     }
 

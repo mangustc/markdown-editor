@@ -17,6 +17,8 @@ import com.example.markdown_editor.domain.viewmodel.actions.MessengerActions
 import com.example.markdown_editor.domain.viewmodel.actions.ProjectActions
 import com.example.markdown_editor.domain.viewmodel.actions.SettingsActions
 import com.example.markdown_editor.domain.viewmodel.events.AppEvent
+import com.example.markdown_editor.domain.viewmodel.events.ClipboardEvent
+import com.example.markdown_editor.domain.viewmodel.events.FocusEvent
 import com.example.markdown_editor.domain.viewmodel.events.NavigationEvent
 import com.example.markdown_editor.domain.viewmodel.events.NotificationEvent
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -76,14 +78,23 @@ class AppViewModel(application: Application) : AndroidViewModel(application), Ap
 
     private val _navigationEvents = Channel<NavigationEvent>(Channel.BUFFERED)
     val navigationEvents = _navigationEvents.receiveAsFlow()
-    private val _toastEvents = Channel<NotificationEvent>(Channel.BUFFERED)
-    val toastEvents = _toastEvents.receiveAsFlow()
+
+    private val _notificationEvents = Channel<NotificationEvent>(Channel.BUFFERED)
+    val notificationEvents = _notificationEvents.receiveAsFlow()
+
+    private val _clipboardEvents = Channel<ClipboardEvent>(Channel.BUFFERED)
+    val clipboardEvents = _clipboardEvents.receiveAsFlow()
+
+    private val _focusEvents = Channel<FocusEvent>(Channel.BUFFERED)
+    val focusEvents = _focusEvents.receiveAsFlow()
 
     override fun onEvent(event: AppEvent) {
         deps.scope.launch {
             when (event) {
                 is NavigationEvent -> _navigationEvents.send(event)
-                is NotificationEvent -> _toastEvents.send(event)
+                is NotificationEvent -> _notificationEvents.send(event)
+                is ClipboardEvent -> _clipboardEvents.send(event)
+                is FocusEvent -> _focusEvents.send(event)
             }
         }
     }

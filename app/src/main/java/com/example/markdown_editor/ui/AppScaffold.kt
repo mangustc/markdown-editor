@@ -1,6 +1,7 @@
 package com.example.markdown_editor.ui
 
 import android.content.ClipData
+import android.content.Intent
 import android.text.format.DateUtils
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -75,6 +76,7 @@ import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -92,6 +94,8 @@ import com.example.markdown_editor.data.model.Note
 import com.example.markdown_editor.domain.navigation.EditorDestination
 import com.example.markdown_editor.domain.navigation.MessengerDestination
 import com.example.markdown_editor.domain.viewmodel.AppViewModel
+import com.example.markdown_editor.domain.viewmodel.events.ClipboardEvent
+import com.example.markdown_editor.domain.viewmodel.events.FocusEvent
 import com.example.markdown_editor.domain.viewmodel.events.NavigationEvent
 import com.example.markdown_editor.domain.viewmodel.events.NotificationEvent
 import com.example.markdown_editor.ui.components.NoteDrawerItem
@@ -119,23 +123,58 @@ fun AppScaffold() {
         uri?.let { appViewModel.project.onProjectSelected(it) }
     }
 
-    LaunchedEffect(Unit) {
-        appViewModel.navigationEvents.collect { event ->
-            when (event) {
-                is NavigationEvent.GoToEditor ->
-                    navController.navigate(EditorDestination(event.note.uri.toString()))
-
-                is NavigationEvent.GoBack -> navController.popBackStack()
-                is NavigationEvent.OpenDrawer -> scope.launch { drawerState.open() }
-                is NavigationEvent.CloseDrawer -> scope.launch { drawerState.close() }
-            }
-        }
-    }
-
     val clipboard = LocalClipboard.current
     val resources = LocalResources.current
     val focusManager = LocalFocusManager.current
     val context = LocalContext.current
+    val uriHandler = LocalUriHandler.current
+
+    LaunchedEffect(Unit) {
+        appViewModel.navigationEvents.collect {
+            when (it) {
+                is NavigationEvent.GoToEditor ->
+                    navController.navigate(EditorDestination(it.note.uri.toString()))
+
+                is NavigationEvent.GoBack -> navController.popBackStack()
+                is NavigationEvent.OpenDrawer -> scope.launch { drawerState.open() }
+                is NavigationEvent.CloseDrawer -> scope.launch { drawerState.close() }
+                is NavigationEvent.OpenUrl -> uriHandler.openUri(it.url)
+                is NavigationEvent.OpenFile -> {
+                    val intent = Intent(Intent.ACTION_VIEW).apply {
+                        setDataAndType(it.uri, context.contentResolver.getType(it.uri) ?: "*/*")
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    }
+                    try {
+                        context.startActivity(intent)
+                    } catch (_: Exception) {
+                    }
+                }
+            }
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        appViewModel.focusEvents.collect {
+            when (it) {
+                is FocusEvent.ClearFocus -> focusManager.clearFocus()
+            }
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        appViewModel.clipboardEvents.collect {
+            when (it) {
+                is ClipboardEvent.Save -> clipboard.setClipEntry(
+                    ClipEntry(
+                        ClipData.newPlainText(
+                            "Markdown Editor",
+                            it.text,
+                        ),
+                    ),
+                )
+            }
+        }
+    }
 
     LaunchedEffect(Unit) {
         fun toast(message: String) {
@@ -145,7 +184,7 @@ fun AppScaffold() {
                 Toast.LENGTH_SHORT,
             ).show()
         }
-        appViewModel.toastEvents.collect {
+        appViewModel.notificationEvents.collect {
             when (it) {
                 is NotificationEvent.LinkCopied -> {
                     toast(resources.getString(R.string.link_copied))

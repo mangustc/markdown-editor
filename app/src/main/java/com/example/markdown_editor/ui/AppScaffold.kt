@@ -25,7 +25,6 @@ import androidx.compose.material.icons.filled.Abc
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Create
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Menu
@@ -393,14 +392,7 @@ fun AppScaffold() {
                         if (!isSelectionMode &&
                             navBackStackEntry?.destination?.route != MessengerDestination::class.qualifiedName
                         ) {
-                            if (uiState.isViewingMode) {
-                                TooltipIconButton(
-                                    onClick = { appViewModel.editor.toggleViewingMode() },
-                                    icon = Icons.Default.Edit,
-                                    tooltip = stringResource(R.string.edit_editor),
-                                    tooltipAnchorPosition = TooltipAnchorPosition.Below,
-                                )
-                            } else {
+                            if (!uiState.isViewingMode) {
                                 TooltipIconButton(
                                     onClick = { appViewModel.editor.toggleViewingMode() },
                                     icon = Icons.Default.Visibility,

@@ -44,6 +44,7 @@ import androidx.compose.material.icons.filled.AddLink
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Code
+import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.FormatBold
 import androidx.compose.material.icons.filled.FormatItalic
 import androidx.compose.material.icons.filled.Image
@@ -53,17 +54,22 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingToolbarDefaults.ScreenOffset
 import androidx.compose.material3.HorizontalFloatingToolbar
 import androidx.compose.material3.Icon
 import androidx.compose.material3.InputChip
 import androidx.compose.material3.InputChipDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.SearchBarDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TooltipAnchorPosition
+import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
+import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -301,6 +307,34 @@ fun EditorScreen(
                     )
                 }
             }
+        } else {
+            Box(
+                modifier = Modifier
+                    .padding(end = 16.dp)
+                    .align(Alignment.BottomEnd)
+                    .offset(y = -ScreenOffset)
+                    .zIndex(1f)
+                    .onSizeChanged {
+                        toolbarHeightDp = with(density) { it.height.toDp() + ScreenOffset * 3 }
+                    },
+            ) {
+                TooltipBox(
+                    positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
+                        TooltipAnchorPosition.Above,
+                    ),
+                    tooltip = { PlainTooltip { Text(stringResource(R.string.edit_note)) } },
+                    state = rememberTooltipState(),
+                ) {
+                    FloatingActionButton(
+                        onClick = { viewModel.editor.toggleViewingMode() },
+                    ) {
+                        Icon(
+                            Icons.Default.EditNote,
+                            contentDescription = stringResource(R.string.edit_note),
+                        )
+                    }
+                }
+            }
         }
         Column(
             modifier = Modifier
@@ -337,7 +371,7 @@ fun EditorScreen(
                                 .padding(
                                     start = 16.dp,
                                     end = 16.dp,
-                                    bottom = if (isViewingMode) 0.dp else toolbarHeightDp,
+                                    bottom = toolbarHeightDp,
                                 )
                                 .onFocusEvent {},
                         )
@@ -556,7 +590,7 @@ fun TagEditor(
                         imageVector = Icons.Default.Close,
                         contentDescription = null,
                         modifier = Modifier
-                            .size(18.dp)
+                            .size(InputChipDefaults.IconSize)
                             .clickable { onRemoveTag(tag) },
                     )
                 },

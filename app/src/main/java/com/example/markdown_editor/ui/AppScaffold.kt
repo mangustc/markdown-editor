@@ -254,6 +254,9 @@ fun AppScaffold() {
                             searchState = appViewModel.drawer.searchState,
                             searchResults = searchResults,
                             onSearchEvent = appViewModel.drawer::onSearchEvent,
+//                            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+//                            searchBarColor = MaterialTheme.colorScheme.secondaryContainer,
+//                            dividerColor = Color.Transparent
                         ) { note ->
                             NoteDrawerItem(
                                 name = note.name,

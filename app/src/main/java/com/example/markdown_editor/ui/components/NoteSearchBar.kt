@@ -43,6 +43,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.SearchBarDefaults
 import androidx.compose.material3.SuggestionChip
+import androidx.compose.material3.SuggestionChipDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -76,10 +77,23 @@ fun NoteSearchBar(
     searchResults: LazyPagingItems<Note>,
     onSearchEvent: (SearchEvent) -> Unit,
     modifier: Modifier = Modifier,
+    containerColor: Color = MaterialTheme.colorScheme.secondaryContainer,
+    searchBarColor: Color = containerColor,
+    dividerColor: Color = SearchBarDefaults.colors().dividerColor,
     itemContent: @Composable (Note) -> Unit,
 ) {
     val focusManager = LocalFocusManager.current
     var isUserClick by remember { mutableStateOf(false) }
+
+    val searchBarColors = SearchBarDefaults.colors(
+        containerColor = containerColor,
+        inputFieldColors = SearchBarDefaults.inputFieldColors(
+            focusedContainerColor = searchBarColor,
+            unfocusedContainerColor = searchBarColor,
+            disabledContainerColor = searchBarColor,
+        ),
+        dividerColor = dividerColor,
+    )
 
     DockedSearchBar(
         inputField = {
@@ -99,6 +113,7 @@ fun NoteSearchBar(
                         )
                     }
                 },
+                colors = searchBarColors.inputFieldColors,
                 modifier = Modifier
                     .pointerInput(Unit) {
                         awaitPointerEventScope {
@@ -118,9 +133,11 @@ fun NoteSearchBar(
                     },
             )
         },
+        colors = searchBarColors,
         expanded = true,
         onExpandedChange = {},
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth(),
     ) {
         Row(
             modifier = Modifier
@@ -136,7 +153,7 @@ fun NoteSearchBar(
                     Icon(
                         Icons.Default.Tag,
                         contentDescription = null,
-                        modifier = Modifier.size(18.dp),
+                        modifier = Modifier.size(SuggestionChipDefaults.IconSize),
                     )
                 },
             )
@@ -147,7 +164,7 @@ fun NoteSearchBar(
                     Icon(
                         Icons.Default.Abc,
                         contentDescription = null,
-                        modifier = Modifier.size(18.dp),
+                        modifier = Modifier.size(SuggestionChipDefaults.IconSize),
                     )
                 },
             )
@@ -158,7 +175,7 @@ fun NoteSearchBar(
                     Icon(
                         Icons.Default.Remove,
                         contentDescription = null,
-                        modifier = Modifier.size(18.dp),
+                        modifier = Modifier.size(SuggestionChipDefaults.IconSize),
                     )
                 },
             )
@@ -198,8 +215,6 @@ fun NoteSearchBar(
 @Composable
 fun NoteDrawerItem(
     name: String,
-    supportingText: String? = null,
-    isPinned: Boolean = false,
     selected: Boolean,
     onClick: () -> Unit,
     onPin: () -> Unit,
@@ -207,6 +222,9 @@ fun NoteDrawerItem(
     onDelete: () -> Unit,
     onShowInfo: () -> Unit,
     onRename: () -> Unit,
+    supportingText: String? = null,
+    isPinned: Boolean = false,
+    containerColor: Color = MaterialTheme.colorScheme.secondaryContainer,
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
     remember { MutableInteractionSource() }
@@ -245,7 +263,7 @@ fun NoteDrawerItem(
                         lineBreak = LineBreak.Paragraph,
                     ),
                     color = if (selected) MaterialTheme.colorScheme.primary
-                    else MaterialTheme.colorScheme.onSurface,
+                    else Color.Unspecified,
                 )
             },
             supportingContent = {
@@ -253,7 +271,7 @@ fun NoteDrawerItem(
                     Text(supportingText)
                 }
             },
-            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+            colors = ListItemDefaults.colors(containerColor = containerColor),
             trailingContent = {
                 TooltipIconButton(
                     onClick = { menuExpanded = true },
@@ -329,8 +347,9 @@ fun NoteDrawerItem(
 @Composable
 fun NoteDrawerItem(
     name: String,
-    supportingText: String? = null,
     onClick: () -> Unit,
+    supportingText: String? = null,
+    containerColor: Color = MaterialTheme.colorScheme.secondaryContainer,
 ) {
     ListItem(
         content = {
@@ -339,7 +358,6 @@ fun NoteDrawerItem(
                 style = LocalTextStyle.current.copy(
                     lineBreak = LineBreak.Paragraph,
                 ),
-                color = MaterialTheme.colorScheme.onSurface,
             )
         },
         supportingContent = {
@@ -347,7 +365,7 @@ fun NoteDrawerItem(
                 Text(supportingText)
             }
         },
-        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+        colors = ListItemDefaults.colors(containerColor = containerColor),
         onClick = onClick,
     )
 }

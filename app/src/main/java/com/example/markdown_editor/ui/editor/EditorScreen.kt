@@ -394,6 +394,7 @@ fun EditorScreen(
                     name = note.name,
                     supportingText = if (!note.tags.isNullOrEmpty()) note.tags.joinToString(", ") else null,
                     onClick = { viewModel.editor.insertNoteLink(note) },
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
                 )
             }
         }

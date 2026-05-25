@@ -31,7 +31,7 @@
     <string name="select_project_folder">Выбрать папку проекта</string>
     <string name="search_notes">Поиск заметок…</string>
     <string name="clear_search">Очистить поиск</string>
-    <string name="no_matches">Ничего не найдено</string>
+    <string name="no_matches">Нет совпадений</string>
     <string name="quick_notes">Заметки</string>
     <string name="open_menu">Открыть меню</string>
     <string name="note_actions">Действия с заметкой</string>
@@ -78,4 +78,10 @@
     <string name="take_photo">Сделать фото</string>
     <string name="failed_to_start_camera">Не удалось запустить камеру</string>
     <string name="failed_to_create_photo_container">Не удалось добавить фото</string>
+    <string name="authentication_failed_please_log_in_again">Аутентификация не удалась. Пожалуйста, войдите снова</string>
+    <string name="network_error_check_internet_connection">Сетевая ошибка. Проверьте подключение к интернету</string>
+    <string name="sync_server_unavailable_try_again_later">Сервис синхронизации недоступен. Попробуйте позже</string>
+    <string name="local_file_error_check_storage_space_and_permissions">Ошибка доступа к файловой системе. Проверьте место на диске и права доступа</string>
+    <string name="sync_data_corrupted_please_reset_sync">Данные синхронизации повреждены. Пожалуйста, перезапустите синхронизацию</string>
+    <string name="cloud_storage_full_free_up_space">Облачное хранилище заполнено. Пожалуйста, освободите место</string>
 </resources>

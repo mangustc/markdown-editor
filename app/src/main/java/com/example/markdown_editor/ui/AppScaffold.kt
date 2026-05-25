@@ -5,7 +5,6 @@ import android.text.format.DateUtils
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.annotation.StringRes
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -154,29 +153,57 @@ fun AppScaffold() {
     val context = LocalContext.current
 
     LaunchedEffect(Unit) {
-        fun showToastById(@StringRes id: Int) {
+        fun toast(message: String) {
             Toast.makeText(
                 context,
-                resources.getString(id),
+                message,
                 Toast.LENGTH_SHORT,
             ).show()
         }
-        appViewModel.toastEvents.collect { notificationEvent ->
-            when (notificationEvent) {
+        appViewModel.toastEvents.collect {
+            when (it) {
                 is NotificationEvent.LinkCopied -> {
-                    showToastById(R.string.link_copied)
+                    toast(resources.getString(R.string.link_copied))
                 }
 
                 is NotificationEvent.FailedToAddPhoto -> {
-                    showToastById(R.string.failed_to_create_photo_container)
+                    toast(resources.getString(R.string.failed_to_create_photo_container))
                 }
 
                 is NotificationEvent.FailedToStartCamera -> {
-                    showToastById(R.string.failed_to_start_camera)
+                    toast(resources.getString(R.string.failed_to_start_camera))
                 }
 
                 is NotificationEvent.NoAppFoundToOpenThisFile -> {
-                    showToastById(R.string.no_app_found_to_open_this_file)
+                    toast(resources.getString(R.string.no_app_found_to_open_this_file))
+                }
+
+                is NotificationEvent.SyncAuthException -> {
+                    toast(context.getString(R.string.authentication_failed_please_log_in_again))
+                }
+
+                is NotificationEvent.SyncNetworkException -> {
+                    toast(context.getString(R.string.network_error_check_internet_connection))
+                }
+
+                is NotificationEvent.SyncServerException -> {
+                    toast(context.getString(R.string.sync_server_unavailable_try_again_later))
+                }
+
+                is NotificationEvent.SyncLocalIoException -> {
+                    toast(context.getString(R.string.local_file_error_check_storage_space_and_permissions))
+                }
+
+                is NotificationEvent.SyncStateException -> {
+                    toast(context.getString(R.string.sync_data_corrupted_please_reset_sync))
+                }
+
+                is NotificationEvent.SyncQuotaException -> {
+                    toast(context.getString(R.string.cloud_storage_full_free_up_space))
+                }
+
+                is NotificationEvent.CustomMessage -> {
+                    toast(it.message)
                 }
             }
         }

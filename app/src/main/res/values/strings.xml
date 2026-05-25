@@ -77,4 +77,10 @@
     <string name="take_photo">Take photo</string>
     <string name="failed_to_start_camera">Failed to start camera</string>
     <string name="failed_to_create_photo_container">Failed to add photo</string>
+    <string name="authentication_failed_please_log_in_again">Authentication failed. Please log in again</string>
+    <string name="network_error_check_internet_connection">Network error. Check internet connection</string>
+    <string name="sync_server_unavailable_try_again_later">Sync server unavailable. Try again later</string>
+    <string name="local_file_error_check_storage_space_and_permissions">Local storage access error. Check storage space and permissions</string>
+    <string name="sync_data_corrupted_please_reset_sync">Sync data corrupted. Please restart sync</string>
+    <string name="cloud_storage_full_free_up_space">Cloud storage is full. Please free up space</string>
 </resources>

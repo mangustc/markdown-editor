@@ -32,6 +32,7 @@ class SyncEngine(
                 json.decodeFromString<SyncManifest>(it.decodeToString())
             }
         }.getOrNull() ?: SyncManifest.EMPTY
+
         val remoteManifest = loadRemoteManifest(remoteRoot) ?: SyncManifest.EMPTY
 
         if (localManifest.files == baseManifest.files && remoteManifest.files == baseManifest.files) {
@@ -50,13 +51,22 @@ class SyncEngine(
         }
 
         val errors = mutableListOf<String>()
+        var criticalError: Exception? = null
+
         actions.forEach { action ->
             try {
                 execute(action, project, remoteRoot)
+            } catch (e: SyncException) {
+                // Auth/Quota/Network abort entire sync.
+                criticalError = e
+                return@forEach
             } catch (e: Exception) {
+                // File-specific error. Log, continue others.
                 errors.add("${action::class.simpleName}(${actionPath(action)}): ${e.message}")
             }
         }
+
+        criticalError?.let { throw it }
 
         val finalLocalState = snapshotLocal(project)
         val manifest = SyncManifest(
@@ -89,13 +99,13 @@ class SyncEngine(
         when (action) {
             is Upload, is ConflictUpload -> {
                 val bytes = readLocalFile(project, actionPath(action))
-                    ?: throw IllegalStateException("Local file missing for upload")
+                    ?: throw SyncLocalIoException()
                 provider.uploadFile(remotePath, bytes)
             }
 
             is Download -> {
                 val bytes = provider.downloadFile(remotePath)
-                    ?: throw IllegalStateException("Remote file missing for download")
+                    ?: throw SyncStateException()
                 writeLocalFile(project, actionPath(action), bytes)
             }
 
@@ -133,18 +143,22 @@ class SyncEngine(
 
     private fun readLocalFile(project: Project, relativePath: String): ByteArray? {
         val uri = project.getFileUri(relativePath)
-        return context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+        return try {
+            context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+        } catch (e: Exception) {
+            null
+        }
     }
 
     private fun writeLocalFile(project: Project, relativePath: String, bytes: ByteArray) {
         val parts = relativePath.split("/")
         val root = DocumentFile.fromTreeUri(context, project.uri)
-            ?: throw IllegalStateException("Cannot access project root")
+            ?: throw SyncLocalIoException()
 
         var dir = root
         for (segment in parts.dropLast(1)) {
             dir = dir.findFile(segment) ?: dir.createDirectory(segment)
-                    ?: throw IllegalStateException("Cannot create directory $segment")
+                    ?: throw SyncLocalIoException()
         }
 
         val fileName = parts.last()
@@ -154,17 +168,23 @@ class SyncEngine(
         } else {
             val mime = if (fileName.endsWith(".md")) "text/markdown" else "application/octet-stream"
             dir.createFile(mime, fileName)?.uri
-                ?: throw IllegalStateException("Cannot create file $fileName")
+                ?: throw SyncLocalIoException()
         }
 
-        context.contentResolver.openOutputStream(targetUri, "wt")
-            ?.use { it.write(bytes) }
+        try {
+            context.contentResolver.openOutputStream(targetUri, "wt")
+                ?.use { it.write(bytes) }
+        } catch (_: Exception) {
+            throw SyncLocalIoException()
+        }
     }
 
     private fun deleteLocalFile(project: Project, relativePath: String) {
         val uri = project.getFileUri(relativePath)
         val file = DocumentFile.fromSingleUri(context, uri)
-        if (file?.exists() == true) file.delete()
+        if (file?.exists() == true) {
+            if (!file.delete()) throw SyncLocalIoException()
+        }
     }
 
     private suspend fun loadRemoteManifest(remoteRoot: String): SyncManifest? {
@@ -197,12 +217,4 @@ class SyncEngine(
         is ConflictUpload -> action.relativePath
         is NoOp -> action.relativePath
     }
-}
-
-data class SyncResult(
-    val actions: List<SyncFileAction>,
-    val newManifest: SyncManifest,
-    val errors: List<String> = emptyList(),
-) {
-    val hasErrors get() = errors.isNotEmpty()
 }

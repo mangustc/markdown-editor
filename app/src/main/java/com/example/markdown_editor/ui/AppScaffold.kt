@@ -179,27 +179,27 @@ fun AppScaffold() {
                 }
 
                 is NotificationEvent.SyncAuthException -> {
-                    toast(context.getString(R.string.authentication_failed_please_log_in_again))
+                    toast(resources.getString(R.string.authentication_failed_please_log_in_again))
                 }
 
                 is NotificationEvent.SyncNetworkException -> {
-                    toast(context.getString(R.string.network_error_check_internet_connection))
+                    toast(resources.getString(R.string.network_error_check_internet_connection))
                 }
 
                 is NotificationEvent.SyncServerException -> {
-                    toast(context.getString(R.string.sync_server_unavailable_try_again_later))
+                    toast(resources.getString(R.string.sync_server_unavailable_try_again_later))
                 }
 
                 is NotificationEvent.SyncLocalIoException -> {
-                    toast(context.getString(R.string.local_file_error_check_storage_space_and_permissions))
+                    toast(resources.getString(R.string.local_file_error_check_storage_space_and_permissions))
                 }
 
                 is NotificationEvent.SyncStateException -> {
-                    toast(context.getString(R.string.sync_data_corrupted_please_reset_sync))
+                    toast(resources.getString(R.string.sync_data_corrupted_please_reset_sync))
                 }
 
                 is NotificationEvent.SyncQuotaException -> {
-                    toast(context.getString(R.string.cloud_storage_full_free_up_space))
+                    toast(resources.getString(R.string.cloud_storage_full_free_up_space))
                 }
 
                 is NotificationEvent.CustomMessage -> {

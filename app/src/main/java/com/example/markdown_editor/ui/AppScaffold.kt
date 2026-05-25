@@ -85,6 +85,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -145,6 +146,8 @@ fun AppScaffold() {
 
     val clipboard = LocalClipboard.current
     val resources = LocalResources.current
+    val focusManager = LocalFocusManager.current
+
     val isSelectionMode = uiState.messengerSelectedNotes.isNotEmpty()
 
     ModalNavigationDrawer(
@@ -258,7 +261,7 @@ fun AppScaffold() {
                             onSearchEvent = appViewModel.drawer::onSearchEvent,
                             reverseLayout = reverseLayout,
                             paddingValues = PaddingValues(horizontal = 16.dp),
-                        ) { note, clearFocus ->
+                        ) { note ->
                             NoteDrawerItem(
                                 name = note.name,
                                 supportingText = if (!note.tags.isNullOrEmpty()) note.tags.joinToString(
@@ -266,7 +269,7 @@ fun AppScaffold() {
                                 ) else null,
                                 isPinned = note.tags?.contains("pinned") == true,
                                 selected = note.uri == uiState.activeNote?.uri,
-                                onClick = { appViewModel.drawer.onNoteSelected(note); clearFocus() },
+                                onClick = { appViewModel.drawer.onNoteSelected(note); focusManager.clearFocus() },
                                 onOpen = { appViewModel.drawer.onNoteSelected(note) },
                                 onDelete = { appViewModel.drawer.showNoteDeleteDialog(note) },
                                 onRename = { appViewModel.drawer.showNoteRenameDialog(note) },

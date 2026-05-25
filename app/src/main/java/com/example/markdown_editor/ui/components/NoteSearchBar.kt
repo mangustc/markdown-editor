@@ -56,6 +56,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
@@ -82,9 +84,11 @@ fun NoteSearchBar(
     onSearchEvent: (SearchEvent) -> Unit,
     paddingValues: PaddingValues = PaddingValues(),
     reverseLayout: Boolean = false,
-    itemContent: @Composable (note: Note, clearFocus: () -> Unit) -> Unit,
+    itemContent: @Composable (note: Note) -> Unit,
 ) {
     val focusManager = LocalFocusManager.current
+    val focusRequester = remember { FocusRequester() }
+
     var isUserClick by remember { mutableStateOf(false) }
 
     val searchResultsTextComponent = @Composable {
@@ -113,7 +117,7 @@ fun NoteSearchBar(
             ) { index ->
                 val note = searchResults[index]
                 if (note != null) {
-                    itemContent(note) { focusManager.clearFocus() }
+                    itemContent(note)
                 }
             }
         }
@@ -128,7 +132,11 @@ fun NoteSearchBar(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             SuggestionChip(
-                onClick = { onSearchEvent(SearchEvent.AppendTag) },
+                onClick = {
+                    onSearchEvent(SearchEvent.AppendTag)
+                    isUserClick = true
+                    focusRequester.requestFocus()
+                },
                 label = { Text("tag:") },
                 icon = {
                     Icon(
@@ -139,7 +147,11 @@ fun NoteSearchBar(
                 },
             )
             SuggestionChip(
-                onClick = { onSearchEvent(SearchEvent.AppendName) },
+                onClick = {
+                    onSearchEvent(SearchEvent.AppendName)
+                    isUserClick = true
+                    focusRequester.requestFocus()
+                },
                 label = { Text("name:") },
                 icon = {
                     Icon(
@@ -186,6 +198,7 @@ fun NoteSearchBar(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(paddingValues)
+                .focusRequester(focusRequester)
                 .pointerInput(Unit) {
                     awaitPointerEventScope {
                         while (true) {

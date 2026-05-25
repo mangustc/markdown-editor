@@ -217,6 +217,8 @@ fun EditorScreen(
         }
     }
 
+    val focusManager = LocalFocusManager.current
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -432,13 +434,13 @@ fun EditorScreen(
                         onSearchEvent = viewModel.editor::onLinkSearchEvent,
                         paddingValues = PaddingValues(horizontal = 16.dp),
                         reverseLayout = true,
-                    ) { note, clearFocus ->
+                    ) { note ->
                         NoteDrawerItem(
                             name = note.name,
                             supportingText = if (!note.tags.isNullOrEmpty()) note.tags.joinToString(
                                 ", ",
                             ) else null,
-                            onClick = { viewModel.editor.insertNoteLink(note); clearFocus() },
+                            onClick = { viewModel.editor.insertNoteLink(note); focusManager.clearFocus() },
                         )
                     }
                 }

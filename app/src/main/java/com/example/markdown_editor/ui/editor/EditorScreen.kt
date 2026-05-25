@@ -195,6 +195,7 @@ fun EditorScreen(
     var toolbarHeightDp by remember { mutableStateOf(0.dp) }
     val imeBottom = WindowInsets.ime.getBottom(density)
     LaunchedEffect(viewModel.editor.state.selection, layoutState, toolbarHeightDp, imeBottom) {
+        if (uiState.isViewingMode) return@LaunchedEffect
         val layoutResult = layoutState?.layout ?: return@LaunchedEffect
         val selection = viewModel.editor.state.selection
         if (selection.collapsed) {

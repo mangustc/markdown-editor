@@ -8,6 +8,8 @@ import com.example.markdown_editor.data.sync.SyncNetworkException
 import com.example.markdown_editor.data.sync.SyncQuotaException
 import com.example.markdown_editor.data.sync.SyncServerException
 import com.example.markdown_editor.data.sync.SyncStateException
+import com.example.markdown_editor.data.sync.ValidSyncProvider
+import com.example.markdown_editor.data.sync.YandexDiskProvider
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -18,7 +20,8 @@ class ProjectActions(
         deps.scope.launch {
             val project = deps.projectRepo.buildProject(uri)
             deps.projectRepo.saveProject(project)
-            deps.uiState.update { it.copy(project = project) }
+            val settings = deps.settingsRepo.getSettings(project)
+            deps.uiState.update { it.copy(project = project, settings = settings) }
             deps.projectRepo.syncDatabase(project)
             deps.globalActions.updateNoteLists()
         }
@@ -28,7 +31,8 @@ class ProjectActions(
         deps.scope.launch {
             val project = deps.projectRepo.loadSavedProject()
             if (project != null) {
-                deps.uiState.update { it.copy(project = project) }
+                val settings = deps.settingsRepo.getSettings(project)
+                deps.uiState.update { it.copy(project = project, settings = settings) }
                 deps.globalActions.updateNoteLists()
             } else {
                 deps.uiState.update { it.copy(messengerIsLoading = false) }
@@ -39,9 +43,19 @@ class ProjectActions(
     fun syncNow() {
         if (deps.uiState.value.isSyncInProgress) return
         val project = deps.uiState.value.project ?: return
+        val settings = deps.uiState.value.settings ?: return
         deps.scope.launch {
             deps.uiState.update { it.copy(isSyncInProgress = true) }
             try {
+                when (settings.syncProvider) {
+                    ValidSyncProvider.YANDEX -> {
+                        deps.syncRepo.configure(YandexDiskProvider(oauthToken = settings.yandexOauthToken))
+                    }
+
+                    ValidSyncProvider.NONE -> {
+                        return@launch
+                    }
+                }
                 deps.syncRepo.sync(project)
             } catch (_: SyncAuthException) {
                 deps.globalActions.showToast(NotificationEvent.SyncAuthException)

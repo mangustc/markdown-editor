@@ -105,6 +105,8 @@ import androidx.navigation.toRoute
 import androidx.paging.compose.collectAsLazyPagingItems
 import com.example.markdown_editor.R
 import com.example.markdown_editor.data.model.Note
+import com.example.markdown_editor.data.model.Settings
+import com.example.markdown_editor.data.sync.ValidSyncProvider
 import com.example.markdown_editor.domain.navigation.EditorDestination
 import com.example.markdown_editor.domain.navigation.MessengerDestination
 import com.example.markdown_editor.domain.viewmodel.AppViewModel
@@ -537,13 +539,12 @@ fun AppScaffold() {
             note = uiState.dialogNote!!,
         )
     }
-    if (uiState.isSettingsDialogVisible) {
+    if (uiState.isSettingsDialogVisible && uiState.settings != null) {
         SettingsDialog(
             onDismissRequest = { appViewModel.settings.dismissSettings() },
-            syncProvider = uiState.syncProvider,
-            onSyncProviderChange = { appViewModel.settings.setSyncProvider(it) },
-            oauthToken = uiState.yandexOauthToken,
-            onOauthTokenChange = { appViewModel.settings.setYandexOauthToken(it) },
+            settings = uiState.settings!!,
+            onSyncProviderChange = appViewModel.settings::setSyncProvider,
+            onOauthTokenChange = appViewModel.settings::setYandexOauthToken,
         )
     }
 }
@@ -727,12 +728,12 @@ fun ShowInfoDialog(
 @Composable
 fun SettingsDialog(
     onDismissRequest: () -> Unit,
-    syncProvider: String,
-    onSyncProviderChange: (String) -> Unit,
-    oauthToken: String,
+    settings: Settings,
+    onSyncProviderChange: (ValidSyncProvider) -> Unit,
     onOauthTokenChange: (String) -> Unit,
 ) {
     var dropdownExpanded by remember { mutableStateOf(false) }
+    val currentProviderString = getStringFromValidSyncProvider(settings.syncProvider)
 
     Dialog(
         onDismissRequest = onDismissRequest,
@@ -780,7 +781,7 @@ fun SettingsDialog(
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         OutlinedTextField(
-                            value = syncProvider,
+                            value = currentProviderString,
                             onValueChange = {},
                             readOnly = true,
                             label = { Text("Provider") },
@@ -799,20 +800,20 @@ fun SettingsDialog(
                                 shapes = MenuDefaults.groupShape(index = 0, count = 1),
                             ) {
                                 DropdownMenuItem(
-                                    selected = syncProvider == "None",
-                                    text = { Text("None") },
+                                    selected = settings.syncProvider == ValidSyncProvider.NONE,
+                                    text = { Text(getStringFromValidSyncProvider(ValidSyncProvider.NONE)) },
                                     shapes = MenuDefaults.itemShape(index = 0, count = 2),
                                     onClick = {
-                                        onSyncProviderChange("None")
+                                        onSyncProviderChange(ValidSyncProvider.NONE)
                                         dropdownExpanded = false
                                     },
                                 )
                                 DropdownMenuItem(
-                                    selected = syncProvider == "Yandex Disk",
-                                    text = { Text("Yandex Disk") },
+                                    selected = settings.syncProvider == ValidSyncProvider.YANDEX,
+                                    text = { Text(getStringFromValidSyncProvider(ValidSyncProvider.YANDEX)) },
                                     shapes = MenuDefaults.itemShape(index = 1, count = 2),
                                     onClick = {
-                                        onSyncProviderChange("Yandex Disk")
+                                        onSyncProviderChange(ValidSyncProvider.YANDEX)
                                         dropdownExpanded = false
                                     },
                                 )
@@ -820,8 +821,8 @@ fun SettingsDialog(
                         }
                     }
 
-                    when (syncProvider) {
-                        "Yandex Disk" -> {
+                    when (settings.syncProvider) {
+                        ValidSyncProvider.YANDEX -> {
                             Button(
                                 onClick = {},
                                 modifier = Modifier.fillMaxWidth(),
@@ -830,15 +831,25 @@ fun SettingsDialog(
                             }
 
                             OutlinedTextField(
-                                value = oauthToken,
+                                value = settings.yandexOauthToken,
                                 onValueChange = onOauthTokenChange,
                                 label = { Text("Oauth Token") },
                                 modifier = Modifier.fillMaxWidth(),
                             )
                         }
+
+                        ValidSyncProvider.NONE -> {}
                     }
                 }
             }
         }
     }
+}
+
+fun getStringFromValidSyncProvider(provider: ValidSyncProvider): String {
+    val result = when (provider) {
+        ValidSyncProvider.NONE -> "None"
+        ValidSyncProvider.YANDEX -> "Yandex"
+    }
+    return result
 }

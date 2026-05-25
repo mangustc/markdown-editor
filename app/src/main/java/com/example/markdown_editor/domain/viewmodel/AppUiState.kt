@@ -4,6 +4,7 @@ import com.example.markdown_editor.data.model.FrontMatter
 import com.example.markdown_editor.data.model.LinkPreview
 import com.example.markdown_editor.data.model.Note
 import com.example.markdown_editor.data.model.Project
+import com.example.markdown_editor.data.model.Settings
 import com.example.markdown_editor.domain.messenger.Attachment
 
 data class AppUiState(
@@ -11,6 +12,8 @@ data class AppUiState(
     val error: String? = null,
     val activeNote: Note? = null,
     val allProjectTags: List<String> = emptyList(),
+    val isSyncInProgress: Boolean = false,
+    val settings: Settings? = null,
 
     val isCreateNoteDialogVisible: Boolean = false,
     val newNoteNameInput: String = "",
@@ -37,9 +40,6 @@ data class AppUiState(
     val messengerSelectedNotes: Set<String> = emptySet(),
 
     val isSettingsDialogVisible: Boolean = false,
-    val syncProvider: String = "None",
-    val yandexOauthToken: String = "",
-    val isSyncInProgress: Boolean = false,
 
     val pendingIntentAttachments: List<Attachment> = emptyList(),
 )

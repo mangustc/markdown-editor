@@ -8,6 +8,7 @@ import com.example.markdown_editor.data.database.NoteDb
 import com.example.markdown_editor.data.repository.LinkPreviewRepositoryImpl
 import com.example.markdown_editor.data.repository.NoteRepositoryImpl
 import com.example.markdown_editor.data.repository.ProjectRepositoryImpl
+import com.example.markdown_editor.data.repository.SettingsRepositoryImpl
 import com.example.markdown_editor.data.sync.SyncRepositoryImpl
 import com.example.markdown_editor.domain.messenger.Attachment
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -34,7 +35,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application), Ap
     )
     private val noteRepo = NoteRepositoryImpl(context = application)
     private val linkRepo = LinkPreviewRepositoryImpl(linkPreviewDao = db.linkPreviewDao())
-    private val syncRepo = SyncRepositoryImpl(context = application)   // NEW
+    private val syncRepo = SyncRepositoryImpl(context = application)
+    private val settingsRepo = SettingsRepositoryImpl(context = application)
 
     private val _uiState = MutableStateFlow(AppUiState())
     val uiState: StateFlow<AppUiState> = _uiState.asStateFlow()
@@ -46,7 +48,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application), Ap
             projectRepo = projectRepo,
             noteRepo = noteRepo,
             linkRepo = linkRepo,
-            syncRepo = syncRepo,               // NEW
+            syncRepo = syncRepo,
+            settingsRepo = settingsRepo,
             uiState = _uiState,
             globalActions = this,
         )
@@ -57,7 +60,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application), Ap
 
     init {
         project.loadSavedProject()
-        settings.loadSavedSettings()
     }
 
     val drawer = DrawerActions(deps)

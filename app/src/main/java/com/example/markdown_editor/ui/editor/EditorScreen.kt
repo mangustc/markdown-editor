@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -58,6 +59,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.InputChip
 import androidx.compose.material3.InputChipDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SearchBarDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -383,19 +385,23 @@ fun EditorScreen(
 
     if (uiState.isLinkNoteDialogVisible) {
         Dialog(onDismissRequest = { viewModel.editor.dismissLinkNoteDialog() }) {
-            val linkSearchResults =
-                viewModel.editor.linkSearchResultsPaged.collectAsLazyPagingItems()
-            NoteSearchBar(
-                searchState = viewModel.editor.linkSearchState,
-                searchResults = linkSearchResults,
-                onSearchEvent = viewModel.editor::onLinkSearchEvent,
-            ) { note ->
-                NoteDrawerItem(
-                    name = note.name,
-                    supportingText = if (!note.tags.isNullOrEmpty()) note.tags.joinToString(", ") else null,
-                    onClick = { viewModel.editor.insertNoteLink(note) },
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                )
+            Surface(
+                shape = SearchBarDefaults.dockedShape,
+            ) {
+                val linkSearchResults =
+                    viewModel.editor.linkSearchResultsPaged.collectAsLazyPagingItems()
+                NoteSearchBar(
+                    searchState = viewModel.editor.linkSearchState,
+                    searchResults = linkSearchResults,
+                    onSearchEvent = viewModel.editor::onLinkSearchEvent,
+                    paddingValues = PaddingValues(16.dp),
+                ) { note, clearFocus ->
+                    NoteDrawerItem(
+                        name = note.name,
+                        supportingText = if (!note.tags.isNullOrEmpty()) note.tags.joinToString(", ") else null,
+                        onClick = { viewModel.editor.insertNoteLink(note); clearFocus() },
+                    )
+                }
             }
         }
     }

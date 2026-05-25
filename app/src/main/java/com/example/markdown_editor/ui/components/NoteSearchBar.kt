@@ -6,11 +6,14 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.plus
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
@@ -32,16 +35,17 @@ import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.DriveFileRenameOutline
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.PushPin
-import androidx.compose.material3.DockedSearchBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuDefaults
-import androidx.compose.material3.SearchBarDefaults
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.SuggestionChipDefaults
 import androidx.compose.material3.Text
@@ -76,74 +80,51 @@ fun NoteSearchBar(
     searchState: TextFieldState,
     searchResults: LazyPagingItems<Note>,
     onSearchEvent: (SearchEvent) -> Unit,
-    modifier: Modifier = Modifier,
-    containerColor: Color = MaterialTheme.colorScheme.secondaryContainer,
-    searchBarColor: Color = containerColor,
-    dividerColor: Color = SearchBarDefaults.colors().dividerColor,
-    itemContent: @Composable (Note) -> Unit,
+    paddingValues: PaddingValues = PaddingValues(),
+    reverseLayout: Boolean = false,
+    itemContent: @Composable (note: Note, clearFocus: () -> Unit) -> Unit,
 ) {
     val focusManager = LocalFocusManager.current
     var isUserClick by remember { mutableStateOf(false) }
 
-    val searchBarColors = SearchBarDefaults.colors(
-        containerColor = containerColor,
-        inputFieldColors = SearchBarDefaults.inputFieldColors(
-            focusedContainerColor = searchBarColor,
-            unfocusedContainerColor = searchBarColor,
-            disabledContainerColor = searchBarColor,
-        ),
-        dividerColor = dividerColor,
-    )
+    val searchResultsTextComponent = @Composable {
+        Text(
+            text = if (searchResults.itemCount == 0) stringResource(R.string.no_matches) else "Found: ${searchResults.itemCount}",
+            modifier = Modifier.padding(
+                paddingValues = paddingValues + if (reverseLayout) PaddingValues(top = 8.dp) else PaddingValues(
+                    bottom = 8.dp,
+                ),
+            ),
+            style = MaterialTheme.typography.bodyMedium,
+        )
+    }
+    val searchResultsComponent = @Composable {
+        val searchListState = rememberLazyListState()
+        LazyColumn(
+            state = searchListState,
+            reverseLayout = reverseLayout,
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+            modifier = Modifier
+                .scrollbar(searchListState),
+        ) {
+            items(
+                count = searchResults.itemCount,
+                key = searchResults.itemKey { it.uri.toString() },
+            ) { index ->
+                val note = searchResults[index]
+                if (note != null) {
+                    itemContent(note) { focusManager.clearFocus() }
+                }
+            }
+        }
+    }
 
-    DockedSearchBar(
-        inputField = {
-            SearchBarDefaults.InputField(
-                state = searchState,
-                onSearch = {},
-                expanded = true,
-                onExpandedChange = {},
-                placeholder = { Text(stringResource(R.string.search_notes)) },
-                leadingIcon = { Icon(Icons.Default.Search, null) },
-                trailingIcon = {
-                    if (searchState.text.isNotEmpty()) {
-                        TooltipIconButton(
-                            onClick = { onSearchEvent(SearchEvent.Clear) },
-                            icon = Icons.Default.Close,
-                            tooltip = stringResource(R.string.clear_search),
-                        )
-                    }
-                },
-                colors = searchBarColors.inputFieldColors,
-                modifier = Modifier
-                    .pointerInput(Unit) {
-                        awaitPointerEventScope {
-                            while (true) {
-                                awaitFirstDown(requireUnconsumed = false)
-                                isUserClick = true
-                            }
-                        }
-                    }
-                    .onFocusChanged { focusState ->
-                        if (focusState.isFocused && !isUserClick) {
-                            focusManager.clearFocus()
-                        }
-                        if (!focusState.isFocused) {
-                            isUserClick = false
-                        }
-                    },
-            )
-        },
-        colors = searchBarColors,
-        expanded = true,
-        onExpandedChange = {},
-        modifier = modifier
-            .fillMaxWidth(),
-    ) {
+    val suggestionsComponent = @Composable {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .horizontalScroll(rememberScrollState())
-                .padding(horizontal = 8.dp, vertical = 4.dp),
+                .padding(paddingValues)
+                .horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             SuggestionChip(
@@ -180,29 +161,67 @@ fun NoteSearchBar(
                 },
             )
         }
-        if (searchResults.itemCount == 0) {
-            Text(
-                stringResource(R.string.no_matches),
-                modifier = Modifier.padding(16.dp),
-                style = MaterialTheme.typography.bodyMedium,
-            )
-        } else {
-            val searchListState = rememberLazyListState()
-            LazyColumn(
-                state = searchListState,
-                verticalArrangement = Arrangement.spacedBy(2.dp),
-                modifier = Modifier.scrollbar(searchListState),
-            ) {
-                items(
-                    count = searchResults.itemCount,
-                    key = searchResults.itemKey { it.uri.toString() },
-                ) { index ->
-                    val note = searchResults[index]
-                    if (note != null) {
-                        itemContent(note)
+    }
+
+    val inputFieldComponent = @Composable {
+        OutlinedTextField(
+            state = searchState,
+            placeholder = { Text(stringResource(R.string.search_notes)) },
+            leadingIcon = { Icon(Icons.Default.Search, null) },
+            trailingIcon = {
+                if (searchState.text.isNotEmpty()) {
+                    TooltipIconButton(
+                        onClick = { onSearchEvent(SearchEvent.Clear) },
+                        icon = Icons.Default.Close,
+                        tooltip = stringResource(R.string.clear_search),
+                    )
+                }
+            },
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedContainerColor = Color.Transparent,
+                unfocusedContainerColor = Color.Transparent,
+                unfocusedBorderColor = Color.Transparent,
+                focusedBorderColor = Color.Transparent,
+            ),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(paddingValues)
+                .pointerInput(Unit) {
+                    awaitPointerEventScope {
+                        while (true) {
+                            awaitFirstDown(requireUnconsumed = false)
+                            isUserClick = true
+                        }
                     }
                 }
-            }
+                .onFocusChanged { focusState ->
+                    if (focusState.isFocused && !isUserClick) {
+                        focusManager.clearFocus()
+                    }
+                    if (!focusState.isFocused) {
+                        isUserClick = false
+                    }
+                },
+        )
+    }
+
+    Column {
+        if (reverseLayout) {
+            searchResultsComponent()
+            Spacer(modifier = Modifier.height(8.dp))
+            HorizontalDivider()
+            searchResultsTextComponent()
+            suggestionsComponent()
+            HorizontalDivider(modifier = Modifier.padding(paddingValues))
+            inputFieldComponent()
+        } else {
+            inputFieldComponent()
+            HorizontalDivider(modifier = Modifier.padding(paddingValues))
+            suggestionsComponent()
+            searchResultsTextComponent()
+            HorizontalDivider()
+            Spacer(modifier = Modifier.height(8.dp))
+            searchResultsComponent()
         }
     }
 }
@@ -224,7 +243,7 @@ fun NoteDrawerItem(
     onRename: () -> Unit,
     supportingText: String? = null,
     isPinned: Boolean = false,
-    containerColor: Color = MaterialTheme.colorScheme.secondaryContainer,
+    containerColor: Color = Color.Transparent,
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
     remember { MutableInteractionSource() }
@@ -349,7 +368,7 @@ fun NoteDrawerItem(
     name: String,
     onClick: () -> Unit,
     supportingText: String? = null,
-    containerColor: Color = MaterialTheme.colorScheme.secondaryContainer,
+    containerColor: Color = Color.Unspecified,
 ) {
     ListItem(
         content = {

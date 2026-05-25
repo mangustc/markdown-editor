@@ -7,6 +7,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -17,6 +18,7 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Abc
@@ -45,7 +47,8 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
@@ -151,16 +154,14 @@ fun AppScaffold() {
             ModalDrawerSheet(
                 modifier = Modifier.imePadding(),
             ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxHeight()
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
+                val reverseLayout = false
+                val projectComponent = @Composable {
                     Row(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
                     ) {
                         SplitButtonLayout(
                             leadingButton = {
@@ -249,15 +250,16 @@ fun AppScaffold() {
                             }
                         }
                     }
+                }
+                val searchComponent = @Composable {
                     if (uiState.project != null) {
                         NoteSearchBar(
                             searchState = appViewModel.drawer.searchState,
                             searchResults = searchResults,
                             onSearchEvent = appViewModel.drawer::onSearchEvent,
-//                            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-//                            searchBarColor = MaterialTheme.colorScheme.secondaryContainer,
-//                            dividerColor = Color.Transparent
-                        ) { note ->
+                            reverseLayout = reverseLayout,
+                            paddingValues = PaddingValues(horizontal = 16.dp),
+                        ) { note, clearFocus ->
                             NoteDrawerItem(
                                 name = note.name,
                                 supportingText = if (!note.tags.isNullOrEmpty()) note.tags.joinToString(
@@ -265,7 +267,7 @@ fun AppScaffold() {
                                 ) else null,
                                 isPinned = note.tags?.contains("pinned") == true,
                                 selected = note.uri == uiState.activeNote?.uri,
-                                onClick = { appViewModel.drawer.onNoteSelected(note) },
+                                onClick = { appViewModel.drawer.onNoteSelected(note); clearFocus() },
                                 onOpen = { appViewModel.drawer.onNoteSelected(note) },
                                 onDelete = { appViewModel.drawer.showNoteDeleteDialog(note) },
                                 onRename = { appViewModel.drawer.showNoteRenameDialog(note) },
@@ -273,29 +275,46 @@ fun AppScaffold() {
                                 onPin = { appViewModel.drawer.onPinNote(note) },
                             )
                         }
-
-                        Spacer(Modifier.weight(1f))
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.End,
-                        ) {
-                            ExtendedFloatingActionButton(
-                                onClick = { appViewModel.drawer.showCreateNoteDialog() },
-                                icon = {
-                                    Icon(
-                                        Icons.Default.Create,
-                                        contentDescription = stringResource(R.string.create_new_note),
-                                    )
-                                },
-                                text = { Text(text = stringResource(R.string.create_new_note)) },
-                            )
-                        }
                     } else {
                         Text(
                             stringResource(R.string.open_a_project_folder_to_see_notes),
                             style = MaterialTheme.typography.bodyMedium,
                         )
+                    }
+                }
+                val createNoteComponent = @Composable {
+                    FilledTonalButton(
+                        onClick = { appViewModel.drawer.showCreateNoteDialog() },
+                        modifier = Modifier
+                            .padding(horizontal = 16.dp)
+                            .fillMaxWidth(),
+                    ) {
+                        Icon(
+                            Icons.Default.Create,
+                            contentDescription = stringResource(R.string.create_new_note),
+                        )
+                        Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
+                        Text(text = stringResource(R.string.create_new_note))
+                    }
+                }
+
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .padding(vertical = 8.dp),
+                ) {
+                    if (reverseLayout) {
+                        projectComponent()
+                        HorizontalDivider()
+                        Spacer(Modifier.weight(1f))
+                        searchComponent()
+                    } else {
+                        searchComponent()
+                        Spacer(Modifier.weight(1f))
+                        HorizontalDivider()
+                        createNoteComponent()
+                        projectComponent()
                     }
                 }
             }

@@ -127,6 +127,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.zIndex
+import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.compose.collectAsLazyPagingItems
@@ -164,7 +165,7 @@ fun MessengerScreen(viewModel: AppViewModel) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     val attachments = remember { mutableStateListOf<Attachment>() }
-    var imagePagerState by remember { mutableStateOf<Pair<Int, List<Uri>>?>(null) }
+    var imagePagerState by remember { mutableStateOf<Pair<Int, List<String>>?>(null) }
     var carouselExpanded by rememberSaveable { mutableStateOf(false) }
     val resources = LocalResources.current
     val context = LocalContext.current
@@ -178,7 +179,7 @@ fun MessengerScreen(viewModel: AppViewModel) {
             )
             attachments.add(
                 Attachment(
-                    uri = uri,
+                    path = uri.toString(),
                     displayName = displayName,
                     type = AttachmentType.PENDING_IMAGE,
                 ),
@@ -193,7 +194,7 @@ fun MessengerScreen(viewModel: AppViewModel) {
                 DocumentFile.fromSingleUri(context, uri)?.name ?: resources.getString(R.string.file)
             attachments.add(
                 Attachment(
-                    uri = uri,
+                    path = uri.toString(),
                     displayName = displayName,
                     type = AttachmentType.PENDING_FILE,
                 ),
@@ -210,7 +211,7 @@ fun MessengerScreen(viewModel: AppViewModel) {
                 val displayName = "Camera_${System.currentTimeMillis()}.jpg"
                 attachments.add(
                     Attachment(
-                        uri = uri,
+                        path = uri.toString(),
                         displayName = displayName,
                         type = AttachmentType.PENDING_IMAGE,
                     ),
@@ -323,20 +324,20 @@ fun MessengerScreen(viewModel: AppViewModel) {
                 onImageClick = { clickedUri ->
                     val imageUris = attachments.mapNotNull {
                         when (it.type) {
-                            AttachmentType.IMAGE, AttachmentType.PENDING_IMAGE -> it.uri
+                            AttachmentType.IMAGE, AttachmentType.PENDING_IMAGE -> it.path
                             else -> null
                         }
                     }
-                    val index = imageUris.indexOf(clickedUri)
+                    val index = imageUris.indexOf(clickedUri.toString())
                     imagePagerState = index to imageUris
                 },
                 onFileClick = { uri ->
                     try {
                         val mime =
-                            context.contentResolver.getType(uri)
+                            context.contentResolver.getType(uri.toUri())
                                 ?: "*/*"
                         val intent = Intent(Intent.ACTION_VIEW).apply {
-                            setDataAndType(uri, mime)
+                            setDataAndType(uri.toUri(), mime)
                             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                         }
                         context.startActivity(
@@ -528,8 +529,8 @@ private fun MessengerInputBar(
     onTakePhoto: () -> Unit,
     onAddImage: () -> Unit,
     onAddFile: () -> Unit,
-    onImageClick: (Uri) -> Unit,
-    onFileClick: (Uri) -> Unit,
+    onImageClick: (String) -> Unit,
+    onFileClick: (String) -> Unit,
     onRemoveAttachment: (Int) -> Unit,
     onSend: () -> Unit,
     carouselExpanded: Boolean,
@@ -673,8 +674,8 @@ private fun AttachmentCarouselStrip(
     onAddImage: (() -> Unit)? = null,
     onAddFile: (() -> Unit)? = null,
     onRemove: ((Int) -> Unit)? = null,
-    onImageClick: (Uri) -> Unit,
-    onFileClick: (Uri) -> Unit,
+    onImageClick: (String) -> Unit,
+    onFileClick: (String) -> Unit,
     isViewing: Boolean,
 ) {
     val state = rememberCarouselState { if (isViewing) attachments.size else attachments.size + 3 }
@@ -694,7 +695,7 @@ private fun AttachmentCarouselStrip(
             if (!isViewing && page == 0) {
                 AttachmentIconButton(
                     attachment = Attachment(
-                        uri = Uri.EMPTY,
+                        path = Uri.EMPTY.toString(),
                         displayName = resources.getString(R.string.take_photo),
                         type = AttachmentType.FILE,
                     ),
@@ -704,7 +705,7 @@ private fun AttachmentCarouselStrip(
             } else if (!isViewing && page == 1) {
                 AttachmentIconButton(
                     attachment = Attachment(
-                        uri = Uri.EMPTY,
+                        path = Uri.EMPTY.toString(),
                         displayName = resources.getString(R.string.attach_images),
                         type = AttachmentType.FILE,
                     ),
@@ -714,7 +715,7 @@ private fun AttachmentCarouselStrip(
             } else if (!isViewing && page == 2) {
                 AttachmentIconButton(
                     attachment = Attachment(
-                        uri = Uri.EMPTY,
+                        path = Uri.EMPTY.toString(),
                         displayName = resources.getString(R.string.attach_files),
                         type = AttachmentType.FILE,
                     ),
@@ -727,11 +728,11 @@ private fun AttachmentCarouselStrip(
                     attachment = attachment,
                     onClick = when (attachment.type) {
                         AttachmentType.IMAGE, AttachmentType.PENDING_IMAGE -> {
-                            { onImageClick(attachment.uri) }
+                            { onImageClick(attachment.path) }
                         }
 
                         AttachmentType.FILE, AttachmentType.PENDING_FILE -> {
-                            { onFileClick(attachment.uri) }
+                            { onFileClick(attachment.path) }
                         }
                     },
                 )
@@ -790,7 +791,7 @@ private fun AttachmentIconButton(
             when (attachment.type) {
                 AttachmentType.IMAGE, AttachmentType.PENDING_IMAGE ->
                     AsyncImage(
-                        model = attachment.uri,
+                        model = attachment.path,
                         contentDescription = null,
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize(),
@@ -831,7 +832,7 @@ private fun MessageBubble(
     onNoteSelected: (Note) -> Unit,
     onDeleteNote: (Note) -> Unit,
     onEditNote: (Note, String, List<Attachment>) -> Unit,
-    onImageClick: (Int, List<Uri>) -> Unit,
+    onImageClick: (Int, List<String>) -> Unit,
     onPinNote: (Note) -> Unit,
     isPinned: Boolean = false,
     isSelected: Boolean = false,
@@ -958,7 +959,7 @@ private fun MessageBubble(
                                 onImageClick = { clickedUri ->
                                     val imageUris = parsedBody.attachments.mapNotNull {
                                         when (it.type) {
-                                            AttachmentType.IMAGE, AttachmentType.PENDING_IMAGE -> it.uri
+                                            AttachmentType.IMAGE, AttachmentType.PENDING_IMAGE -> it.path
                                             else -> null
                                         }
                                     }
@@ -966,9 +967,9 @@ private fun MessageBubble(
                                 },
                                 onFileClick = { uri ->
                                     try {
-                                        val mime = context.contentResolver.getType(uri) ?: "*/*"
+                                        val mime = context.contentResolver.getType(uri.toUri()) ?: "*/*"
                                         val intent = Intent(Intent.ACTION_VIEW).apply {
-                                            setDataAndType(uri, mime)
+                                            setDataAndType(uri.toUri(), mime)
                                             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                                         }
                                         context.startActivity(Intent.createChooser(intent, null))
@@ -1239,7 +1240,7 @@ private fun DateHeader(timestamp: Long) {
 @Composable
 private fun FullScreenImageCarouselDialog(
     initialIndex: Int,
-    uris: List<Uri>,
+    uris: List<String>,
     onDismiss: () -> Unit,
 ) {
     val state = rememberCarouselState(initialItem = initialIndex) { uris.size }
@@ -1266,7 +1267,7 @@ private fun FullScreenImageCarouselDialog(
                 modifier = Modifier.fillMaxSize(),
             ) { page ->
                 ZoomableImage(
-                    uri = uris[page],
+                    uri = uris[page].toUri(),
                     onTap = { showTopPanel = !showTopPanel },
                 )
             }

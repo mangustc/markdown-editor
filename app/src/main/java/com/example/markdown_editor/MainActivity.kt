@@ -73,7 +73,7 @@ class MainActivity : ComponentActivity() {
             val resolvedMime = contentResolver.getType(uri) ?: mimeType
             val displayName = DocumentFile.fromSingleUri(this, uri)?.name ?: "File"
             Attachment(
-                uri = uri,
+                path = uri.toString(),
                 displayName = displayName,
                 type = if (resolvedMime.startsWith("image/")) AttachmentType.PENDING_IMAGE else AttachmentType.PENDING_FILE,
             )

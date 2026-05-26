@@ -133,12 +133,12 @@ class MessengerActions(
                 attachments.forEach { attachment ->
                     when (attachment.type) {
                         AttachmentType.PENDING_IMAGE -> {
-                            val path = deps.projectRepo.copyToAssets(project, attachment.uri)
+                            val path = deps.projectRepo.copyToAssets(project, attachment.path.toUri())
                             append("\n![image](<$path>)")
                         }
 
                         AttachmentType.PENDING_FILE -> {
-                            val path = deps.projectRepo.copyToAssets(project, attachment.uri)
+                            val path = deps.projectRepo.copyToAssets(project, attachment.path.toUri())
                             val label = attachment.displayName
                                 .replace("[", "\\[")
                                 .replace("]", "\\]")
@@ -146,14 +146,14 @@ class MessengerActions(
                         }
 
                         AttachmentType.IMAGE -> {
-                            if (isEditedNote) append("\n![image](<${attachment.path}>)")
+                            if (isEditedNote) append("\n![image](<${attachment.relativePath}>)")
                         }
 
                         AttachmentType.FILE -> {
                             val label = attachment.displayName
                                 .replace("[", "\\[")
                                 .replace("]", "\\]")
-                            if (isEditedNote) append("\n[${label}](<${attachment.path}>)")
+                            if (isEditedNote) append("\n[${label}](<${attachment.relativePath}>)")
                         }
                     }
                 }

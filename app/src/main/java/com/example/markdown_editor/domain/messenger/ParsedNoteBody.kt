@@ -17,9 +17,9 @@ data class ParsedNoteBody(
 
             val imageAttachments = spans.filterIsInstance<SpanInfo.Image>().map { span ->
                 Attachment(
-                    uri = project.getFileUri(span.payload),
+                    path = project.getFileUri(span.payload).toString(),
                     displayName = span.payload,
-                    path = span.payload,
+                    relativePath = span.payload,
                     type = AttachmentType.IMAGE,
                 )
             }
@@ -27,9 +27,9 @@ data class ParsedNoteBody(
             val fileAttachments = spans.filterIsInstance<SpanInfo.Link>().mapNotNull { span ->
                 if (span.linkType != SpanInfo.Link.LinkType.FILE) return@mapNotNull null
                 Attachment(
-                    uri = project.getFileUri(span.payload),
+                    path = project.getFileUri(span.payload).toString(),
                     displayName = span.label,
-                    path = span.payload,
+                    relativePath = span.payload,
                     type = AttachmentType.FILE,
                 )
             }

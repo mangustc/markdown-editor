@@ -328,7 +328,7 @@ fun MessengerScreen(viewModel: AppViewModel) {
                             else -> null
                         }
                     }
-                    val index = imageUris.indexOf(clickedUri.toString())
+                    val index = imageUris.indexOf(clickedUri)
                     imagePagerState = index to imageUris
                 },
                 onFileClick = { uri ->

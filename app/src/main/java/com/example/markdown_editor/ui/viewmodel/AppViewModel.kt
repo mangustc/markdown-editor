@@ -1,4 +1,4 @@
-package com.example.markdown_editor.domain.viewmodel
+package com.example.markdown_editor.ui.viewmodel
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
@@ -11,16 +11,16 @@ import com.example.markdown_editor.data.repository.ProjectRepositoryImpl
 import com.example.markdown_editor.data.repository.SettingsRepositoryImpl
 import com.example.markdown_editor.data.sync.SyncRepositoryImpl
 import com.example.markdown_editor.domain.messenger.Attachment
-import com.example.markdown_editor.domain.viewmodel.actions.DrawerActions
-import com.example.markdown_editor.domain.viewmodel.actions.EditorActions
-import com.example.markdown_editor.domain.viewmodel.actions.MessengerActions
-import com.example.markdown_editor.domain.viewmodel.actions.ProjectActions
-import com.example.markdown_editor.domain.viewmodel.actions.SettingsActions
-import com.example.markdown_editor.domain.viewmodel.events.AppEvent
-import com.example.markdown_editor.domain.viewmodel.events.ClipboardEvent
-import com.example.markdown_editor.domain.viewmodel.events.FocusEvent
-import com.example.markdown_editor.domain.viewmodel.events.NavigationEvent
-import com.example.markdown_editor.domain.viewmodel.events.NotificationEvent
+import com.example.markdown_editor.ui.viewmodel.actions.DrawerActions
+import com.example.markdown_editor.ui.viewmodel.actions.EditorActions
+import com.example.markdown_editor.ui.viewmodel.actions.MessengerActions
+import com.example.markdown_editor.ui.viewmodel.actions.ProjectActions
+import com.example.markdown_editor.ui.viewmodel.actions.SettingsActions
+import com.example.markdown_editor.ui.viewmodel.events.AppEvent
+import com.example.markdown_editor.ui.viewmodel.events.ClipboardEvent
+import com.example.markdown_editor.ui.viewmodel.events.FocusEvent
+import com.example.markdown_editor.ui.viewmodel.events.NavigationEvent
+import com.example.markdown_editor.ui.viewmodel.events.NotificationEvent
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow

@@ -1,4 +1,4 @@
-package com.example.markdown_editor.domain.viewmodel.events
+package com.example.markdown_editor.ui.viewmodel.events
 
 import android.net.Uri
 import com.example.markdown_editor.data.model.Note

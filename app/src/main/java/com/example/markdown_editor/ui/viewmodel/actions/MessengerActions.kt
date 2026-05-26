@@ -1,4 +1,4 @@
-package com.example.markdown_editor.domain.viewmodel.actions
+package com.example.markdown_editor.ui.viewmodel.actions
 
 import androidx.core.net.toUri
 import androidx.paging.PagingData
@@ -10,7 +10,7 @@ import com.example.markdown_editor.data.model.SortBy
 import com.example.markdown_editor.domain.markdown.MarkdownParser
 import com.example.markdown_editor.domain.messenger.Attachment
 import com.example.markdown_editor.domain.messenger.AttachmentType
-import com.example.markdown_editor.domain.viewmodel.AppDeps
+import com.example.markdown_editor.ui.viewmodel.AppDeps
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow

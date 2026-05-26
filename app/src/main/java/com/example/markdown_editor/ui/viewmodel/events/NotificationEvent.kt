@@ -1,4 +1,4 @@
-package com.example.markdown_editor.domain.viewmodel.events
+package com.example.markdown_editor.ui.viewmodel.events
 
 sealed interface NotificationEvent : AppEvent {
     data class CustomMessage(val message: String) : NotificationEvent

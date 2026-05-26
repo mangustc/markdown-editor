@@ -93,17 +93,17 @@ import com.example.markdown_editor.R
 import com.example.markdown_editor.data.model.Note
 import com.example.markdown_editor.domain.navigation.EditorDestination
 import com.example.markdown_editor.domain.navigation.MessengerDestination
-import com.example.markdown_editor.domain.viewmodel.AppViewModel
-import com.example.markdown_editor.domain.viewmodel.events.ClipboardEvent
-import com.example.markdown_editor.domain.viewmodel.events.FocusEvent
-import com.example.markdown_editor.domain.viewmodel.events.NavigationEvent
-import com.example.markdown_editor.domain.viewmodel.events.NotificationEvent
 import com.example.markdown_editor.ui.components.NoteDrawerItem
 import com.example.markdown_editor.ui.components.NoteSearchBar
 import com.example.markdown_editor.ui.components.TooltipIconButton
 import com.example.markdown_editor.ui.editor.EditorScreen
 import com.example.markdown_editor.ui.messenger.MessengerScreen
 import com.example.markdown_editor.ui.settings.SettingsDialog
+import com.example.markdown_editor.ui.viewmodel.AppViewModel
+import com.example.markdown_editor.ui.viewmodel.events.ClipboardEvent
+import com.example.markdown_editor.ui.viewmodel.events.FocusEvent
+import com.example.markdown_editor.ui.viewmodel.events.NavigationEvent
+import com.example.markdown_editor.ui.viewmodel.events.NotificationEvent
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)

@@ -1,4 +1,4 @@
-package com.example.markdown_editor.domain.viewmodel.actions
+package com.example.markdown_editor.ui.viewmodel.actions
 
 import android.net.Uri
 import android.util.Log
@@ -10,8 +10,8 @@ import com.example.markdown_editor.data.sync.SyncServerException
 import com.example.markdown_editor.data.sync.SyncStateException
 import com.example.markdown_editor.data.sync.ValidSyncProvider
 import com.example.markdown_editor.data.sync.YandexDiskProvider
-import com.example.markdown_editor.domain.viewmodel.AppDeps
-import com.example.markdown_editor.domain.viewmodel.events.NotificationEvent
+import com.example.markdown_editor.ui.viewmodel.AppDeps
+import com.example.markdown_editor.ui.viewmodel.events.NotificationEvent
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 

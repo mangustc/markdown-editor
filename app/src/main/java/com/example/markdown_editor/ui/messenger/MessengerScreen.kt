@@ -143,13 +143,13 @@ import com.example.markdown_editor.domain.messenger.Attachment
 import com.example.markdown_editor.domain.messenger.AttachmentType
 import com.example.markdown_editor.domain.messenger.LinkPreviewFetcher
 import com.example.markdown_editor.domain.messenger.ParsedNoteBody
-import com.example.markdown_editor.domain.viewmodel.AppViewModel
-import com.example.markdown_editor.domain.viewmodel.events.NotificationEvent
 import com.example.markdown_editor.ui.components.MenuPopup
 import com.example.markdown_editor.ui.components.MenuPopupGroup
 import com.example.markdown_editor.ui.components.MenuPopupItem
 import com.example.markdown_editor.ui.components.TooltipIconButton
 import com.example.markdown_editor.ui.util.scrollbar
+import com.example.markdown_editor.ui.viewmodel.AppViewModel
+import com.example.markdown_editor.ui.viewmodel.events.NotificationEvent
 import kotlinx.coroutines.launch
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient

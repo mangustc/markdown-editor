@@ -1,6 +1,5 @@
-package com.example.markdown_editor.domain.viewmodel
+package com.example.markdown_editor.ui.viewmodel
 
-import android.content.Context
 import com.example.markdown_editor.data.repository.LinkPreviewRepository
 import com.example.markdown_editor.data.repository.NoteRepository
 import com.example.markdown_editor.data.repository.ProjectRepository

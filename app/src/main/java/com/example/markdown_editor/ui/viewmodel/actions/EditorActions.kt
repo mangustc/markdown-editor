@@ -1,4 +1,4 @@
-package com.example.markdown_editor.domain.viewmodel.actions
+package com.example.markdown_editor.ui.viewmodel.actions
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.text.input.TextFieldState
@@ -16,8 +16,8 @@ import com.example.markdown_editor.data.model.SearchQuery
 import com.example.markdown_editor.domain.editor.EditorEvent
 import com.example.markdown_editor.domain.markdown.SpanInfo
 import com.example.markdown_editor.domain.navigation.SearchEvent
-import com.example.markdown_editor.domain.viewmodel.AppDeps
-import com.example.markdown_editor.domain.viewmodel.events.NavigationEvent
+import com.example.markdown_editor.ui.viewmodel.AppDeps
+import com.example.markdown_editor.ui.viewmodel.events.NavigationEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview

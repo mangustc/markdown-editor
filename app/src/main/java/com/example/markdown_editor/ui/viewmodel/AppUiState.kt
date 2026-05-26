@@ -1,4 +1,4 @@
-package com.example.markdown_editor.domain.viewmodel
+package com.example.markdown_editor.ui.viewmodel
 
 import com.example.markdown_editor.data.model.FrontMatter
 import com.example.markdown_editor.data.model.LinkPreview

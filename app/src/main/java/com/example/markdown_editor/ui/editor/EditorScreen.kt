@@ -111,10 +111,10 @@ import com.example.markdown_editor.data.model.Project
 import com.example.markdown_editor.domain.editor.EditorEvent
 import com.example.markdown_editor.domain.markdown.MarkdownParser
 import com.example.markdown_editor.domain.markdown.SpanInfo
-import com.example.markdown_editor.domain.viewmodel.AppViewModel
 import com.example.markdown_editor.ui.components.NoteDrawerItem
 import com.example.markdown_editor.ui.components.NoteSearchBar
 import com.example.markdown_editor.ui.components.TooltipIconButton
+import com.example.markdown_editor.ui.viewmodel.AppViewModel
 
 data class EditorLayoutState(
     val layout: TextLayoutResult,

@@ -1,4 +1,4 @@
-package com.example.markdown_editor.domain.navigation
+package com.example.markdown_editor.ui.viewmodel.events
 
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd

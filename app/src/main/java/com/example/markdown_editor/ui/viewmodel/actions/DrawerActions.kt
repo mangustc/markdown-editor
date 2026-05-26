@@ -6,9 +6,9 @@ import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import com.example.markdown_editor.data.model.Note
 import com.example.markdown_editor.data.model.SearchQuery
-import com.example.markdown_editor.domain.navigation.SearchEvent
 import com.example.markdown_editor.ui.viewmodel.AppDeps
 import com.example.markdown_editor.ui.viewmodel.events.NavigationEvent
+import com.example.markdown_editor.ui.viewmodel.events.SearchEvent
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine

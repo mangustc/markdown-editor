@@ -1,6 +1,5 @@
 package com.example.markdown_editor.domain.markdown
 
-import androidx.compose.ui.text.TextRange
 import org.commonmark.node.AbstractVisitor
 import org.commonmark.node.BlockQuote
 import org.commonmark.node.Code
@@ -97,9 +96,9 @@ object MarkdownParser {
 
                         val rightBracketIndex = rawText.indexOf(']')
                         val labelRange = if (firstChildStart != null && lastChildEnd != null) {
-                            TextRange(firstChildStart, lastChildEnd)
+                            SpanInfo.TextRange(firstChildStart, lastChildEnd)
                         } else if (rightBracketIndex != -1) {
-                            TextRange(it.start + 1, it.start + rightBracketIndex)
+                            SpanInfo.TextRange(it.start + 1, it.start + rightBracketIndex)
                         } else {
                             it
                         }
@@ -157,9 +156,9 @@ object MarkdownParser {
                                         }
                                     }
                                 }
-                                TextRange(pStart, pEnd)
+                                SpanInfo.TextRange(pStart, pEnd)
                             } else {
-                                TextRange(it.end, it.end)
+                                SpanInfo.TextRange(it.end, it.end)
                             }
 
                         spans.add(
@@ -212,7 +211,7 @@ object MarkdownParser {
         return offsets.toIntArray()
     }
 
-    private fun Node.bounds(lineOffsets: IntArray): TextRange? {
+    private fun Node.bounds(lineOffsets: IntArray): SpanInfo.TextRange? {
         val srcSpans = sourceSpans
         if (srcSpans.isEmpty()) return null
         val first = srcSpans.first()
@@ -221,6 +220,6 @@ object MarkdownParser {
         val end = lineOffsets.getOrNull(last.lineIndex)?.plus(last.columnIndex + last.length)
             ?: return null
         if (start >= end) return null
-        return TextRange(start, end)
+        return SpanInfo.TextRange(start, end)
     }
 }

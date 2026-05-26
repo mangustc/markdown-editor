@@ -1,9 +1,13 @@
 package com.example.markdown_editor.domain.markdown
 
-import androidx.compose.ui.text.TextRange
 import java.net.URI
 
 sealed interface SpanInfo {
+    data class TextRange(
+        val start: Int,
+        val end: Int,
+    )
+
     val range: TextRange
 
     data class Heading(override val range: TextRange, val level: Int) : SpanInfo

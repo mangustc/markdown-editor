@@ -1,4 +1,4 @@
-package com.example.markdown_editor.domain.editor
+package com.example.markdown_editor.ui.viewmodel.events
 
 import android.net.Uri
 

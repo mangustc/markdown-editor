@@ -108,13 +108,13 @@ import com.example.markdown_editor.R
 import com.example.markdown_editor.data.model.FrontMatter
 import com.example.markdown_editor.data.model.FrontMatterValue
 import com.example.markdown_editor.data.model.Project
-import com.example.markdown_editor.domain.editor.EditorEvent
 import com.example.markdown_editor.domain.markdown.MarkdownParser
 import com.example.markdown_editor.domain.markdown.SpanInfo
 import com.example.markdown_editor.ui.components.NoteDrawerItem
 import com.example.markdown_editor.ui.components.NoteSearchBar
 import com.example.markdown_editor.ui.components.TooltipIconButton
 import com.example.markdown_editor.ui.viewmodel.AppViewModel
+import com.example.markdown_editor.ui.viewmodel.events.EditorEvent
 
 data class EditorLayoutState(
     val layout: TextLayoutResult,

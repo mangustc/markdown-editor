@@ -53,7 +53,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application), Ap
 
     private val deps by lazy {
         AppDeps(
-            context = application,
             scope = viewModelScope,
             projectRepo = projectRepo,
             noteRepo = noteRepo,

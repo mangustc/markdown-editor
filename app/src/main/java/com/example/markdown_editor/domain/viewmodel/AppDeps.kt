@@ -10,7 +10,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 
 class AppDeps(
-    val context: Context,
     val scope: CoroutineScope,
     val projectRepo: ProjectRepository,
     val noteRepo: NoteRepository,

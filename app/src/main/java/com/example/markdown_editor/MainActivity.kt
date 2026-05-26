@@ -15,19 +15,21 @@ import com.example.markdown_editor.domain.messenger.AttachmentType
 import com.example.markdown_editor.ui.AppScaffold
 import com.example.markdown_editor.ui.MarkdowneditorTheme
 import com.example.markdown_editor.ui.viewmodel.AppViewModel
+import org.koin.androidx.viewmodel.ext.android.viewModel
 
 class MainActivity : ComponentActivity() {
+    private val appViewModel: AppViewModel by viewModel()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING)
 
-        val appViewModel = ViewModelProvider(this)[AppViewModel::class.java]
         handleShareIntent(intent, appViewModel)
 
         setContent {
             MarkdowneditorTheme(darkTheme = false) {
-                AppScaffold()
+                AppScaffold(appViewModel = appViewModel)
             }
         }
     }

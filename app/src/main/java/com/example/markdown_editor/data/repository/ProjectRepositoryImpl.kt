@@ -28,11 +28,12 @@ import kotlinx.coroutines.withContext
 class ProjectRepositoryImpl(
     private val context: Context,
     private val noteDao: NoteDao,
+) : ProjectRepository {
     private val prefs: SharedPreferences = context.getSharedPreferences(
         "project_prefs",
         Context.MODE_PRIVATE,
-    ),
-) : ProjectRepository {
+    )
+
     override suspend fun getNotes(
         project: Project,
         query: SearchQuery,

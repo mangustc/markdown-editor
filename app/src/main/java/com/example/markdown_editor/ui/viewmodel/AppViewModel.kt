@@ -3,13 +3,11 @@ package com.example.markdown_editor.ui.viewmodel
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.room.Room
-import com.example.markdown_editor.data.database.NoteDb
-import com.example.markdown_editor.data.repository.LinkPreviewRepositoryImpl
-import com.example.markdown_editor.data.repository.NoteRepositoryImpl
-import com.example.markdown_editor.data.repository.ProjectRepositoryImpl
-import com.example.markdown_editor.data.repository.SettingsRepositoryImpl
-import com.example.markdown_editor.data.sync.SyncRepositoryImpl
+import com.example.markdown_editor.data.repository.LinkPreviewRepository
+import com.example.markdown_editor.data.repository.NoteRepository
+import com.example.markdown_editor.data.repository.ProjectRepository
+import com.example.markdown_editor.data.repository.SettingsRepository
+import com.example.markdown_editor.data.sync.SyncRepository
 import com.example.markdown_editor.domain.messenger.Attachment
 import com.example.markdown_editor.ui.viewmodel.actions.DrawerActions
 import com.example.markdown_editor.ui.viewmodel.actions.EditorActions
@@ -31,23 +29,14 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class AppViewModel(application: Application) : AndroidViewModel(application), AppGlobalActions {
-    private val db = Room.databaseBuilder(
-        application,
-        NoteDb::class.java, "database-notes",
-    )
-        .fallbackToDestructiveMigration(true)
-        .build()
-
-    private val projectRepo = ProjectRepositoryImpl(
-        context = application,
-        noteDao = db.noteDao(),
-    )
-    private val noteRepo = NoteRepositoryImpl(context = application)
-    private val linkRepo = LinkPreviewRepositoryImpl(linkPreviewDao = db.linkPreviewDao())
-    private val syncRepo = SyncRepositoryImpl(context = application)
-    private val settingsRepo = SettingsRepositoryImpl(context = application)
-
+class AppViewModel(
+    application: Application,
+    private val projectRepo: ProjectRepository,
+    private val noteRepo: NoteRepository,
+    private val linkRepo: LinkPreviewRepository,
+    private val syncRepo: SyncRepository,
+    private val settingsRepo: SettingsRepository,
+) : AndroidViewModel(application), AppGlobalActions {
     private val _uiState = MutableStateFlow(AppUiState())
     val uiState: StateFlow<AppUiState> = _uiState.asStateFlow()
 

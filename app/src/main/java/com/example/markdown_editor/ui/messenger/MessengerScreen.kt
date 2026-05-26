@@ -967,7 +967,8 @@ private fun MessageBubble(
                                 },
                                 onFileClick = { uri ->
                                     try {
-                                        val mime = context.contentResolver.getType(uri.toUri()) ?: "*/*"
+                                        val mime =
+                                            context.contentResolver.getType(uri.toUri()) ?: "*/*"
                                         val intent = Intent(Intent.ACTION_VIEW).apply {
                                             setDataAndType(uri.toUri(), mime)
                                             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)

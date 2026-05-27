@@ -33,7 +33,6 @@ class GetMessagesUseCase(
             includeFrontMatter = false,
         )
 
-        // 2. Map the Flow, then map the PagingData inside it
         val mappedFlow: Flow<PagingData<MessageBody>> = notesFlow.map { pagingData ->
             pagingData.map { note ->
                 getMessageBody(input.project, note)

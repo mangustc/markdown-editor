@@ -142,7 +142,6 @@ import com.example.markdown_editor.domain.models.Attachment
 import com.example.markdown_editor.domain.models.FileSystemPath
 import com.example.markdown_editor.domain.models.LinkPreview
 import com.example.markdown_editor.domain.models.MessageBody
-import com.example.markdown_editor.domain.models.Note
 import com.example.markdown_editor.ui.components.MenuPopup
 import com.example.markdown_editor.ui.components.MenuPopupGroup
 import com.example.markdown_editor.ui.components.MenuPopupItem
@@ -239,11 +238,11 @@ fun MessengerScreen(viewModel: AppViewModel) {
     val listState = rememberLazyListState()
     val currentPinnedInfo by remember {
         derivedStateOf {
-            val pinned = uiState.messengerPinnedNotes
+            val pinned = uiState.messengerPinnedMessages
             if (pinned.isEmpty()) return@derivedStateOf null
 
             val pinnedIndicesInList = pinned.map { pinnedNote ->
-                pagedNotes.itemSnapshotList.items.indexOfFirst { it.note.projectFile.relativePath == pinnedNote.projectFile.relativePath }
+                pagedNotes.itemSnapshotList.items.indexOfFirst { it.note.projectFile.relativePath == pinnedNote.note.projectFile.relativePath }
             }
 
             val firstVisible = listState.firstVisibleItemIndex
@@ -404,15 +403,15 @@ fun MessengerScreen(viewModel: AppViewModel) {
 
                 else -> {
                     var pinnedBannerHeightDp by remember { mutableStateOf(0.dp) }
-                    if (uiState.messengerPinnedNotes.isNotEmpty()) {
+                    if (uiState.messengerPinnedMessages.isNotEmpty()) {
                         PinnedMessageBanner(
-                            notes = uiState.messengerPinnedNotes,
+                            notes = uiState.messengerPinnedMessages,
                             currentIndex = currentPinnedInfo ?: 0,
                             onClick = { note ->
                                 scope.launch {
                                     val indexInList =
                                         pagedNotes.itemSnapshotList.items.indexOfFirst {
-                                            it.note.projectFile.relativePath == note.projectFile.relativePath
+                                            it.note.projectFile.relativePath == note.note.projectFile.relativePath
                                         }
                                     if (indexInList != -1) {
                                         listState.animateScrollToItem(indexInList)
@@ -1148,16 +1147,16 @@ private fun MessageBubble(
 
 @Composable
 private fun PinnedMessageBanner(
-    notes: List<Note>,
+    notes: List<MessageBody>,
     currentIndex: Int,
-    onClick: (Note) -> Unit,
+    onClick: (MessageBody) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val currentNote = notes.getOrNull(currentIndex) ?: return
     val resources = LocalResources.current
 
-    val displayPreview = remember(currentNote.body) {
-        val rawBody = currentNote.body ?: ""
+    val displayPreview = remember(currentNote.note.body) {
+        val rawBody = currentNote.note.body ?: ""
         val cleaned = rawBody
             .let { MarkdownParser.stripAttachments(it, MarkdownParser.parse(it)) }
             .lines()

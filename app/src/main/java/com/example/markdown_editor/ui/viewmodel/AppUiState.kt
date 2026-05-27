@@ -3,6 +3,7 @@ package com.example.markdown_editor.ui.viewmodel
 import com.example.markdown_editor.domain.models.Attachment
 import com.example.markdown_editor.domain.models.FrontMatter
 import com.example.markdown_editor.domain.models.LinkPreview
+import com.example.markdown_editor.domain.models.MessageBody
 import com.example.markdown_editor.domain.models.Note
 import com.example.markdown_editor.domain.models.Project
 import com.example.markdown_editor.domain.models.Settings
@@ -36,7 +37,7 @@ data class AppUiState(
     val messengerNewNoteText: String = "",
     val messengerLinkPreviews: Map<String, LinkPreview?> = emptyMap(),
     val messengerEditingNote: Note? = null,
-    val messengerPinnedNotes: List<Note> = emptyList(),
+    val messengerPinnedMessages: List<MessageBody> = emptyList(),
     val messengerSelectedNotes: Set<String> = emptySet(),
 
     val isSettingsDialogVisible: Boolean = false,

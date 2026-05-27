@@ -8,9 +8,10 @@ import com.example.markdown_editor.domain.models.FileSystemPath
 import com.example.markdown_editor.domain.models.MessageBody
 import com.example.markdown_editor.domain.models.Note
 import com.example.markdown_editor.domain.models.Project
-import com.example.markdown_editor.domain.models.SearchQuery
 import com.example.markdown_editor.domain.usecases.messenger.GetMessagesInput
 import com.example.markdown_editor.domain.usecases.messenger.GetMessagesUseCase
+import com.example.markdown_editor.domain.usecases.messenger.GetPinnedMessagesInput
+import com.example.markdown_editor.domain.usecases.messenger.GetPinnedMessagesUseCase
 import com.example.markdown_editor.ui.viewmodel.AppDeps
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -32,6 +33,7 @@ class MessengerActions(
     private val deps: AppDeps,
 ) : KoinComponent {
     private val getMessagesUseCase: GetMessagesUseCase by inject()
+    private val getPinnedMessagesUseCase: GetPinnedMessagesUseCase by inject()
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val notesPaged: Flow<PagingData<MessageBody>> = deps.uiState
@@ -46,18 +48,14 @@ class MessengerActions(
     fun onMessengerOpened(project: Project, afterUpdate: () -> Unit = {}) {
         deps.scope.launch {
             deps.projectRepo.syncDatabase(project)
-            val pinnedNotes = deps.projectRepo.getNotes(
-                project = project,
-                SearchQuery(
-                    tagFilters = listOf("quick-note", "pinned"),
-                    sortBy = SearchQuery.SortBy.CREATED_AT,
+            val pinnedMessages = getPinnedMessagesUseCase(
+                GetPinnedMessagesInput(
+                    project = project,
                 ),
-                includeText = true,
-                includeFrontMatter = false,
             )
             deps.uiState.update {
                 it.copy(
-                    messengerPinnedNotes = pinnedNotes,
+                    messengerPinnedMessages = pinnedMessages,
                     messengerIsLoading = false,
                 )
             }

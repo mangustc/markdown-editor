@@ -2,14 +2,17 @@ package com.example.markdown_editor.ui.viewmodel.actions
 
 import android.net.Uri
 import android.util.Log
-import com.example.markdown_editor.data.sync.SyncAuthException
-import com.example.markdown_editor.data.sync.SyncLocalIoException
-import com.example.markdown_editor.data.sync.SyncNetworkException
-import com.example.markdown_editor.data.sync.SyncQuotaException
-import com.example.markdown_editor.data.sync.SyncServerException
-import com.example.markdown_editor.data.sync.SyncStateException
-import com.example.markdown_editor.data.sync.ValidSyncProvider
-import com.example.markdown_editor.data.sync.YandexDiskProvider
+import com.example.markdown_editor.domain.models.FileSystemPath
+import com.example.markdown_editor.domain.models.Project
+import com.example.markdown_editor.domain.models.RelativePath
+import com.example.markdown_editor.domain.usecases.sync.SyncAuthException
+import com.example.markdown_editor.domain.usecases.sync.SyncLocalIoException
+import com.example.markdown_editor.domain.usecases.sync.SyncNetworkException
+import com.example.markdown_editor.domain.usecases.sync.SyncProjectInput
+import com.example.markdown_editor.domain.usecases.sync.SyncProjectUseCase
+import com.example.markdown_editor.domain.usecases.sync.SyncQuotaException
+import com.example.markdown_editor.domain.usecases.sync.SyncServerException
+import com.example.markdown_editor.domain.usecases.sync.SyncStateException
 import com.example.markdown_editor.ui.viewmodel.AppDeps
 import com.example.markdown_editor.ui.viewmodel.events.NotificationEvent
 import kotlinx.coroutines.flow.update
@@ -17,7 +20,9 @@ import kotlinx.coroutines.launch
 
 class ProjectActions(
     private val deps: AppDeps,
+    private val syncProjectUseCase: SyncProjectUseCase,
 ) {
+
     fun onProjectSelected(uri: Uri) {
         deps.scope.launch {
             val project = deps.projectRepo.buildProject(uri)
@@ -49,18 +54,17 @@ class ProjectActions(
         deps.scope.launch {
             deps.uiState.update { it.copy(isSyncInProgress = true) }
             try {
-                val syncProvider = when (settings.syncProvider) {
-                    ValidSyncProvider.YANDEX -> {
-                        YandexDiskProvider(oauthToken = settings.yandexOauthToken)
-                    }
-
-                    ValidSyncProvider.NONE -> {
-                        deps.globalActions.onEvent(NotificationEvent.SyncServiceIsNone)
-                        deps.uiState.update { it.copy(isSyncInProgress = false) }
-                        return@launch
-                    }
-                }
-                deps.syncRepo.sync(project, syncProvider)
+                syncProjectUseCase(
+                    SyncProjectInput(
+                        project = Project(
+                            name = project.name,
+                            rootFileSystemPath = FileSystemPath(project.uri.toString()),
+                            notesRelativePath = RelativePath(project.notesPath),
+                            assetsRelativePath = RelativePath(project.assetsPath),
+                        ),
+                        settings = settings,
+                    ),
+                )
             } catch (_: SyncAuthException) {
                 deps.globalActions.onEvent(NotificationEvent.SyncAuthException)
             } catch (_: SyncNetworkException) {

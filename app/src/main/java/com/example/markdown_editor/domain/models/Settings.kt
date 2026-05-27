@@ -1,4 +1,4 @@
-package com.example.markdown_editor.data.model
+package com.example.markdown_editor.domain.models
 
 import com.example.markdown_editor.domain.usecases.sync.ValidSyncProvider
 import kotlinx.serialization.Serializable

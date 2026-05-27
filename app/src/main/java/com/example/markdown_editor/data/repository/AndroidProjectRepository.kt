@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.net.Uri
+import android.webkit.MimeTypeMap
 import androidx.core.content.edit
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
@@ -20,12 +21,15 @@ import com.example.markdown_editor.data.model.Note
 import com.example.markdown_editor.data.model.Project
 import com.example.markdown_editor.data.model.SearchQuery
 import com.example.markdown_editor.data.model.SortBy
+import com.example.markdown_editor.domain.models.FileSystemPath
+import com.example.markdown_editor.domain.models.ProjectFile
+import com.example.markdown_editor.domain.models.RelativePath
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 
-class ProjectRepositoryImpl(
+class AndroidProjectRepository(
     private val context: Context,
     private val noteDao: NoteDao,
 ) : ProjectRepository {
@@ -176,6 +180,149 @@ class ProjectRepositoryImpl(
 
     override suspend fun getAllTags(): List<String> = withContext(Dispatchers.IO) {
         noteDao.getAllTags().flatMap { it.split(" ") }.filter { it.isNotBlank() }.distinct()
+    }
+
+    override suspend fun writeFile(
+        project: com.example.markdown_editor.domain.models.Project,
+        relativePath: RelativePath,
+        byteArray: ByteArray,
+        overwrite: Boolean,
+        createParents: Boolean,
+    ): ProjectFile? = withContext(Dispatchers.IO) {
+        val rootUri = project.rootFileSystemPath.value.toUri()
+        val rootDoc = DocumentFile.fromTreeUri(context, rootUri) ?: return@withContext null
+
+        val fileName = relativePath.basename
+        val dirParts = relativePath.dirRelativePath.splitParts()
+
+        var currentDir = rootDoc
+        for (part in dirParts) {
+            if (part.isEmpty()) continue
+            var nextDir = currentDir.findFile(part)
+            if (nextDir == null) {
+                if (createParents) {
+                    nextDir = currentDir.createDirectory(part) ?: return@withContext null
+                } else {
+                    return@withContext null
+                }
+            } else if (!nextDir.isDirectory) {
+                return@withContext null
+            }
+            currentDir = nextDir
+        }
+
+        var fileDoc = currentDir.findFile(fileName)
+        if (fileDoc != null) {
+            if (fileDoc.isDirectory) {
+                return@withContext null
+            }
+            if (!overwrite) {
+                return@withContext null
+            }
+        } else {
+            val extension = fileName.substringAfterLast('.', "")
+            val mimeType = MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension)
+                ?: "application/octet-stream"
+            fileDoc = currentDir.createFile(mimeType, fileName) ?: return@withContext null
+        }
+
+        try {
+            context.contentResolver.openOutputStream(fileDoc.uri, "wt")?.use { outputStream ->
+                outputStream.write(byteArray)
+            } ?: return@withContext null
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return@withContext null
+        }
+
+        ProjectFile(
+            fileSystemPath = FileSystemPath(fileDoc.uri.toString()),
+            relativePath = relativePath,
+        )
+    }
+
+    override suspend fun deleteFile(
+        project: com.example.markdown_editor.domain.models.Project,
+        relativePath: RelativePath,
+    ) = withContext(Dispatchers.IO) {
+        val rootUri = project.rootFileSystemPath.value.toUri()
+        val rootDoc = DocumentFile.fromTreeUri(context, rootUri) ?: return@withContext
+
+        if (relativePath.value.isEmpty()) {
+            return@withContext
+        }
+
+        val targetDoc = findDocumentFile(rootDoc, relativePath) ?: return@withContext
+        try {
+            targetDoc.delete()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    override suspend fun readFile(
+        project: com.example.markdown_editor.domain.models.Project,
+        relativePath: RelativePath,
+    ): ByteArray? = withContext(Dispatchers.IO) {
+        val rootUri = project.rootFileSystemPath.value.toUri()
+        val rootDoc = DocumentFile.fromTreeUri(context, rootUri) ?: return@withContext null
+
+        val targetDoc = findDocumentFile(rootDoc, relativePath) ?: return@withContext null
+
+        if (!targetDoc.isFile) {
+            return@withContext null
+        }
+
+        try {
+            context.contentResolver.openInputStream(targetDoc.uri)?.use { inputStream ->
+                inputStream.readBytes()
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
+    override suspend fun getProjectFilesList(
+        project: com.example.markdown_editor.domain.models.Project,
+    ): List<ProjectFile> = withContext(Dispatchers.IO) {
+        val rootUri = project.rootFileSystemPath.value.toUri()
+        val rootDoc = DocumentFile.fromTreeUri(context, rootUri) ?: return@withContext emptyList()
+
+        val result = mutableListOf<ProjectFile>()
+        walkDocumentTree(rootDoc, RelativePath(""), result)
+        return@withContext result.toList()
+    }
+
+    private fun walkDocumentTree(
+        dir: DocumentFile,
+        prefix: RelativePath,
+        out: MutableList<ProjectFile>,
+    ) {
+        dir.listFiles().forEach { file ->
+            val name = file.name ?: return@forEach
+            val relPath = prefix.appendRelativePath(RelativePath(name))
+            if (file.isDirectory) {
+                walkDocumentTree(file, relPath, out)
+            } else {
+                out.add(
+                    ProjectFile(
+                        fileSystemPath = FileSystemPath(file.uri.toString()),
+                        relativePath = relPath,
+                    ),
+                )
+            }
+        }
+    }
+
+    private fun findDocumentFile(rootDoc: DocumentFile, relativePath: RelativePath): DocumentFile? {
+        val parts = relativePath.splitParts()
+        var current = rootDoc
+        for (part in parts) {
+            if (part.isEmpty()) continue
+            current = current.findFile(part) ?: return null
+        }
+        return current
     }
 
     private fun readFullText(uri: Uri): String =

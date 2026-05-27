@@ -1,4 +1,4 @@
-package com.example.markdown_editor.data.sync
+package com.example.markdown_editor.domain.usecases.sync
 
 sealed class SyncException(val userMessage: String) : Exception(userMessage)
 

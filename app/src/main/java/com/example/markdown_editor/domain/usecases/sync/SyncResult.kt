@@ -1,4 +1,4 @@
-package com.example.markdown_editor.data.sync
+package com.example.markdown_editor.domain.usecases.sync
 
 data class SyncResult(
     val actions: List<SyncFileAction>,

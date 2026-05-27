@@ -7,8 +7,8 @@ import com.example.markdown_editor.data.repository.LinkPreviewRepository
 import com.example.markdown_editor.data.repository.NoteRepository
 import com.example.markdown_editor.data.repository.ProjectRepository
 import com.example.markdown_editor.data.repository.SettingsRepository
-import com.example.markdown_editor.data.sync.SyncRepository
 import com.example.markdown_editor.domain.messenger.Attachment
+import com.example.markdown_editor.domain.usecases.sync.SyncProjectUseCase
 import com.example.markdown_editor.ui.viewmodel.actions.DrawerActions
 import com.example.markdown_editor.ui.viewmodel.actions.EditorActions
 import com.example.markdown_editor.ui.viewmodel.actions.MessengerActions
@@ -34,8 +34,8 @@ class AppViewModel(
     private val projectRepo: ProjectRepository,
     private val noteRepo: NoteRepository,
     private val linkRepo: LinkPreviewRepository,
-    private val syncRepo: SyncRepository,
     private val settingsRepo: SettingsRepository,
+    private val syncProjectUseCase: SyncProjectUseCase,
 ) : AndroidViewModel(application), AppGlobalActions {
     private val _uiState = MutableStateFlow(AppUiState())
     val uiState: StateFlow<AppUiState> = _uiState.asStateFlow()
@@ -46,14 +46,13 @@ class AppViewModel(
             projectRepo = projectRepo,
             noteRepo = noteRepo,
             linkRepo = linkRepo,
-            syncRepo = syncRepo,
             settingsRepo = settingsRepo,
             uiState = _uiState,
             globalActions = this,
         )
     }
 
-    val project = ProjectActions(deps)
+    val project = ProjectActions(deps, syncProjectUseCase)
     val settings = SettingsActions(deps)
 
     init {

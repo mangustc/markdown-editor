@@ -1,5 +1,10 @@
 package com.example.markdown_editor.data.sync
 
+import com.example.markdown_editor.domain.models.RelativePath
+import com.example.markdown_editor.domain.usecases.sync.SyncAuthException
+import com.example.markdown_editor.domain.usecases.sync.SyncNetworkException
+import com.example.markdown_editor.domain.usecases.sync.SyncQuotaException
+import com.example.markdown_editor.domain.usecases.sync.SyncServerException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
@@ -11,10 +16,11 @@ import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import java.io.IOException
+import java.net.URLEncoder
 
-class YandexDiskProvider(
+class YandexSyncRepository(
     private val oauthToken: String,
-) : SyncProvider {
+) : SyncRepository {
 
     override val name: String = "Yandex Disk"
 
@@ -24,20 +30,10 @@ class YandexDiskProvider(
 
     private val client = OkHttpClient()
 
-    override suspend fun listRemoteFiles(remoteRoot: String): Map<String, String> =
+    override suspend fun downloadFile(path: RelativePath): ByteArray? =
         withContext(Dispatchers.IO) {
             runNetwork {
-                val rootPath = "$appFolder/$remoteRoot"
-                val result = mutableMapOf<String, String>()
-                listRecursive(rootPath, remoteRoot, result)
-                result
-            }
-        }
-
-    override suspend fun downloadFile(remotePath: String): ByteArray? =
-        withContext(Dispatchers.IO) {
-            runNetwork {
-                val encodedPath = encode("$appFolder/$remotePath")
+                val encodedPath = encode("$appFolder/$path")
                 val downloadUrl = getDownloadUrl(encodedPath) ?: return@runNetwork null
 
                 val request = Request.Builder()
@@ -54,11 +50,11 @@ class YandexDiskProvider(
             }
         }
 
-    override suspend fun uploadFile(remotePath: String, bytes: ByteArray) =
+    override suspend fun uploadFile(path: RelativePath, bytes: ByteArray) =
         withContext(Dispatchers.IO) {
             runNetwork {
-                val encodedPath = encode("$appFolder/$remotePath")
-                ensureDirectories(remotePath)
+                val encodedPath = encode("$appFolder/$path")
+                ensureDirectories(path)
                 val uploadUrl = getUploadUrl(encodedPath)
 
                 val requestBody = bytes.toRequestBody("application/octet-stream".toMediaType())
@@ -76,9 +72,9 @@ class YandexDiskProvider(
             }
         }
 
-    override suspend fun deleteFile(remotePath: String) = withContext(Dispatchers.IO) {
+    override suspend fun deleteFile(path: RelativePath) = withContext(Dispatchers.IO) {
         runNetwork {
-            val encodedPath = encode("$appFolder/$remotePath")
+            val encodedPath = encode("$appFolder/$path")
             val request = Request.Builder()
                 .url("$baseApi/resources?path=$encodedPath&permanently=true")
                 .header("Authorization", "OAuth $oauthToken")
@@ -88,53 +84,6 @@ class YandexDiskProvider(
             client.newCall(request).execute().use { response ->
                 if (!response.isSuccessful && response.code != 404) {
                     checkError(response)
-                }
-            }
-        }
-    }
-
-    override suspend fun testConnection() = withContext(Dispatchers.IO) {
-        runNetwork {
-            val request = Request.Builder()
-                .url("$baseApi/")
-                .header("Authorization", "OAuth $oauthToken")
-                .get()
-                .build()
-
-            client.newCall(request).execute().use { response ->
-                checkError(response)
-            }
-        }
-    }
-
-    private fun listRecursive(
-        diskPath: String,
-        remoteRoot: String,
-        out: MutableMap<String, String>,
-    ) {
-        val encodedPath = encode(diskPath)
-        val url =
-            "$baseApi/resources?path=$encodedPath&limit=1000&fields=_embedded.items.path,_embedded.items.md5,_embedded.items.type,_embedded.items.name"
-
-        val request = Request.Builder()
-            .url(url)
-            .header("Authorization", "OAuth $oauthToken")
-            .get()
-            .build()
-
-        client.newCall(request).execute().use { response ->
-            checkError(response)
-            val body = response.body.string()
-            val resourceResponse = json.decodeFromString<YaDiskResourceResponse>(body)
-
-            resourceResponse.embedded?.items?.forEach { item ->
-                when (item.type) {
-                    "dir" -> listRecursive(item.path, remoteRoot, out)
-                    "file" -> {
-                        val prefix = "disk:$appFolder/$remoteRoot/"
-                        val rel = item.path.removePrefix(prefix)
-                        item.md5?.let { out[rel] = it }
-                    }
                 }
             }
         }
@@ -169,8 +118,8 @@ class YandexDiskProvider(
         }
     }
 
-    private fun ensureDirectories(relativePath: String) {
-        val parts = relativePath.split("/").dropLast(1)
+    private fun ensureDirectories(relativePath: RelativePath) {
+        val parts = relativePath.dirRelativePath.splitParts()
         var current = appFolder
         parts.forEach { segment ->
             current += "/$segment"
@@ -190,7 +139,7 @@ class YandexDiskProvider(
         }
     }
 
-    private fun encode(s: String) = java.net.URLEncoder.encode(s, "UTF-8")
+    private fun encode(s: String) = URLEncoder.encode(s, "UTF-8")
 
     private inline fun <T> runNetwork(block: () -> T): T {
         return try {

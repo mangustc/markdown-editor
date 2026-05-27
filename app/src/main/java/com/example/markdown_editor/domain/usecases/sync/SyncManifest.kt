@@ -1,5 +1,6 @@
-package com.example.markdown_editor.data.sync
+package com.example.markdown_editor.domain.usecases.sync
 
+import com.example.markdown_editor.domain.models.RelativePath
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -8,7 +9,7 @@ data class SyncManifest(
     val files: Map<String, String> = emptyMap(),
 ) {
     companion object {
-        const val MANIFEST_PATH = ".sync_manifest.json"
+        val MANIFEST_RELATIVE_PATH = RelativePath(".sync_manifest.json")
         val EMPTY = SyncManifest(lastSyncTimestamp = 0L)
     }
 }

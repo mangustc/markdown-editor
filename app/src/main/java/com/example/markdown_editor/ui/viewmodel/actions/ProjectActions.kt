@@ -4,6 +4,8 @@ import com.example.markdown_editor.domain.models.FileSystemPath
 import com.example.markdown_editor.domain.usecases.project.LoadSavedProjectUseCase
 import com.example.markdown_editor.domain.usecases.project.SelectProjectInput
 import com.example.markdown_editor.domain.usecases.project.SelectProjectUseCase
+import com.example.markdown_editor.domain.usecases.settings.GetSettingsInput
+import com.example.markdown_editor.domain.usecases.settings.GetSettingsUseCase
 import com.example.markdown_editor.domain.usecases.sync.SyncProjectInput
 import com.example.markdown_editor.domain.usecases.sync.SyncProjectUseCase
 import com.example.markdown_editor.ui.viewmodel.AppDeps
@@ -18,6 +20,7 @@ class ProjectActions(
     private val syncProjectUseCase: SyncProjectUseCase by inject()
     private val loadSavedProjectUseCase: LoadSavedProjectUseCase by inject()
     private val selectProjectUseCase: SelectProjectUseCase by inject()
+    private val getSettingsUseCase: GetSettingsUseCase by inject()
 
     fun onProjectSelected(projectPath: FileSystemPath) {
         deps.scope.launch {
@@ -26,7 +29,11 @@ class ProjectActions(
                     projectPath = projectPath,
                 ),
             )
-            val settings = deps.settingsRepo.getSettings(project)
+            val settings = getSettingsUseCase(
+                GetSettingsInput(
+                    project = project,
+                ),
+            )
             deps.uiState.update { it.copy(project = project, settings = settings) }
             deps.projectRepo.syncDatabase(project)
             deps.globalActions.updateNoteLists()
@@ -37,7 +44,11 @@ class ProjectActions(
         deps.scope.launch {
             val project = loadSavedProjectUseCase(Unit)
             if (project != null) {
-                val settings = deps.settingsRepo.getSettings(project)
+                val settings = getSettingsUseCase(
+                    GetSettingsInput(
+                        project = project,
+                    ),
+                )
                 deps.uiState.update { it.copy(project = project, settings = settings) }
                 deps.globalActions.updateNoteLists()
             } else {

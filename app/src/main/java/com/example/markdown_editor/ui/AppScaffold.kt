@@ -90,6 +90,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import androidx.paging.compose.collectAsLazyPagingItems
 import com.example.markdown_editor.R
+import com.example.markdown_editor.domain.models.FileSystemPath
 import com.example.markdown_editor.domain.models.Note
 import com.example.markdown_editor.domain.navigation.EditorDestination
 import com.example.markdown_editor.domain.navigation.MessengerDestination
@@ -121,7 +122,7 @@ fun AppScaffold(
     val folderPicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocumentTree(),
     ) { uri ->
-        uri?.let { appViewModel.project.onProjectSelected(it) }
+        uri?.let { appViewModel.project.onProjectSelected(FileSystemPath(it.toString())) }
     }
 
     val clipboard = LocalClipboard.current

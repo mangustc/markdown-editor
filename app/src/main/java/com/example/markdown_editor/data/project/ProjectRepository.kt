@@ -24,9 +24,7 @@ interface ProjectRepository {
         includeFrontMatter: Boolean = true,
     ): Flow<PagingData<Note>>
 
-    fun buildProject(rootUri: FileSystemPath): Project
-    suspend fun saveProject(project: Project)
-    suspend fun loadSavedProject(): Project?
+    fun buildProject(projectPath: FileSystemPath): Project
     suspend fun syncDatabase(project: Project)
     suspend fun copyToAssets(project: Project, assetPath: FileSystemPath): ProjectFile
     suspend fun getAllTags(): List<String>

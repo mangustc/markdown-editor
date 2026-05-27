@@ -6,9 +6,7 @@ import com.example.markdown_editor.data.sync.SyncRepositoryFactory
 import com.example.markdown_editor.domain.models.Project
 import com.example.markdown_editor.domain.models.RelativePath
 import com.example.markdown_editor.domain.models.Settings
-import com.example.markdown_editor.domain.usecases.DomainError
 import com.example.markdown_editor.domain.usecases.UseCase
-import com.example.markdown_editor.domain.usecases.UseCaseResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -25,22 +23,9 @@ class SyncProjectUseCase(
 ) : UseCase<SyncProjectInput, Unit> {
     private val json = Json { ignoreUnknownKeys = true; prettyPrint = true }
 
-    override suspend fun invoke(input: SyncProjectInput): UseCaseResult<Unit> {
-        return try {
-            val syncRepository = syncRepositoryFactory.create(input.settings)
-                ?: return UseCaseResult.Failure(DomainError.Unexpected("No sync provider configured"))
-
-            sync(input.project, syncRepository)
-
-            UseCaseResult.Success(Unit)
-
-        } catch (e: Exception) {
-            UseCaseResult.Failure(
-                DomainError.Unexpected(
-                    e.localizedMessage ?: "Unknown sync error",
-                ),
-            )
-        }
+    override suspend fun invoke(input: SyncProjectInput) {
+        val syncRepository = syncRepositoryFactory.create(input.settings) ?: return
+        sync(input.project, syncRepository)
     }
 
     private suspend fun sync(

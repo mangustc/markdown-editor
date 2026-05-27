@@ -12,7 +12,6 @@ import com.example.markdown_editor.domain.models.RelativePath
 import com.example.markdown_editor.domain.models.SearchQuery
 import com.example.markdown_editor.domain.models.SpanInfo
 import com.example.markdown_editor.domain.usecases.UseCase
-import com.example.markdown_editor.domain.usecases.UseCaseResult
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -25,7 +24,7 @@ private val URL_PATTERN = Regex("""https?://[^\s<>"')]+""")
 class GetMessagesUseCase(
     private val projectRepository: ProjectRepository,
 ) : UseCase<GetMessagesInput, Flow<PagingData<MessageBody>>> {
-    override suspend fun invoke(input: GetMessagesInput): UseCaseResult<Flow<PagingData<MessageBody>>> {
+    override suspend fun invoke(input: GetMessagesInput): Flow<PagingData<MessageBody>> {
         val notesFlow: Flow<PagingData<Note>> = projectRepository.getNotesPaged(
             input.project,
             SearchQuery(tagFilters = listOf("quick-note"), sortBy = SearchQuery.SortBy.CREATED_AT),
@@ -39,7 +38,7 @@ class GetMessagesUseCase(
             }
         }
 
-        return UseCaseResult.Success(mappedFlow)
+        return mappedFlow
     }
 
     private suspend fun getMessageBody(project: Project, note: Note): MessageBody {

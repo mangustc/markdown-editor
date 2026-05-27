@@ -1,12 +1,10 @@
 package com.example.markdown_editor.data.project
 
 import android.content.Context
-import android.content.Intent
 import android.content.SharedPreferences
 import android.net.Uri
 import android.provider.DocumentsContract
 import android.webkit.MimeTypeMap
-import androidx.core.content.edit
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import androidx.paging.Pager
@@ -137,32 +135,16 @@ class AndroidProjectRepository(
         }
     }
 
-    override fun buildProject(rootUri: FileSystemPath): Project {
-        val root = DocumentFile.fromTreeUri(context, rootUri.value.toUri())
+    override fun buildProject(projectPath: FileSystemPath): Project {
+        val root = DocumentFile.fromTreeUri(context, projectPath.value.toUri())
         val notesDir = root?.findFile("notes") ?: root?.createDirectory("notes")
         val assetsDir = root?.findFile("assets") ?: root?.createDirectory("assets")
         return Project(
             name = root?.name ?: "Project",
-            rootFileSystemPath = FileSystemPath(rootUri.toString()),
+            rootFileSystemPath = FileSystemPath(projectPath.toString()),
             notesRelativePath = RelativePath(if (notesDir != null) "notes" else ""),
             assetsRelativePath = RelativePath(if (assetsDir != null) "assets" else ""),
         )
-    }
-
-    override suspend fun saveProject(project: Project) {
-        val projectUri = project.rootFileSystemPath.value.toUri()
-        context.contentResolver.takePersistableUriPermission(
-            projectUri,
-            Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
-        )
-        prefs.edit {
-            putString(KEY_PROJECT_URI, projectUri.toString())
-        }
-    }
-
-    override suspend fun loadSavedProject(): Project? = withContext(Dispatchers.IO) {
-        val uriString = prefs.getString(KEY_PROJECT_URI, null) ?: return@withContext null
-        buildProject(FileSystemPath(uriString))
     }
 
     override suspend fun copyToAssets(project: Project, assetPath: FileSystemPath): ProjectFile =
@@ -422,9 +404,5 @@ class AndroidProjectRepository(
         sb.append("\nORDER BY $pinnedClause$sortClause")
 
         return SimpleSQLiteQuery(sb.toString(), args.toTypedArray())
-    }
-
-    companion object {
-        private const val KEY_PROJECT_URI = "project_uri"
     }
 }

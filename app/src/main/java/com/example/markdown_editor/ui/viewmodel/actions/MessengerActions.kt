@@ -9,7 +9,6 @@ import com.example.markdown_editor.domain.models.MessageBody
 import com.example.markdown_editor.domain.models.Note
 import com.example.markdown_editor.domain.models.Project
 import com.example.markdown_editor.domain.models.SearchQuery
-import com.example.markdown_editor.domain.usecases.UseCaseResult
 import com.example.markdown_editor.domain.usecases.messenger.GetMessagesInput
 import com.example.markdown_editor.domain.usecases.messenger.GetMessagesUseCase
 import com.example.markdown_editor.ui.viewmodel.AppDeps
@@ -40,12 +39,7 @@ class MessengerActions(
         .distinctUntilChanged()
         .flatMapLatest { project ->
             if (project == null) return@flatMapLatest emptyFlow()
-            getMessagesUseCase(GetMessagesInput(project)).let { result ->
-                when (result) {
-                    is UseCaseResult.Success -> result.data
-                    is UseCaseResult.Failure -> emptyFlow()
-                }
-            }
+            getMessagesUseCase(GetMessagesInput(project))
         }
         .cachedIn(deps.scope)
 

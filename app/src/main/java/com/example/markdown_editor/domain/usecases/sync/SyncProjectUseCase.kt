@@ -54,17 +54,17 @@ class SyncProjectUseCase(
             files = snapshotLocal(project),
         )
         val baseManifest = runCatching {
-            projectRepository.readFile(project, SyncManifest.MANIFEST_RELATIVE_PATH)?.let {
+            projectRepository.readFile(project, SyncManifest.ProjectRelativePath)?.let {
                 json.decodeFromString<SyncManifest>(it.decodeToString())
             }
-        }.getOrNull() ?: SyncManifest.EMPTY
+        }.getOrNull() ?: SyncManifest.Empty
 
         val remoteManifest = runCatching {
-            syncRepository.downloadFile(remoteRoot.appendRelativePath(SyncManifest.MANIFEST_RELATIVE_PATH))
+            syncRepository.downloadFile(remoteRoot.appendRelativePath(SyncManifest.ProjectRelativePath))
                 ?.let {
                     json.decodeFromString<SyncManifest>(it.decodeToString())
                 }
-        }.getOrNull() ?: SyncManifest.EMPTY
+        }.getOrNull() ?: SyncManifest.Empty
 
         if (localManifest.files == baseManifest.files && remoteManifest.files == baseManifest.files) {
             return@withContext SyncResult(actions = emptyList(), newManifest = baseManifest)
@@ -127,10 +127,10 @@ class SyncProjectUseCase(
 
         val newManifestBytes = json.encodeToString(manifest).toByteArray()
         syncRepository.uploadFile(
-            remoteRoot.appendRelativePath(SyncManifest.MANIFEST_RELATIVE_PATH),
+            remoteRoot.appendRelativePath(SyncManifest.ProjectRelativePath),
             newManifestBytes,
         )
-        projectRepository.writeFile(project, SyncManifest.MANIFEST_RELATIVE_PATH, newManifestBytes)
+        projectRepository.writeFile(project, SyncManifest.ProjectRelativePath, newManifestBytes)
 
         SyncResult(actions = actions, newManifest = manifest, errors = errors)
     }
@@ -155,7 +155,7 @@ class SyncProjectUseCase(
         project: Project,
     ): Map<String, String> {
         return projectRepository.getProjectFilesList(project).mapNotNull { file ->
-            if (file.relativePath == SyncManifest.MANIFEST_RELATIVE_PATH) {
+            if (file.relativePath == SyncManifest.ProjectRelativePath) {
                 null
             } else {
                 val bytes = projectRepository.readFile(project, file.relativePath)

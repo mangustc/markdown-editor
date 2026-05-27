@@ -9,7 +9,7 @@ data class SyncManifest(
     val files: Map<String, String> = emptyMap(),
 ) {
     companion object {
-        val MANIFEST_RELATIVE_PATH = RelativePath(".sync_manifest.json")
-        val EMPTY = SyncManifest(lastSyncTimestamp = 0L)
+        val ProjectRelativePath = RelativePath(".sync_manifest.json")
+        val Empty = SyncManifest(lastSyncTimestamp = 0L)
     }
 }

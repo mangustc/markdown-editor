@@ -8,6 +8,8 @@ import androidx.core.net.toUri
 import com.example.markdown_editor.domain.models.FileSystemPath
 import com.example.markdown_editor.domain.models.Project
 import com.example.markdown_editor.domain.models.Settings
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 
 class AndroidSettingsRepository(
@@ -15,10 +17,10 @@ class AndroidSettingsRepository(
 ) : SettingsRepository {
     private val json = Json { ignoreUnknownKeys = true; prettyPrint = false }
 
-    override fun setSettings(
+    override suspend fun setSettings(
         project: Project,
         settings: Settings,
-    ): Settings {
+    ): Settings = withContext(Dispatchers.IO) {
         val prefs: SharedPreferences = context.getSharedPreferences(
             "${KEY_PREFIX_PROJECT}${project.name}",
             Context.MODE_PRIVATE,
@@ -27,10 +29,10 @@ class AndroidSettingsRepository(
         prefs.edit {
             putString(KEY_SETTINGS, settingsJson)
         }
-        return settings
+        settings
     }
 
-    override fun getSettings(project: Project): Settings {
+    override suspend fun getSettings(project: Project): Settings = withContext(Dispatchers.IO) {
         val prefs: SharedPreferences = context.getSharedPreferences(
             "${KEY_PREFIX_PROJECT}${project.name}",
             Context.MODE_PRIVATE,
@@ -40,10 +42,10 @@ class AndroidSettingsRepository(
             if (settingsJson == null) return@runCatching null
             json.decodeFromString<Settings>(settingsJson)
         }.getOrNull() ?: Settings.EMPTY
-        return settings
+        settings
     }
 
-    override fun setProjectPath(path: FileSystemPath) {
+    override suspend fun setProjectPath(path: FileSystemPath) = withContext(Dispatchers.IO) {
         val prefs: SharedPreferences = context.getSharedPreferences(
             KEY_PROJECT_URI,
             Context.MODE_PRIVATE,
@@ -58,13 +60,13 @@ class AndroidSettingsRepository(
         }
     }
 
-    override fun getProjectPath(): FileSystemPath? {
+    override suspend fun getProjectPath(): FileSystemPath? = withContext(Dispatchers.IO) {
         val prefs: SharedPreferences = context.getSharedPreferences(
             KEY_PROJECT_URI,
             Context.MODE_PRIVATE,
         )
-        val uriString = prefs.getString(KEY_PROJECT_URI, null) ?: return null
-        return FileSystemPath(uriString)
+        val uriString = prefs.getString(KEY_PROJECT_URI, null) ?: return@withContext null
+        FileSystemPath(uriString)
     }
 
     companion object {

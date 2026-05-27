@@ -63,9 +63,9 @@ class DrawerActions(
     }
 
     fun onCreateNote() {
-        val project = deps.uiState.value.project ?: return
-        val nameToUse = deps.uiState.value.newNoteNameInput
         deps.scope.launch {
+            val project = deps.uiState.value.project ?: return@launch
+            val nameToUse = deps.uiState.value.newNoteNameInput
             val uri = deps.noteRepo.createNote(project, nameToUse)
             if (uri != null) {
                 deps.projectRepo.syncDatabase(project)

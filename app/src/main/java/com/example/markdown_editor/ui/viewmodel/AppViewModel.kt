@@ -81,11 +81,13 @@ class AppViewModel(
         }
     }
 
-    override suspend fun updateNoteLists() {
-        val project = _uiState.value.project ?: return
-        projectRepo.syncDatabase(project)
-        _uiState.update { it.copy(allProjectTags = projectRepo.getAllTags()) }
-        messenger.updateMessages()
+    override fun updateNoteLists() {
+        deps.scope.launch {
+            val project = _uiState.value.project ?: return@launch
+            projectRepo.syncDatabase(project)
+            _uiState.update { it.copy(allProjectTags = projectRepo.getAllTags()) }
+            messenger.updateMessages()
+        }
     }
 
     fun onShareIntent(text: String?, attachments: List<Attachment>) {

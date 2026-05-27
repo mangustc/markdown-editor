@@ -18,7 +18,6 @@ import com.example.markdown_editor.ui.viewmodel.AppDeps
 import com.example.markdown_editor.ui.viewmodel.events.EditorEvent
 import com.example.markdown_editor.ui.viewmodel.events.NavigationEvent
 import com.example.markdown_editor.ui.viewmodel.events.SearchEvent
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.Flow
@@ -30,7 +29,6 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 @OptIn(FlowPreview::class)
 class EditorActions(
@@ -96,8 +94,8 @@ class EditorActions(
             }
 
             is EditorEvent.AttachPhoto -> {
-                val project = deps.uiState.value.project ?: return
-                deps.scope.launch(Dispatchers.IO) {
+                deps.scope.launch {
+                    val project = deps.uiState.value.project ?: return@launch
                     val projectFile =
                         deps.projectRepo.copyToAssets(
                             project = project,
@@ -105,13 +103,13 @@ class EditorActions(
                         )
                     val label = projectFile.relativePath.basename
                     val markdown = "![$label](<${projectFile.relativePath.value}>)"
-                    withContext(Dispatchers.Main) { insertWithOffset(markdown, 0) }
+                    insertWithOffset(markdown, 0)
                 }
             }
 
             is EditorEvent.AttachFile -> {
-                val project = deps.uiState.value.project ?: return
-                deps.scope.launch(Dispatchers.IO) {
+                deps.scope.launch {
+                    val project = deps.uiState.value.project ?: return@launch
                     val projectFile =
                         deps.projectRepo.copyToAssets(
                             project = project,
@@ -119,7 +117,7 @@ class EditorActions(
                         )
                     val label = event.displayName ?: projectFile.relativePath.basename
                     val markdown = "[$label](<${projectFile.relativePath.value}>)"
-                    withContext(Dispatchers.Main) { insertWithOffset(markdown, 0) }
+                    insertWithOffset(markdown, 0)
                 }
             }
 
@@ -156,61 +154,55 @@ class EditorActions(
         }
     }
 
-    fun openLink(span: SpanInfo.Link) = deps.scope.launch {
-        when (val linkType = span.linkType) {
-            SpanInfo.Link.LinkType.NOTE, SpanInfo.Link.LinkType.FILE -> {
-                val project = deps.uiState.value.project ?: return@launch
-                val fileUri = deps.projectRepo.getProjectFile(
-                    project,
-                    RelativePath(span.payload),
-                )?.fileSystemPath ?: return@launch
-                val isNote =
-                    linkType == SpanInfo.Link.LinkType.NOTE && span.payload.startsWith("${project.notesRelativePath.value}/")
+    fun openLink(span: SpanInfo.Link) {
+        deps.scope.launch {
+            when (val linkType = span.linkType) {
+                SpanInfo.Link.LinkType.NOTE, SpanInfo.Link.LinkType.FILE -> {
+                    val project = deps.uiState.value.project ?: return@launch
+                    val fileUri = deps.projectRepo.getProjectFile(
+                        project,
+                        RelativePath(span.payload),
+                    )?.fileSystemPath ?: return@launch
+                    val isNote =
+                        linkType == SpanInfo.Link.LinkType.NOTE && span.payload.startsWith("${project.notesRelativePath.value}/")
 
-                if (isNote) {
-                    deps.scope.launch(Dispatchers.IO) {
+                    if (isNote) {
                         try {
                             val note = deps.noteRepo.getNoteByFileSystemPath(fileUri)
-                            withContext(Dispatchers.Main) {
-                                deps.globalActions.onEvent(NavigationEvent.GoToEditor(note = note))
-                            }
+                            deps.globalActions.onEvent(NavigationEvent.GoToEditor(note = note))
                         } catch (_: Exception) {
-                            withContext(Dispatchers.Main) {
-                                deps.globalActions.onEvent(NavigationEvent.OpenFile(fileUri))
-                            }
+                            deps.globalActions.onEvent(NavigationEvent.OpenFile(fileUri))
                         }
+                    } else {
+                        deps.globalActions.onEvent(NavigationEvent.OpenFile(fileUri))
                     }
-                } else {
-                    deps.globalActions.onEvent(NavigationEvent.OpenFile(fileUri))
                 }
-            }
 
-            SpanInfo.Link.LinkType.HTTP -> {
-                deps.globalActions.onEvent(NavigationEvent.OpenUrl(span.payload))
+                SpanInfo.Link.LinkType.HTTP -> {
+                    deps.globalActions.onEvent(NavigationEvent.OpenUrl(span.payload))
+                }
             }
         }
     }
 
     @OptIn(ExperimentalFoundationApi::class)
     fun onNoteOpened(noteUriString: String) {
-        deps.scope.launch(Dispatchers.IO) {
+        deps.scope.launch {
             try {
                 val note = deps.noteRepo.getNoteByFileSystemPath(FileSystemPath(noteUriString))
                 val text = deps.noteRepo.getNoteText(note)
                 val (frontMatter, body) = FrontMatter.splitFromContent(text)
-                withContext(Dispatchers.Main) {
-                    deps.uiState.update {
-                        it.copy(
-                            activeNote = note,
-                            editorFrontMatter = frontMatter,
-                            isViewingMode = true,
-                        )
-                    }
-                    state.edit {
-                        replace(0, length, body)
-                    }
-                    state.undoState.clearHistory()
+                deps.uiState.update {
+                    it.copy(
+                        activeNote = note,
+                        editorFrontMatter = frontMatter,
+                        isViewingMode = true,
+                    )
                 }
+                state.edit {
+                    replace(0, length, body)
+                }
+                state.undoState.clearHistory()
             } catch (_: Exception) {
                 deps.globalActions.onEvent(NavigationEvent.GoBack)
             }
@@ -283,19 +275,18 @@ class EditorActions(
     }
 
     fun onSave() {
-        val project = deps.uiState.value.project ?: return
-        val note = deps.uiState.value.activeNote ?: return
-        val bodyText = state.text.toString()
-        val fm = deps.uiState.value.editorFrontMatter
+        deps.scope.launch {
+            val project = deps.uiState.value.project ?: return@launch
+            val note = deps.uiState.value.activeNote ?: return@launch
+            val bodyText = state.text.toString()
+            val fm = deps.uiState.value.editorFrontMatter
 
-        val textToSave = if (fm != null && fm.fields.isNotEmpty()) {
-            "$fm\n$bodyText"
-        } else {
-            bodyText
+            val textToSave = if (fm != null && fm.fields.isNotEmpty()) {
+                "$fm\n$bodyText"
+            } else {
+                bodyText
+            }
 
-        }
-
-        deps.scope.launch(Dispatchers.IO) {
             deps.noteRepo.saveNoteText(note, textToSave)
             deps.projectRepo.syncDatabase(project)
             deps.globalActions.updateNoteLists()

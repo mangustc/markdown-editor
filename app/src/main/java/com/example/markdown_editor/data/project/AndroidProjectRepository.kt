@@ -135,17 +135,18 @@ class AndroidProjectRepository(
         }
     }
 
-    override fun buildProject(projectPath: FileSystemPath): Project {
-        val root = DocumentFile.fromTreeUri(context, projectPath.value.toUri())
-        val notesDir = root?.findFile("notes") ?: root?.createDirectory("notes")
-        val assetsDir = root?.findFile("assets") ?: root?.createDirectory("assets")
-        return Project(
-            name = root?.name ?: "Project",
-            rootFileSystemPath = FileSystemPath(projectPath.toString()),
-            notesRelativePath = RelativePath(if (notesDir != null) "notes" else ""),
-            assetsRelativePath = RelativePath(if (assetsDir != null) "assets" else ""),
-        )
-    }
+    override suspend fun buildProject(projectPath: FileSystemPath): Project =
+        withContext(Dispatchers.IO) {
+            val root = DocumentFile.fromTreeUri(context, projectPath.value.toUri())
+            val notesDir = root?.findFile("notes") ?: root?.createDirectory("notes")
+            val assetsDir = root?.findFile("assets") ?: root?.createDirectory("assets")
+            Project(
+                name = root?.name ?: "Project",
+                rootFileSystemPath = FileSystemPath(projectPath.toString()),
+                notesRelativePath = RelativePath(if (notesDir != null) "notes" else ""),
+                assetsRelativePath = RelativePath(if (assetsDir != null) "assets" else ""),
+            )
+        }
 
     override suspend fun copyToAssets(project: Project, assetPath: FileSystemPath): ProjectFile =
         withContext(Dispatchers.IO) {

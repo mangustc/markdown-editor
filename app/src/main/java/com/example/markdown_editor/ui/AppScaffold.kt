@@ -115,7 +115,6 @@ fun AppScaffold(
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val drawerState = rememberDrawerState(DrawerValue.Closed)
-    val scope = rememberCoroutineScope()
 
     val uiState by appViewModel.uiState.collectAsStateWithLifecycle()
 
@@ -130,6 +129,7 @@ fun AppScaffold(
     val focusManager = LocalFocusManager.current
     val context = LocalContext.current
     val uriHandler = LocalUriHandler.current
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
         appViewModel.navigationEvents.collect {
@@ -167,7 +167,7 @@ fun AppScaffold(
     LaunchedEffect(Unit) {
         appViewModel.clipboardEvents.collect {
             when (it) {
-                is ClipboardEvent.Save -> clipboard.setClipEntry(
+                is ClipboardEvent.Copy -> clipboard.setClipEntry(
                     ClipEntry(
                         ClipData.newPlainText(
                             "Markdown Editor",
@@ -444,11 +444,7 @@ fun AppScaffold(
                         } else if (navBackStackEntry?.destination?.route != MessengerDestination::class.qualifiedName) {
                             TooltipIconButton(
                                 onClick = {
-                                    scope.launch {
-                                        appViewModel.onEvent(
-                                            NavigationEvent.GoBack,
-                                        )
-                                    }
+                                    appViewModel.onEvent(NavigationEvent.GoBack)
                                 },
                                 icon = Icons.AutoMirrored.Filled.ArrowBack,
                                 tooltip = stringResource(R.string.go_back),
@@ -457,11 +453,7 @@ fun AppScaffold(
                         } else {
                             TooltipIconButton(
                                 onClick = {
-                                    scope.launch {
-                                        appViewModel.onEvent(
-                                            NavigationEvent.OpenDrawer,
-                                        )
-                                    }
+                                    appViewModel.onEvent(NavigationEvent.OpenDrawer)
                                 },
                                 icon = Icons.Default.Menu,
                                 tooltip = stringResource(R.string.open_menu),
@@ -473,18 +465,7 @@ fun AppScaffold(
                         if (isSelectionMode) {
                             TooltipIconButton(
                                 onClick = {
-                                    scope.launch {
-                                        val text = appViewModel.messenger.getSelectedNotesText()
-                                        clipboard.setClipEntry(
-                                            ClipEntry(
-                                                ClipData.newPlainText(
-                                                    "Notes text",
-                                                    text,
-                                                ),
-                                            ),
-                                        )
-                                        appViewModel.messenger.clearSelection()
-                                    }
+                                    appViewModel.messenger.copySelectedNotesText()
                                 },
                                 icon = Icons.Outlined.ContentCopy,
                                 tooltip = stringResource(R.string.copy_selected),

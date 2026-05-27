@@ -9,6 +9,7 @@ import com.example.markdown_editor.domain.usecases.settings.GetSettingsUseCase
 import com.example.markdown_editor.domain.usecases.sync.SyncProjectInput
 import com.example.markdown_editor.domain.usecases.sync.SyncProjectUseCase
 import com.example.markdown_editor.ui.viewmodel.AppDeps
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.koin.core.component.KoinComponent
@@ -57,11 +58,14 @@ class ProjectActions(
         }
     }
 
+    private var syncJob: Job? = null
     fun syncNow() {
-        if (deps.uiState.value.isSyncInProgress) return
-        val project = deps.uiState.value.project ?: return
-        val settings = deps.uiState.value.settings ?: return
-        deps.scope.launch {
+        if (syncJob?.isActive == true) return
+
+        syncJob = deps.scope.launch {
+            val project = deps.uiState.value.project ?: return@launch
+            val settings = deps.uiState.value.settings ?: return@launch
+
             deps.uiState.update { it.copy(isSyncInProgress = true) }
             syncProjectUseCase(
                 SyncProjectInput(

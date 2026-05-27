@@ -5,6 +5,8 @@ import com.example.markdown_editor.domain.models.MessageBody
 import com.example.markdown_editor.domain.models.Project
 import com.example.markdown_editor.domain.models.SearchQuery
 import com.example.markdown_editor.domain.usecases.UseCase
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 data class GetPinnedMessagesInput(
     val project: Project,
@@ -13,20 +15,21 @@ data class GetPinnedMessagesInput(
 class GetPinnedMessagesUseCase(
     private val projectRepository: ProjectRepository,
 ) : UseCase<GetPinnedMessagesInput, List<MessageBody>> {
-    override suspend fun invoke(input: GetPinnedMessagesInput): List<MessageBody> {
-        return projectRepository.getNotes(
-            input.project,
-            SearchQuery(
-                tagFilters = listOf("quick-note", "pinned"),
-                sortBy = SearchQuery.SortBy.CREATED_AT,
-            ),
-            includeText = true,
-            includeFrontMatter = false,
-        ).map { note ->
-            MessageBody.parse(
-                note = note,
-                getProjectFile = { projectRepository.getProjectFile(input.project, it) },
-            )
+    override suspend fun invoke(input: GetPinnedMessagesInput): List<MessageBody> =
+        withContext(Dispatchers.Default) {
+            projectRepository.getNotes(
+                input.project,
+                SearchQuery(
+                    tagFilters = listOf("quick-note", "pinned"),
+                    sortBy = SearchQuery.SortBy.CREATED_AT,
+                ),
+                includeText = true,
+                includeFrontMatter = false,
+            ).map { note ->
+                MessageBody.parse(
+                    note = note,
+                    getProjectFile = { projectRepository.getProjectFile(input.project, it) },
+                )
+            }
         }
-    }
 }

@@ -159,8 +159,6 @@ class YandexSyncRepository(
         }
     }
 
-    // ── Serialization models ─────────────────────────────────────────────
-
     @Serializable
     private data class YaDiskHref(val href: String)
 

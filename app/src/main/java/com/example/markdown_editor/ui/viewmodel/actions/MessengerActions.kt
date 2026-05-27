@@ -12,7 +12,7 @@ import com.example.markdown_editor.domain.usecases.messenger.GetMessagesUseCase
 import com.example.markdown_editor.domain.usecases.messenger.GetPinnedMessagesInput
 import com.example.markdown_editor.domain.usecases.messenger.GetPinnedMessagesUseCase
 import com.example.markdown_editor.ui.viewmodel.AppDeps
-import kotlinx.coroutines.Dispatchers
+import com.example.markdown_editor.ui.viewmodel.events.ClipboardEvent
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -21,7 +21,6 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import java.time.Instant
@@ -87,18 +86,17 @@ class MessengerActions(
         attachments: List<Attachment> = emptyList(),
         afterUpdate: () -> Unit = {},
     ) {
-        val project = deps.uiState.value.project ?: return
-        val text = deps.uiState.value.messengerNewNoteText.trim()
+        deps.scope.launch {
+            val project = deps.uiState.value.project ?: return@launch
+            val text = deps.uiState.value.messengerNewNoteText.trim()
 
-        // Pre-checks
-        val editNote = if (isEditedNote) {
-            deps.uiState.value.messengerEditingNote ?: return
-        } else {
-            if (text.isBlank() && attachments.isEmpty()) return
-            null
-        }
+            val editNote = if (isEditedNote) {
+                deps.uiState.value.messengerEditingNote ?: return@launch
+            } else {
+                if (text.isBlank() && attachments.isEmpty()) return@launch
+                null
+            }
 
-        deps.scope.launch(Dispatchers.IO) {
             val targetNote = if (isEditedNote) {
                 editNote!!
             } else {
@@ -165,13 +163,11 @@ class MessengerActions(
 
             deps.noteRepo.saveNoteText(targetNote, finalContent)
 
-            withContext(Dispatchers.Main) {
-                deps.uiState.update { state ->
-                    state.copy(
-                        messengerNewNoteText = "",
-                        messengerEditingNote = if (isEditedNote) null else state.messengerEditingNote,
-                    )
-                }
+            deps.uiState.update { state ->
+                state.copy(
+                    messengerNewNoteText = "",
+                    messengerEditingNote = if (isEditedNote) null else state.messengerEditingNote,
+                )
             }
             deps.globalActions.updateNoteLists()
             afterUpdate()
@@ -179,16 +175,13 @@ class MessengerActions(
     }
 
     fun ensureLinkPreview(url: String) {
-        if (deps.uiState.value.messengerLinkPreviews.containsKey(url)) return
-        deps.uiState.update { it.copy(messengerLinkPreviews = it.messengerLinkPreviews + (url to null)) }
-
         deps.scope.launch {
+            if (deps.uiState.value.messengerLinkPreviews.containsKey(url)) return@launch
             val preview = deps.linkRepo.getLinkPreview(url)
             if (preview != null) {
                 deps.uiState.update {
                     it.copy(messengerLinkPreviews = it.messengerLinkPreviews + (url to preview))
                 }
-                return@launch
             }
         }
     }
@@ -205,9 +198,9 @@ class MessengerActions(
     }
 
     fun deleteSelectedNotes() {
-        val uris = deps.uiState.value.messengerSelectedNotes
-        val project = deps.uiState.value.project ?: return
-        deps.scope.launch(Dispatchers.IO) {
+        deps.scope.launch {
+            val uris = deps.uiState.value.messengerSelectedNotes
+            val project = deps.uiState.value.project ?: return@launch
             uris.forEach { u ->
                 runCatching {
                     deps.noteRepo.deleteNote(
@@ -218,21 +211,23 @@ class MessengerActions(
                 }
             }
             deps.projectRepo.syncDatabase(project)
-            withContext(Dispatchers.Main) {
-                clearSelection()
-                deps.globalActions.updateNoteLists()
-            }
+            clearSelection()
+            deps.globalActions.updateNoteLists()
         }
     }
 
-    suspend fun getSelectedNotesText(): String = withContext(Dispatchers.IO) {
-        deps.uiState.value.messengerSelectedNotes.mapNotNull { u ->
-            runCatching {
-                val note = deps.noteRepo.getNoteByFileSystemPath(FileSystemPath(u))
-                val text = deps.noteRepo.getNoteText(note, includeFrontMatter = false)
+    fun copySelectedNotesText() {
+        deps.scope.launch {
+            val text = deps.uiState.value.messengerSelectedNotes.mapNotNull { u ->
+                runCatching {
+                    val note = deps.noteRepo.getNoteByFileSystemPath(FileSystemPath(u))
+                    val text = deps.noteRepo.getNoteText(note, includeFrontMatter = false)
 
-                MarkdownParser.stripAttachments(text, MarkdownParser.parse(text))
-            }.getOrNull()?.takeIf { it.isNotBlank() }
-        }.joinToString("\n\n")
+                    MarkdownParser.stripAttachments(text, MarkdownParser.parse(text))
+                }.getOrNull()?.takeIf { it.isNotBlank() }
+            }.joinToString("\n\n")
+            deps.globalActions.onEvent(ClipboardEvent.Copy(text))
+            clearSelection()
+        }
     }
 }

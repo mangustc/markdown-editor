@@ -225,7 +225,7 @@ fun MessengerScreen(viewModel: AppViewModel) {
         }
     }
     LaunchedEffect(uiState.project) {
-        uiState.project?.let { viewModel.messenger.onMessengerOpened(it) }
+        uiState.project?.let { viewModel.messenger.updateMessages() }
     }
 
     LaunchedEffect(Unit) {

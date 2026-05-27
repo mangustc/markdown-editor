@@ -88,7 +88,7 @@ class AppViewModel(
         val project = _uiState.value.project ?: return
         projectRepo.syncDatabase(project)
         _uiState.update { it.copy(allProjectTags = projectRepo.getAllTags()) }
-        messenger.onMessengerOpened(project)
+        messenger.updateMessages()
     }
 
     fun onShareIntent(text: String?, attachments: List<Attachment>) {

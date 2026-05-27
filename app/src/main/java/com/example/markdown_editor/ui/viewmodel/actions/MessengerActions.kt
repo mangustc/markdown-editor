@@ -7,7 +7,6 @@ import com.example.markdown_editor.domain.models.Attachment
 import com.example.markdown_editor.domain.models.FileSystemPath
 import com.example.markdown_editor.domain.models.MessageBody
 import com.example.markdown_editor.domain.models.Note
-import com.example.markdown_editor.domain.models.Project
 import com.example.markdown_editor.domain.usecases.messenger.GetMessagesInput
 import com.example.markdown_editor.domain.usecases.messenger.GetMessagesUseCase
 import com.example.markdown_editor.domain.usecases.messenger.GetPinnedMessagesInput
@@ -45,8 +44,9 @@ class MessengerActions(
         }
         .cachedIn(deps.scope)
 
-    fun onMessengerOpened(project: Project, afterUpdate: () -> Unit = {}) {
+    fun updateMessages(afterUpdate: () -> Unit = {}) {
         deps.scope.launch {
+            val project = deps.uiState.value.project ?: return@launch
             deps.projectRepo.syncDatabase(project)
             val pinnedMessages = getPinnedMessagesUseCase(
                 GetPinnedMessagesInput(

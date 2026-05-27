@@ -1,13 +1,13 @@
-package com.example.markdown_editor.data.repository
+package com.example.markdown_editor.data.project
 
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.core.content.edit
-import com.example.markdown_editor.data.model.Project
-import com.example.markdown_editor.data.model.Settings
+import com.example.markdown_editor.domain.models.Project
+import com.example.markdown_editor.domain.models.Settings
 import kotlinx.serialization.json.Json
 
-class SettingsRepositoryImpl(
+class AndroidSettingsRepository(
     private val context: Context,
 ) : SettingsRepository {
     private val json = Json { ignoreUnknownKeys = true; prettyPrint = false }

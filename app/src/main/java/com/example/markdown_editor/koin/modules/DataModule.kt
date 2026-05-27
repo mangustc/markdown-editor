@@ -4,14 +4,14 @@ import androidx.room.Room
 import com.example.markdown_editor.data.database.LinkPreviewDao
 import com.example.markdown_editor.data.database.NoteDao
 import com.example.markdown_editor.data.database.NoteDb
-import com.example.markdown_editor.data.repository.AndroidProjectRepository
-import com.example.markdown_editor.data.repository.LinkPreviewRepository
-import com.example.markdown_editor.data.repository.LinkPreviewRepositoryImpl
-import com.example.markdown_editor.data.repository.NoteRepository
-import com.example.markdown_editor.data.repository.NoteRepositoryImpl
-import com.example.markdown_editor.data.repository.ProjectRepository
-import com.example.markdown_editor.data.repository.SettingsRepository
-import com.example.markdown_editor.data.repository.SettingsRepositoryImpl
+import com.example.markdown_editor.data.linkPreview.AndroidLinkPreviewRepository
+import com.example.markdown_editor.data.linkPreview.LinkPreviewRepository
+import com.example.markdown_editor.data.project.AndroidNoteRepository
+import com.example.markdown_editor.data.project.AndroidProjectRepository
+import com.example.markdown_editor.data.project.AndroidSettingsRepository
+import com.example.markdown_editor.data.project.NoteRepository
+import com.example.markdown_editor.data.project.ProjectRepository
+import com.example.markdown_editor.data.project.SettingsRepository
 import com.example.markdown_editor.data.sync.SyncRepositoryFactory
 import org.koin.dsl.bind
 import org.koin.dsl.module
@@ -37,8 +37,8 @@ val dataModule = module {
     single { create(::provideLinkPreviewDao) }
 
     single<AndroidProjectRepository>() bind ProjectRepository::class
-    single<SettingsRepositoryImpl>() bind SettingsRepository::class
-    single<NoteRepositoryImpl>() bind NoteRepository::class
-    single<LinkPreviewRepositoryImpl>() bind LinkPreviewRepository::class
+    single<AndroidSettingsRepository>() bind SettingsRepository::class
+    single<AndroidNoteRepository>() bind NoteRepository::class
+    single<AndroidLinkPreviewRepository>() bind LinkPreviewRepository::class
     single<SyncRepositoryFactory>()
 }

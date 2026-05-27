@@ -1,9 +1,10 @@
-package com.example.markdown_editor.data.repository
+package com.example.markdown_editor.data.project
 
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.net.Uri
+import android.provider.DocumentsContract
 import android.webkit.MimeTypeMap
 import androidx.core.content.edit
 import androidx.core.net.toUri
@@ -16,14 +17,13 @@ import androidx.sqlite.db.SimpleSQLiteQuery
 import androidx.sqlite.db.SupportSQLiteQuery
 import com.example.markdown_editor.data.database.NoteDao
 import com.example.markdown_editor.data.database.NoteEntity
-import com.example.markdown_editor.data.model.FrontMatter
-import com.example.markdown_editor.data.model.Note
-import com.example.markdown_editor.data.model.Project
-import com.example.markdown_editor.data.model.SearchQuery
-import com.example.markdown_editor.data.model.SortBy
 import com.example.markdown_editor.domain.models.FileSystemPath
+import com.example.markdown_editor.domain.models.FrontMatter
+import com.example.markdown_editor.domain.models.Note
+import com.example.markdown_editor.domain.models.Project
 import com.example.markdown_editor.domain.models.ProjectFile
 import com.example.markdown_editor.domain.models.RelativePath
+import com.example.markdown_editor.domain.models.SearchQuery
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -50,7 +50,10 @@ class AndroidProjectRepository(
         entities.map { entity ->
             Note(
                 name = entity.name,
-                uri = entity.uri.toUri(),
+                projectFile = ProjectFile(
+                    fileSystemPath = FileSystemPath(entity.uri),
+                    relativePath = project.notesRelativePath.appendRelativePath(RelativePath(entity.name)),
+                ),
                 lastModified = entity.lastModified,
                 createdAt = entity.createdAt,
                 body = if (includeText) entity.body else null,
@@ -78,7 +81,14 @@ class AndroidProjectRepository(
             pagingData.map { entity ->
                 Note(
                     name = entity.name,
-                    uri = entity.uri.toUri(),
+                    projectFile = ProjectFile(
+                        fileSystemPath = FileSystemPath(entity.uri),
+                        relativePath = project.notesRelativePath.appendRelativePath(
+                            RelativePath(
+                                entity.name,
+                            ),
+                        ),
+                    ),
                     lastModified = entity.lastModified,
                     createdAt = entity.createdAt,
                     body = if (includeText) entity.body else null,
@@ -89,7 +99,9 @@ class AndroidProjectRepository(
     }
 
     override suspend fun syncDatabase(project: Project) = withContext(Dispatchers.IO) {
-        val notesDir = DocumentFile.fromTreeUri(context, project.notesUri)
+        val projectUri = project.rootFileSystemPath.value.toUri()
+        val notesDir =
+            DocumentFile.fromTreeUri(context, getUri(projectUri, project.notesRelativePath))
         val files =
             notesDir?.listFiles()?.filter { it.name?.endsWith(".md") == true }
                 ?: return@withContext
@@ -125,42 +137,46 @@ class AndroidProjectRepository(
         }
     }
 
-    override fun buildProject(rootUri: Uri): Project {
-        val root = DocumentFile.fromTreeUri(context, rootUri)
+    override fun buildProject(rootUri: FileSystemPath): Project {
+        val root = DocumentFile.fromTreeUri(context, rootUri.value.toUri())
         val notesDir = root?.findFile("notes") ?: root?.createDirectory("notes")
         val assetsDir = root?.findFile("assets") ?: root?.createDirectory("assets")
         return Project(
             name = root?.name ?: "Project",
-            uri = rootUri,
-            notesPath = if (notesDir != null) "notes" else "",
-            assetsPath = if (assetsDir != null) "assets" else "",
+            rootFileSystemPath = FileSystemPath(rootUri.toString()),
+            notesRelativePath = RelativePath(if (notesDir != null) "notes" else ""),
+            assetsRelativePath = RelativePath(if (assetsDir != null) "assets" else ""),
         )
     }
 
     override suspend fun saveProject(project: Project) {
+        val projectUri = project.rootFileSystemPath.value.toUri()
         context.contentResolver.takePersistableUriPermission(
-            project.uri,
+            projectUri,
             Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
         )
         prefs.edit {
-            putString(KEY_PROJECT_URI, project.uri.toString())
+            putString(KEY_PROJECT_URI, projectUri.toString())
         }
     }
 
     override suspend fun loadSavedProject(): Project? = withContext(Dispatchers.IO) {
         val uriString = prefs.getString(KEY_PROJECT_URI, null) ?: return@withContext null
-        buildProject(uriString.toUri())
+        buildProject(FileSystemPath(uriString))
     }
 
-    override suspend fun copyToAssets(project: Project, assetUri: Uri): String =
+    override suspend fun copyToAssets(project: Project, assetPath: FileSystemPath): ProjectFile =
         withContext(Dispatchers.IO) {
             val resolver = context.contentResolver
+            val assetUri = assetPath.value.toUri()
             val sourceFile = DocumentFile.fromSingleUri(context, assetUri)
             val fileName = sourceFile?.name ?: "attachment_${System.currentTimeMillis()}"
             val mimeType = resolver.getType(assetUri) ?: "application/octet-stream"
+            val projectUri = project.rootFileSystemPath.value.toUri()
 
-            val assetsDir = DocumentFile.fromTreeUri(context, project.assetsUri)
-                ?: throw IllegalStateException("Could not access assets directory")
+            val assetsDir =
+                DocumentFile.fromTreeUri(context, getUri(projectUri, project.assetsRelativePath))
+                    ?: throw IllegalStateException("Could not access assets directory")
             val targetFile = assetsDir.createFile(mimeType, fileName)
                 ?: throw IllegalStateException("Failed to create file in assets")
 
@@ -175,7 +191,10 @@ class AndroidProjectRepository(
                 throw e
             }
 
-            "assets/${targetFile.name}"
+            ProjectFile(
+                fileSystemPath = FileSystemPath(targetFile.uri.toString()),
+                relativePath = RelativePath("assets/${targetFile.name}"),
+            )
         }
 
     override suspend fun getAllTags(): List<String> = withContext(Dispatchers.IO) {
@@ -183,7 +202,7 @@ class AndroidProjectRepository(
     }
 
     override suspend fun writeFile(
-        project: com.example.markdown_editor.domain.models.Project,
+        project: Project,
         relativePath: RelativePath,
         byteArray: ByteArray,
         overwrite: Boolean,
@@ -242,7 +261,7 @@ class AndroidProjectRepository(
     }
 
     override suspend fun deleteFile(
-        project: com.example.markdown_editor.domain.models.Project,
+        project: Project,
         relativePath: RelativePath,
     ) = withContext(Dispatchers.IO) {
         val rootUri = project.rootFileSystemPath.value.toUri()
@@ -261,7 +280,7 @@ class AndroidProjectRepository(
     }
 
     override suspend fun readFile(
-        project: com.example.markdown_editor.domain.models.Project,
+        project: Project,
         relativePath: RelativePath,
     ): ByteArray? = withContext(Dispatchers.IO) {
         val rootUri = project.rootFileSystemPath.value.toUri()
@@ -284,7 +303,7 @@ class AndroidProjectRepository(
     }
 
     override suspend fun getProjectFilesList(
-        project: com.example.markdown_editor.domain.models.Project,
+        project: Project,
     ): List<ProjectFile> = withContext(Dispatchers.IO) {
         val rootUri = project.rootFileSystemPath.value.toUri()
         val rootDoc = DocumentFile.fromTreeUri(context, rootUri) ?: return@withContext emptyList()
@@ -292,6 +311,31 @@ class AndroidProjectRepository(
         val result = mutableListOf<ProjectFile>()
         walkDocumentTree(rootDoc, RelativePath(""), result)
         return@withContext result.toList()
+    }
+
+    override suspend fun getProjectFile(
+        project: Project,
+        relativePath: RelativePath,
+    ): ProjectFile? = withContext(Dispatchers.IO) {
+        val rootUri = project.rootFileSystemPath.value.toUri()
+        val rootDoc = DocumentFile.fromTreeUri(context, rootUri) ?: return@withContext null
+        val targetDoc = findDocumentFile(rootDoc, relativePath) ?: return@withContext null
+
+        return@withContext ProjectFile(
+            fileSystemPath = FileSystemPath(
+                targetDoc.uri.toString(),
+            ),
+            relativePath = relativePath,
+        )
+    }
+
+    private fun getUri(
+        rootUri: Uri,
+        relativePath: RelativePath,
+    ): Uri {
+        val treeId = DocumentsContract.getTreeDocumentId(rootUri)
+        val childId = if (relativePath.value.isEmpty()) treeId else "$treeId/${relativePath.value}"
+        return DocumentsContract.buildDocumentUriUsingTree(rootUri, childId)
     }
 
     private fun walkDocumentTree(
@@ -371,8 +415,8 @@ class AndroidProjectRepository(
             "CASE WHEN notes.tags LIKE '%pinned%' THEN 0 ELSE 1 END ASC,\n  "
         else ""
         val sortClause = when (query.sortBy) {
-            SortBy.LAST_MODIFIED -> "notes.lastModified DESC"
-            SortBy.CREATED_AT ->
+            SearchQuery.SortBy.LAST_MODIFIED -> "notes.lastModified DESC"
+            SearchQuery.SortBy.CREATED_AT ->
                 "notes.createdAt DESC, notes.lastModified DESC"
         }
         sb.append("\nORDER BY $pinnedClause$sortClause")

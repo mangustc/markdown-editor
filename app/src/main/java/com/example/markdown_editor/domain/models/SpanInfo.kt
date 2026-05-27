@@ -1,4 +1,4 @@
-package com.example.markdown_editor.domain.markdown
+package com.example.markdown_editor.domain.models
 
 import java.net.URI
 

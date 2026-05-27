@@ -1,15 +1,17 @@
 package com.example.markdown_editor.ui.viewmodel.actions
 
-import androidx.core.net.toUri
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
-import com.example.markdown_editor.data.model.Note
-import com.example.markdown_editor.data.model.Project
-import com.example.markdown_editor.data.model.SearchQuery
-import com.example.markdown_editor.data.model.SortBy
 import com.example.markdown_editor.domain.markdown.MarkdownParser
-import com.example.markdown_editor.domain.messenger.Attachment
-import com.example.markdown_editor.domain.messenger.AttachmentType
+import com.example.markdown_editor.domain.models.Attachment
+import com.example.markdown_editor.domain.models.FileSystemPath
+import com.example.markdown_editor.domain.models.MessageBody
+import com.example.markdown_editor.domain.models.Note
+import com.example.markdown_editor.domain.models.Project
+import com.example.markdown_editor.domain.models.SearchQuery
+import com.example.markdown_editor.domain.usecases.UseCaseResult
+import com.example.markdown_editor.domain.usecases.messenger.GetMessagesInput
+import com.example.markdown_editor.domain.usecases.messenger.GetMessagesUseCase
 import com.example.markdown_editor.ui.viewmodel.AppDeps
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -21,25 +23,29 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.koin.core.component.KoinComponent
+import org.koin.core.component.inject
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 class MessengerActions(
     private val deps: AppDeps,
-) {
+) : KoinComponent {
+    private val getMessagesUseCase: GetMessagesUseCase by inject()
+
     @OptIn(ExperimentalCoroutinesApi::class)
-    val notesPaged: Flow<PagingData<Note>> = deps.uiState
+    val notesPaged: Flow<PagingData<MessageBody>> = deps.uiState
         .map { it.project }
         .distinctUntilChanged()
         .flatMapLatest { project ->
             if (project == null) return@flatMapLatest emptyFlow()
-            deps.projectRepo.getNotesPaged(
-                project,
-                SearchQuery(tagFilters = listOf("quick-note"), sortBy = SortBy.CREATED_AT),
-                includeText = true,
-                includeFrontMatter = false,
-            )
+            getMessagesUseCase(GetMessagesInput(project)).let { result ->
+                when (result) {
+                    is UseCaseResult.Success -> result.data
+                    is UseCaseResult.Failure -> emptyFlow()
+                }
+            }
         }
         .cachedIn(deps.scope)
 
@@ -50,7 +56,7 @@ class MessengerActions(
                 project = project,
                 SearchQuery(
                     tagFilters = listOf("quick-note", "pinned"),
-                    sortBy = SortBy.CREATED_AT,
+                    sortBy = SearchQuery.SortBy.CREATED_AT,
                 ),
                 includeText = true,
                 includeFrontMatter = false,
@@ -111,7 +117,7 @@ class MessengerActions(
                 val name = "quick-note-$timestamp"
                 val tags = listOf("quick-note")
                 val uri = deps.noteRepo.createNote(project, name, tags) ?: return@launch
-                deps.noteRepo.getNoteByUri(uri)
+                deps.noteRepo.getNoteByFileSystemPath(uri)
             }
 
             val baseText = deps.noteRepo.getNoteText(targetNote, includeFrontMatter = true)
@@ -131,31 +137,22 @@ class MessengerActions(
 
             val attachmentLines = buildString {
                 attachments.forEach { attachment ->
-                    when (attachment.type) {
-                        AttachmentType.PENDING_IMAGE -> {
-                            val path =
-                                deps.projectRepo.copyToAssets(project, attachment.path.toUri())
-                            append("\n![image](<$path>)")
+                    val label = attachment.displayName
+                        .replace("[", "\\[")
+                        .replace("]", "\\]")
+                    val firstPart = when (attachment.type) {
+                        Attachment.AttachmentType.IMAGE -> "![$label]"
+                        Attachment.AttachmentType.FILE -> "[$label]"
+                    }
+                    when (attachment) {
+                        is Attachment.PendingAttachment -> {
+                            val projectFile =
+                                deps.projectRepo.copyToAssets(project, attachment.fileSystemPath)
+                            append("\n$firstPart(<${projectFile.relativePath.value}>)")
                         }
 
-                        AttachmentType.PENDING_FILE -> {
-                            val path =
-                                deps.projectRepo.copyToAssets(project, attachment.path.toUri())
-                            val label = attachment.displayName
-                                .replace("[", "\\[")
-                                .replace("]", "\\]")
-                            append("\n[$label](<$path>)")
-                        }
-
-                        AttachmentType.IMAGE -> {
-                            if (isEditedNote) append("\n![image](<${attachment.relativePath}>)")
-                        }
-
-                        AttachmentType.FILE -> {
-                            val label = attachment.displayName
-                                .replace("[", "\\[")
-                                .replace("]", "\\]")
-                            if (isEditedNote) append("\n[${label}](<${attachment.relativePath}>)")
+                        is Attachment.ProjectAttachment -> {
+                            if (isEditedNote) append("\n$firstPart(<${attachment.relativePath.value}>)")
                         }
                     }
                 }
@@ -220,7 +217,13 @@ class MessengerActions(
         val project = deps.uiState.value.project ?: return
         deps.scope.launch(Dispatchers.IO) {
             uris.forEach { u ->
-                runCatching { deps.noteRepo.deleteNote(deps.noteRepo.getNoteByUri(u.toUri())) }
+                runCatching {
+                    deps.noteRepo.deleteNote(
+                        deps.noteRepo.getNoteByFileSystemPath(
+                            FileSystemPath(u),
+                        ),
+                    )
+                }
             }
             deps.projectRepo.syncDatabase(project)
             withContext(Dispatchers.Main) {
@@ -233,7 +236,7 @@ class MessengerActions(
     suspend fun getSelectedNotesText(): String = withContext(Dispatchers.IO) {
         deps.uiState.value.messengerSelectedNotes.mapNotNull { u ->
             runCatching {
-                val note = deps.noteRepo.getNoteByUri(u.toUri())
+                val note = deps.noteRepo.getNoteByFileSystemPath(FileSystemPath(u))
                 val text = deps.noteRepo.getNoteText(note, includeFrontMatter = false)
 
                 MarkdownParser.stripAttachments(text, MarkdownParser.parse(text))

@@ -136,14 +136,13 @@ import coil3.ImageLoader
 import coil3.compose.AsyncImage
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import com.example.markdown_editor.R
-import com.example.markdown_editor.data.model.LinkPreview
-import com.example.markdown_editor.data.model.Note
-import com.example.markdown_editor.data.model.Project
 import com.example.markdown_editor.domain.markdown.MarkdownParser
-import com.example.markdown_editor.domain.messenger.Attachment
-import com.example.markdown_editor.domain.messenger.AttachmentType
 import com.example.markdown_editor.domain.messenger.LinkPreviewFetcher
-import com.example.markdown_editor.domain.messenger.ParsedNoteBody
+import com.example.markdown_editor.domain.models.Attachment
+import com.example.markdown_editor.domain.models.FileSystemPath
+import com.example.markdown_editor.domain.models.LinkPreview
+import com.example.markdown_editor.domain.models.MessageBody
+import com.example.markdown_editor.domain.models.Note
 import com.example.markdown_editor.ui.components.MenuPopup
 import com.example.markdown_editor.ui.components.MenuPopupGroup
 import com.example.markdown_editor.ui.components.MenuPopupItem
@@ -165,7 +164,7 @@ fun MessengerScreen(viewModel: AppViewModel) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     val attachments = remember { mutableStateListOf<Attachment>() }
-    var imagePagerState by remember { mutableStateOf<Pair<Int, List<String>>?>(null) }
+    var imagePagerState by remember { mutableStateOf<Pair<Int, List<FileSystemPath>>?>(null) }
     var carouselExpanded by rememberSaveable { mutableStateOf(false) }
     val resources = LocalResources.current
     val context = LocalContext.current
@@ -178,10 +177,10 @@ fun MessengerScreen(viewModel: AppViewModel) {
                 R.string.image,
             )
             attachments.add(
-                Attachment(
-                    path = uri.toString(),
+                Attachment.PendingAttachment(
+                    fileSystemPath = FileSystemPath(uri.toString()),
                     displayName = displayName,
-                    type = AttachmentType.PENDING_IMAGE,
+                    type = Attachment.AttachmentType.IMAGE,
                 ),
             )
         }
@@ -193,10 +192,10 @@ fun MessengerScreen(viewModel: AppViewModel) {
             val displayName =
                 DocumentFile.fromSingleUri(context, uri)?.name ?: resources.getString(R.string.file)
             attachments.add(
-                Attachment(
-                    path = uri.toString(),
+                Attachment.PendingAttachment(
+                    fileSystemPath = FileSystemPath(uri.toString()),
                     displayName = displayName,
-                    type = AttachmentType.PENDING_FILE,
+                    type = Attachment.AttachmentType.FILE,
                 ),
             )
         }
@@ -210,10 +209,10 @@ fun MessengerScreen(viewModel: AppViewModel) {
             tempCameraUri?.let { uri ->
                 val displayName = "Camera_${System.currentTimeMillis()}.jpg"
                 attachments.add(
-                    Attachment(
-                        path = uri.toString(),
+                    Attachment.PendingAttachment(
+                        fileSystemPath = FileSystemPath(uri.toString()),
                         displayName = displayName,
-                        type = AttachmentType.PENDING_IMAGE,
+                        type = Attachment.AttachmentType.IMAGE,
                     ),
                 )
             }
@@ -232,7 +231,7 @@ fun MessengerScreen(viewModel: AppViewModel) {
 
     LaunchedEffect(Unit) {
         val pending = viewModel.consumePendingIntentAttachments()
-        if (pending.isNotEmpty()) carouselExpanded = true
+        if (!pending.isEmpty()) carouselExpanded = true
         attachments.addAll(pending)
     }
     val pagedNotes = viewModel.messenger.notesPaged.collectAsLazyPagingItems()
@@ -244,7 +243,7 @@ fun MessengerScreen(viewModel: AppViewModel) {
             if (pinned.isEmpty()) return@derivedStateOf null
 
             val pinnedIndicesInList = pinned.map { pinnedNote ->
-                pagedNotes.itemSnapshotList.items.indexOfFirst { it.uri == pinnedNote.uri }
+                pagedNotes.itemSnapshotList.items.indexOfFirst { it.note.projectFile.relativePath == pinnedNote.projectFile.relativePath }
             }
 
             val firstVisible = listState.firstVisibleItemIndex
@@ -306,7 +305,6 @@ fun MessengerScreen(viewModel: AppViewModel) {
                             contentValues,
                         )
                         if (uri != null) {
-                            tempCameraUri = uri
                             cameraLauncher.launch(uri)
                         } else {
                             viewModel.onEvent(NotificationEvent.FailedToAddPhoto)
@@ -321,23 +319,23 @@ fun MessengerScreen(viewModel: AppViewModel) {
                     )
                 },
                 onAddFile = { filePickerLauncher.launch(arrayOf("*/*")) },
-                onImageClick = { clickedUri ->
+                onImageClick = { clickedFileSystemPath ->
                     val imageUris = attachments.mapNotNull {
                         when (it.type) {
-                            AttachmentType.IMAGE, AttachmentType.PENDING_IMAGE -> it.path
-                            else -> null
+                            Attachment.AttachmentType.IMAGE -> it.fileSystemPath
+                            Attachment.AttachmentType.FILE -> null
                         }
                     }
-                    val index = imageUris.indexOf(clickedUri)
+                    val index = imageUris.indexOf(clickedFileSystemPath)
                     imagePagerState = index to imageUris
                 },
                 onFileClick = { uri ->
                     try {
                         val mime =
-                            context.contentResolver.getType(uri.toUri())
+                            context.contentResolver.getType(uri.value.toUri())
                                 ?: "*/*"
                         val intent = Intent(Intent.ACTION_VIEW).apply {
-                            setDataAndType(uri.toUri(), mime)
+                            setDataAndType(uri.value.toUri(), mime)
                             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                         }
                         context.startActivity(
@@ -414,7 +412,7 @@ fun MessengerScreen(viewModel: AppViewModel) {
                                 scope.launch {
                                     val indexInList =
                                         pagedNotes.itemSnapshotList.items.indexOfFirst {
-                                            it.uri == note.uri
+                                            it.note.projectFile.relativePath == note.projectFile.relativePath
                                         }
                                     if (indexInList != -1) {
                                         listState.animateScrollToItem(indexInList)
@@ -447,15 +445,15 @@ fun MessengerScreen(viewModel: AppViewModel) {
                         }
                         items(
                             count = pagedNotes.itemCount,
-                            key = pagedNotes.itemKey { it.uri.toString() },
+                            key = pagedNotes.itemKey { it.note.projectFile.relativePath.toString() },
                         ) { index ->
                             val note = pagedNotes[index]
                             if (note != null) {
-                                val currentTimestamp = note.createdAt ?: note.lastModified
+                                val currentTimestamp = note.note.createdAt ?: note.note.lastModified
                                 val prevNote =
                                     if (index + 1 < pagedNotes.itemCount) pagedNotes[index + 1] else null
                                 val prevTimestamp =
-                                    prevNote?.let { it.createdAt ?: it.lastModified }
+                                    prevNote?.let { it.note.createdAt ?: it.note.lastModified }
 
                                 Column(
                                     verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -469,14 +467,13 @@ fun MessengerScreen(viewModel: AppViewModel) {
                                         DateHeader(currentTimestamp)
                                     }
                                     MessageBubble(
-                                        note = note,
-                                        project = uiState.project!!,
+                                        message = note,
                                         linkPreviews = uiState.messengerLinkPreviews,
                                         onEnsurePreview = { viewModel.messenger.ensureLinkPreview(it) },
-                                        onNoteSelected = { viewModel.drawer.onNoteSelected(it) },
-                                        onDeleteNote = { viewModel.drawer.onDeleteNote(it) },
+                                        onNoteSelected = { viewModel.drawer.onNoteSelected(it.note) },
+                                        onDeleteNote = { viewModel.drawer.onDeleteNote(it.note) },
                                         onEditNote = { n, text, attach ->
-                                            viewModel.messenger.startEditNote(n, text)
+                                            viewModel.messenger.startEditNote(n.note, text)
                                             attachments.clear()
                                             attachments.addAll(attach)
                                             if (attachments.isNotEmpty()) carouselExpanded = true
@@ -484,13 +481,13 @@ fun MessengerScreen(viewModel: AppViewModel) {
                                         onImageClick = { idx, uris ->
                                             imagePagerState = idx to uris
                                         },
-                                        onPinNote = { viewModel.drawer.onPinNote(it) },
-                                        isPinned = note.tags?.contains("pinned") ?: false,
-                                        isSelected = uiState.messengerSelectedNotes.contains(note.uri.toString()),
+                                        onPinNote = { viewModel.drawer.onPinNote(it.note) },
+                                        isPinned = note.note.tags?.contains("pinned") ?: false,
+                                        isSelected = uiState.messengerSelectedNotes.contains(note.note.projectFile.relativePath.toString()),
                                         isSelectionMode = uiState.messengerSelectedNotes.isNotEmpty(),
                                         onToggleSelect = {
                                             viewModel.messenger.toggleNoteSelection(
-                                                it.uri.toString(),
+                                                it.note.projectFile.relativePath.toString(),
                                             )
                                         },
                                         onNoAppFound = {
@@ -529,8 +526,8 @@ private fun MessengerInputBar(
     onTakePhoto: () -> Unit,
     onAddImage: () -> Unit,
     onAddFile: () -> Unit,
-    onImageClick: (String) -> Unit,
-    onFileClick: (String) -> Unit,
+    onImageClick: (FileSystemPath) -> Unit,
+    onFileClick: (FileSystemPath) -> Unit,
     onRemoveAttachment: (Int) -> Unit,
     onSend: () -> Unit,
     carouselExpanded: Boolean,
@@ -674,8 +671,8 @@ private fun AttachmentCarouselStrip(
     onAddImage: (() -> Unit)? = null,
     onAddFile: (() -> Unit)? = null,
     onRemove: ((Int) -> Unit)? = null,
-    onImageClick: (String) -> Unit,
-    onFileClick: (String) -> Unit,
+    onImageClick: (FileSystemPath) -> Unit,
+    onFileClick: (FileSystemPath) -> Unit,
     isViewing: Boolean,
 ) {
     val state = rememberCarouselState { if (isViewing) attachments.size else attachments.size + 3 }
@@ -694,30 +691,30 @@ private fun AttachmentCarouselStrip(
         ) {
             if (!isViewing && page == 0) {
                 AttachmentIconButton(
-                    attachment = Attachment(
-                        path = Uri.EMPTY.toString(),
+                    attachment = Attachment.PendingAttachment(
+                        fileSystemPath = FileSystemPath(Uri.EMPTY.toString()),
+                        type = Attachment.AttachmentType.FILE,
                         displayName = resources.getString(R.string.take_photo),
-                        type = AttachmentType.FILE,
                     ),
                     icon = Icons.Default.PhotoCamera,
                     onClick = onTakePhoto ?: {},
                 )
             } else if (!isViewing && page == 1) {
                 AttachmentIconButton(
-                    attachment = Attachment(
-                        path = Uri.EMPTY.toString(),
+                    attachment = Attachment.PendingAttachment(
+                        fileSystemPath = FileSystemPath(Uri.EMPTY.toString()),
+                        type = Attachment.AttachmentType.FILE,
                         displayName = resources.getString(R.string.attach_images),
-                        type = AttachmentType.FILE,
                     ),
                     icon = Icons.Default.Image,
                     onClick = onAddImage ?: {},
                 )
             } else if (!isViewing && page == 2) {
                 AttachmentIconButton(
-                    attachment = Attachment(
-                        path = Uri.EMPTY.toString(),
+                    attachment = Attachment.PendingAttachment(
+                        fileSystemPath = FileSystemPath(Uri.EMPTY.toString()),
+                        type = Attachment.AttachmentType.FILE,
                         displayName = resources.getString(R.string.attach_files),
-                        type = AttachmentType.FILE,
                     ),
                     icon = Icons.Default.AttachFile,
                     onClick = onAddFile ?: {},
@@ -727,12 +724,12 @@ private fun AttachmentCarouselStrip(
                 AttachmentIconButton(
                     attachment = attachment,
                     onClick = when (attachment.type) {
-                        AttachmentType.IMAGE, AttachmentType.PENDING_IMAGE -> {
-                            { onImageClick(attachment.path) }
+                        Attachment.AttachmentType.IMAGE -> {
+                            { onImageClick(attachment.fileSystemPath) }
                         }
 
-                        AttachmentType.FILE, AttachmentType.PENDING_FILE -> {
-                            { onFileClick(attachment.path) }
+                        Attachment.AttachmentType.FILE -> {
+                            { onFileClick(attachment.fileSystemPath) }
                         }
                     },
                 )
@@ -789,15 +786,15 @@ private fun AttachmentIconButton(
                 .fillMaxSize(),
         ) {
             when (attachment.type) {
-                AttachmentType.IMAGE, AttachmentType.PENDING_IMAGE ->
+                Attachment.AttachmentType.IMAGE ->
                     AsyncImage(
-                        model = attachment.path,
+                        model = attachment.fileSystemPath.value.toUri(),
                         contentDescription = null,
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize(),
                     )
 
-                AttachmentType.FILE, AttachmentType.PENDING_FILE -> Column(
+                Attachment.AttachmentType.FILE -> Column(
                     modifier = Modifier.padding(4.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center,
@@ -825,19 +822,18 @@ private fun AttachmentIconButton(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun MessageBubble(
-    note: Note,
-    project: Project,
+    message: MessageBody,
     linkPreviews: Map<String, LinkPreview?>,
     onEnsurePreview: (String) -> Unit,
-    onNoteSelected: (Note) -> Unit,
-    onDeleteNote: (Note) -> Unit,
-    onEditNote: (Note, String, List<Attachment>) -> Unit,
-    onImageClick: (Int, List<String>) -> Unit,
-    onPinNote: (Note) -> Unit,
+    onNoteSelected: (MessageBody) -> Unit,
+    onDeleteNote: (MessageBody) -> Unit,
+    onEditNote: (MessageBody, String, List<Attachment>) -> Unit,
+    onImageClick: (Int, List<FileSystemPath>) -> Unit,
+    onPinNote: (MessageBody) -> Unit,
     isPinned: Boolean = false,
     isSelected: Boolean = false,
     isSelectionMode: Boolean = false,
-    onToggleSelect: (Note) -> Unit,
+    onToggleSelect: (MessageBody) -> Unit,
     onLinkCopied: () -> Unit,
     onNoAppFound: () -> Unit,
 ) {
@@ -849,22 +845,22 @@ private fun MessageBubble(
     val focusManager = LocalFocusManager.current
     val resources = LocalResources.current
 
-    val urls = remember(note.body) { LinkPreviewFetcher.extractAllUrls(note.body ?: "") }
+    val urls =
+        remember(message.note.body) { LinkPreviewFetcher.extractAllUrls(message.note.body ?: "") }
     LaunchedEffect(urls) { urls.forEach { onEnsurePreview(it) } }
 
     val previews = remember(urls, linkPreviews) { urls.mapNotNull { linkPreviews[it] } }
-    val parsedBody = remember(note.body) { ParsedNoteBody.parse(note.body ?: "", project) }
 
     var menuExpanded by remember { mutableStateOf(false) }
     var touchX by remember { mutableStateOf(0.dp) }
     var touchY by remember { mutableStateOf(0.dp) }
 
     val urlColor = MaterialTheme.colorScheme.primary
-    val annotatedBody = remember(parsedBody.text) {
+    val annotatedBody = remember(message.text) {
         buildAnnotatedString {
             var lastIndex = 0
-            parsedBody.links.forEach { match ->
-                append(parsedBody.text.substring(lastIndex, match.range.first))
+            message.links.forEach { match ->
+                append(message.text.substring(lastIndex, match.range.first))
                 pushStringAnnotation(tag = "URL", annotation = match.value)
                 withStyle(SpanStyle(color = urlColor, textDecoration = TextDecoration.Underline)) {
                     append(match.value)
@@ -872,7 +868,7 @@ private fun MessageBubble(
                 pop()
                 lastIndex = match.range.last + 1
             }
-            if (lastIndex < parsedBody.text.length) append(parsedBody.text.substring(lastIndex))
+            if (lastIndex < message.text.length) append(message.text.substring(lastIndex))
         }
     }
 
@@ -895,8 +891,8 @@ private fun MessageBubble(
                 }
             }
             .combinedClickable(
-                onClick = { if (isSelectionMode) onToggleSelect(note) else menuExpanded = true },
-                onLongClick = { onToggleSelect(note) },
+                onClick = { if (isSelectionMode) onToggleSelect(message) else menuExpanded = true },
+                onLongClick = { onToggleSelect(message) },
             )
             .padding(horizontal = 12.dp, vertical = 4.dp),
     ) {
@@ -925,8 +921,8 @@ private fun MessageBubble(
                     val timeColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f)
 
                     val isEdited =
-                        note.createdAt != null && (note.lastModified - note.createdAt) > 500
-                    val editString = remember(isEdited, note.lastModified) {
+                        message.note.createdAt != null && (message.note.lastModified - message.note.createdAt) > 500
+                    val editString = remember(isEdited, message.note.lastModified) {
                         if (isEdited) {
                             val pattern =
                                 DateFormat.getBestDateTimePattern(Locale.getDefault(), "MMMdHHmm")
@@ -934,17 +930,17 @@ private fun MessageBubble(
                                 R.string.edited_date,
                                 SimpleDateFormat(pattern, Locale.getDefault()).format(
                                     Date(
-                                        note.lastModified,
+                                        message.note.lastModified,
                                     ),
                                 ),
                             )
                         } else null
                     }
-                    val timeString = remember(note.createdAt, note.lastModified) {
+                    val timeString = remember(message.note.createdAt, message.note.lastModified) {
                         val pattern =
                             DateFormat.getBestDateTimePattern(Locale.getDefault(), "MMMdHHmm")
                         SimpleDateFormat(pattern, Locale.getDefault()).format(
-                            Date(note.createdAt ?: note.lastModified),
+                            Date(message.note.createdAt ?: message.note.lastModified),
                         )
                     }
 
@@ -953,13 +949,13 @@ private fun MessageBubble(
                             contentWidth = with(density) { it.width.toDp() }
                         },
                     ) {
-                        if (parsedBody.attachments.isNotEmpty()) {
+                        if (message.attachments.isNotEmpty()) {
                             AttachmentCarouselStrip(
-                                attachments = parsedBody.attachments,
+                                attachments = message.attachments,
                                 onImageClick = { clickedUri ->
-                                    val imageUris = parsedBody.attachments.mapNotNull {
+                                    val imageUris = message.attachments.mapNotNull {
                                         when (it.type) {
-                                            AttachmentType.IMAGE, AttachmentType.PENDING_IMAGE -> it.path
+                                            Attachment.AttachmentType.IMAGE -> it.fileSystemPath
                                             else -> null
                                         }
                                     }
@@ -968,9 +964,10 @@ private fun MessageBubble(
                                 onFileClick = { uri ->
                                     try {
                                         val mime =
-                                            context.contentResolver.getType(uri.toUri()) ?: "*/*"
+                                            context.contentResolver.getType(uri.value.toUri())
+                                                ?: "*/*"
                                         val intent = Intent(Intent.ACTION_VIEW).apply {
-                                            setDataAndType(uri.toUri(), mime)
+                                            setDataAndType(uri.value.toUri(), mime)
                                             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                                         }
                                         context.startActivity(Intent.createChooser(intent, null))
@@ -980,10 +977,10 @@ private fun MessageBubble(
                                 },
                                 isViewing = true,
                             )
-                            if (parsedBody.text.isNotBlank()) Spacer(modifier = Modifier.height(8.dp))
+                            if (message.text.isNotBlank()) Spacer(modifier = Modifier.height(8.dp))
                         }
 
-                        if (parsedBody.text.isNotBlank()) {
+                        if (message.text.isNotBlank()) {
                             SelectionContainer {
                                 Text(
                                     text = annotatedBody,
@@ -997,7 +994,7 @@ private fun MessageBubble(
                                         detectTapGestures(
                                             onTap = { offset ->
                                                 if (isSelectionMode) {
-                                                    onToggleSelect(note)
+                                                    onToggleSelect(message)
                                                     return@detectTapGestures
                                                 }
                                                 layoutResult.value?.let { result ->
@@ -1097,7 +1094,7 @@ private fun MessageBubble(
                     MenuPopupItem(
                         text = resources.getString(R.string.open), index = 0, count = 5,
                         icon = Icons.AutoMirrored.Outlined.OpenInNew,
-                        onClick = { menuExpanded = false; onNoteSelected(note) },
+                        onClick = { menuExpanded = false; onNoteSelected(message) },
                     )
                     MenuPopupItem(
                         text = resources.getString(R.string.copy), index = 1, count = 5,
@@ -1109,7 +1106,7 @@ private fun MessageBubble(
                                     ClipEntry(
                                         ClipData.newPlainText(
                                             "Note text",
-                                            parsedBody.text,
+                                            message.text,
                                         ),
                                     ),
                                 )
@@ -1122,7 +1119,7 @@ private fun MessageBubble(
                         ),
                         index = 2, count = 5,
                         icon = if (isPinned) Icons.Filled.PushPin else Icons.Outlined.PushPin,
-                        onClick = { menuExpanded = false; onPinNote(note) },
+                        onClick = { menuExpanded = false; onPinNote(message) },
                     )
                     MenuPopupItem(
                         text = resources.getString(R.string.edit), index = 3, count = 5,
@@ -1130,9 +1127,9 @@ private fun MessageBubble(
                         onClick = {
                             menuExpanded = false
                             onEditNote(
-                                note,
-                                parsedBody.text,
-                                parsedBody.attachments,
+                                message,
+                                message.text,
+                                message.attachments,
                             )
                         },
                     )
@@ -1141,7 +1138,7 @@ private fun MessageBubble(
                         supportingText = resources.getString(R.string.cannot_be_undone),
                         icon = Icons.Outlined.Delete,
                         tint = MaterialTheme.colorScheme.error,
-                        onClick = { menuExpanded = false; onDeleteNote(note) },
+                        onClick = { menuExpanded = false; onDeleteNote(message) },
                     )
                 }
             }
@@ -1241,7 +1238,7 @@ private fun DateHeader(timestamp: Long) {
 @Composable
 private fun FullScreenImageCarouselDialog(
     initialIndex: Int,
-    uris: List<String>,
+    uris: List<FileSystemPath>,
     onDismiss: () -> Unit,
 ) {
     val state = rememberCarouselState(initialItem = initialIndex) { uris.size }
@@ -1268,7 +1265,7 @@ private fun FullScreenImageCarouselDialog(
                 modifier = Modifier.fillMaxSize(),
             ) { page ->
                 ZoomableImage(
-                    uri = uris[page].toUri(),
+                    uri = uris[page].value.toUri(),
                     onTap = { showTopPanel = !showTopPanel },
                 )
             }

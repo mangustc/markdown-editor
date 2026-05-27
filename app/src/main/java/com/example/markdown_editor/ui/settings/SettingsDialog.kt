@@ -37,7 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.markdown_editor.R
-import com.example.markdown_editor.data.model.Settings
+import com.example.markdown_editor.domain.models.Settings
 import com.example.markdown_editor.domain.usecases.sync.ValidSyncProvider
 
 @OptIn(ExperimentalMaterial3Api::class)

@@ -3,8 +3,6 @@ package com.example.markdown_editor.ui.viewmodel.actions
 import android.net.Uri
 import android.util.Log
 import com.example.markdown_editor.domain.models.FileSystemPath
-import com.example.markdown_editor.domain.models.Project
-import com.example.markdown_editor.domain.models.RelativePath
 import com.example.markdown_editor.domain.usecases.sync.SyncAuthException
 import com.example.markdown_editor.domain.usecases.sync.SyncLocalIoException
 import com.example.markdown_editor.domain.usecases.sync.SyncNetworkException
@@ -17,15 +15,17 @@ import com.example.markdown_editor.ui.viewmodel.AppDeps
 import com.example.markdown_editor.ui.viewmodel.events.NotificationEvent
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import org.koin.core.component.KoinComponent
+import org.koin.core.component.inject
 
 class ProjectActions(
     private val deps: AppDeps,
-    private val syncProjectUseCase: SyncProjectUseCase,
-) {
+) : KoinComponent {
+    private val syncProjectUseCase: SyncProjectUseCase by inject()
 
     fun onProjectSelected(uri: Uri) {
         deps.scope.launch {
-            val project = deps.projectRepo.buildProject(uri)
+            val project = deps.projectRepo.buildProject(FileSystemPath(uri.toString()))
             deps.projectRepo.saveProject(project)
             val settings = deps.settingsRepo.getSettings(project)
             deps.uiState.update { it.copy(project = project, settings = settings) }
@@ -56,12 +56,7 @@ class ProjectActions(
             try {
                 syncProjectUseCase(
                     SyncProjectInput(
-                        project = Project(
-                            name = project.name,
-                            rootFileSystemPath = FileSystemPath(project.uri.toString()),
-                            notesRelativePath = RelativePath(project.notesPath),
-                            assetsRelativePath = RelativePath(project.assetsPath),
-                        ),
+                        project = project,
                         settings = settings,
                     ),
                 )

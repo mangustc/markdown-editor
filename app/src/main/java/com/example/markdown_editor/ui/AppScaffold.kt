@@ -81,6 +81,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -89,7 +90,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import androidx.paging.compose.collectAsLazyPagingItems
 import com.example.markdown_editor.R
-import com.example.markdown_editor.data.model.Note
+import com.example.markdown_editor.domain.models.Note
 import com.example.markdown_editor.domain.navigation.EditorDestination
 import com.example.markdown_editor.domain.navigation.MessengerDestination
 import com.example.markdown_editor.ui.components.NoteDrawerItem
@@ -133,7 +134,7 @@ fun AppScaffold(
         appViewModel.navigationEvents.collect {
             when (it) {
                 is NavigationEvent.GoToEditor ->
-                    navController.navigate(EditorDestination(it.note.uri.toString()))
+                    navController.navigate(EditorDestination(it.note.projectFile.fileSystemPath.value))
 
                 is NavigationEvent.GoBack -> navController.popBackStack()
                 is NavigationEvent.OpenDrawer -> scope.launch { drawerState.open() }
@@ -141,7 +142,8 @@ fun AppScaffold(
                 is NavigationEvent.OpenUrl -> uriHandler.openUri(it.url)
                 is NavigationEvent.OpenFile -> {
                     val intent = Intent(Intent.ACTION_VIEW).apply {
-                        setDataAndType(it.uri, context.contentResolver.getType(it.uri) ?: "*/*")
+                        val uri = it.uri.value.toUri()
+                        setDataAndType(uri, context.contentResolver.getType(uri) ?: "*/*")
                         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                     }
                     try {
@@ -359,7 +361,7 @@ fun AppScaffold(
                                     ", ",
                                 ) else null,
                                 isPinned = note.tags?.contains("pinned") == true,
-                                selected = note.uri == uiState.activeNote?.uri,
+                                selected = note.projectFile.relativePath == uiState.activeNote?.projectFile?.relativePath,
                                 onClick = { appViewModel.drawer.onNoteSelected(note); focusManager.clearFocus() },
                                 onOpen = { appViewModel.drawer.onNoteSelected(note) },
                                 onDelete = { appViewModel.drawer.showNoteDeleteDialog(note) },

@@ -10,8 +10,8 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.ViewModelProvider
-import com.example.markdown_editor.domain.messenger.Attachment
-import com.example.markdown_editor.domain.messenger.AttachmentType
+import com.example.markdown_editor.domain.models.Attachment
+import com.example.markdown_editor.domain.models.FileSystemPath
 import com.example.markdown_editor.ui.AppScaffold
 import com.example.markdown_editor.ui.MarkdowneditorTheme
 import com.example.markdown_editor.ui.viewmodel.AppViewModel
@@ -74,10 +74,10 @@ class MainActivity : ComponentActivity() {
         val attachments = uris.map { uri ->
             val resolvedMime = contentResolver.getType(uri) ?: mimeType
             val displayName = DocumentFile.fromSingleUri(this, uri)?.name ?: "File"
-            Attachment(
-                path = uri.toString(),
+            Attachment.PendingAttachment(
+                fileSystemPath = FileSystemPath(uri.toString()),
                 displayName = displayName,
-                type = if (resolvedMime.startsWith("image/")) AttachmentType.PENDING_IMAGE else AttachmentType.PENDING_FILE,
+                type = if (resolvedMime.startsWith("image/")) Attachment.AttachmentType.IMAGE else Attachment.AttachmentType.FILE,
             )
         }
 

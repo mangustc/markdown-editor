@@ -1,9 +1,9 @@
 package com.example.markdown_editor.ui.viewmodel
 
-import com.example.markdown_editor.data.repository.LinkPreviewRepository
-import com.example.markdown_editor.data.repository.NoteRepository
-import com.example.markdown_editor.data.repository.ProjectRepository
-import com.example.markdown_editor.data.repository.SettingsRepository
+import com.example.markdown_editor.data.linkPreview.LinkPreviewRepository
+import com.example.markdown_editor.data.project.NoteRepository
+import com.example.markdown_editor.data.project.ProjectRepository
+import com.example.markdown_editor.data.project.SettingsRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 

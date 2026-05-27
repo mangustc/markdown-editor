@@ -1,11 +1,11 @@
 package com.example.markdown_editor.domain.usecases.sync
 
-import com.example.markdown_editor.data.model.Settings
-import com.example.markdown_editor.data.repository.ProjectRepository
+import com.example.markdown_editor.data.project.ProjectRepository
 import com.example.markdown_editor.data.sync.SyncRepository
 import com.example.markdown_editor.data.sync.SyncRepositoryFactory
 import com.example.markdown_editor.domain.models.Project
 import com.example.markdown_editor.domain.models.RelativePath
+import com.example.markdown_editor.domain.models.Settings
 import com.example.markdown_editor.domain.usecases.DomainError
 import com.example.markdown_editor.domain.usecases.UseCase
 import com.example.markdown_editor.domain.usecases.UseCaseResult

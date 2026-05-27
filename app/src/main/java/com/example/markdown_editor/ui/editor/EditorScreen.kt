@@ -1,6 +1,7 @@
 package com.example.markdown_editor.ui.editor
 
 import android.net.Uri
+import android.provider.DocumentsContract
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -101,15 +102,16 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.zIndex
+import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.compose.collectAsLazyPagingItems
 import coil3.compose.AsyncImage
 import com.example.markdown_editor.R
-import com.example.markdown_editor.data.model.FrontMatter
-import com.example.markdown_editor.data.model.FrontMatterValue
-import com.example.markdown_editor.data.model.Project
 import com.example.markdown_editor.domain.markdown.MarkdownParser
-import com.example.markdown_editor.domain.markdown.SpanInfo
+import com.example.markdown_editor.domain.models.FrontMatter
+import com.example.markdown_editor.domain.models.Project
+import com.example.markdown_editor.domain.models.RelativePath
+import com.example.markdown_editor.domain.models.SpanInfo
 import com.example.markdown_editor.ui.components.NoteDrawerItem
 import com.example.markdown_editor.ui.components.NoteSearchBar
 import com.example.markdown_editor.ui.components.TooltipIconButton
@@ -519,8 +521,9 @@ fun FrontMatterProperties(
                             onAddTag = onAddTag,
                             onRemoveTag = onRemoveTag,
                         )
-                    } else if (value is FrontMatterValue.Scalar || value is FrontMatterValue.StringList) {
-                        val realVal = if (value is FrontMatterValue.Scalar) value.value else ""
+                    } else if (value is FrontMatter.FrontMatterValue.Scalar || value is FrontMatter.FrontMatterValue.StringList) {
+                        val realVal =
+                            if (value is FrontMatter.FrontMatterValue.Scalar) value.value else ""
                         var localVal by remember(realVal) { mutableStateOf(realVal) }
                         BasicTextField(
                             value = localVal,
@@ -726,7 +729,12 @@ fun AsyncMarkdownImage(path: String, project: Project, onRatioMeasured: (Float) 
     var imageUri by remember(path, project) { mutableStateOf<Uri?>(null) }
 
     LaunchedEffect(path, project) {
-        imageUri = project.getFileUri(path)
+        // TODO: Change uri get and get it from a use case or something
+        val rootUri = project.rootFileSystemPath.value.toUri()
+        val relativePath = RelativePath(path)
+        val treeId = DocumentsContract.getTreeDocumentId(rootUri)
+        val childId = if (relativePath.value.isEmpty()) treeId else "$treeId/${relativePath.value}"
+        imageUri = DocumentsContract.buildDocumentUriUsingTree(rootUri, childId)
     }
 
     if (imageUri != null) {

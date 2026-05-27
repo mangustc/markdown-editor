@@ -1,5 +1,6 @@
 package com.example.markdown_editor.domain.markdown
 
+import com.example.markdown_editor.domain.models.SpanInfo
 import org.commonmark.node.AbstractVisitor
 import org.commonmark.node.BlockQuote
 import org.commonmark.node.Code

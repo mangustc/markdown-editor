@@ -1,11 +1,11 @@
 package com.example.markdown_editor.ui.viewmodel
 
-import com.example.markdown_editor.data.model.FrontMatter
-import com.example.markdown_editor.data.model.LinkPreview
-import com.example.markdown_editor.data.model.Note
-import com.example.markdown_editor.data.model.Project
-import com.example.markdown_editor.data.model.Settings
-import com.example.markdown_editor.domain.messenger.Attachment
+import com.example.markdown_editor.domain.models.Attachment
+import com.example.markdown_editor.domain.models.FrontMatter
+import com.example.markdown_editor.domain.models.LinkPreview
+import com.example.markdown_editor.domain.models.Note
+import com.example.markdown_editor.domain.models.Project
+import com.example.markdown_editor.domain.models.Settings
 
 data class AppUiState(
     val project: Project? = null,

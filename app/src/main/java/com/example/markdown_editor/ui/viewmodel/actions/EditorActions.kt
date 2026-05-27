@@ -6,14 +6,14 @@ import androidx.compose.foundation.text.input.insert
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.text.TextRange
-import androidx.core.net.toUri
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
-import com.example.markdown_editor.data.model.FrontMatter
-import com.example.markdown_editor.data.model.FrontMatterValue
-import com.example.markdown_editor.data.model.Note
-import com.example.markdown_editor.data.model.SearchQuery
-import com.example.markdown_editor.domain.markdown.SpanInfo
+import com.example.markdown_editor.domain.models.FileSystemPath
+import com.example.markdown_editor.domain.models.FrontMatter
+import com.example.markdown_editor.domain.models.Note
+import com.example.markdown_editor.domain.models.RelativePath
+import com.example.markdown_editor.domain.models.SearchQuery
+import com.example.markdown_editor.domain.models.SpanInfo
 import com.example.markdown_editor.ui.viewmodel.AppDeps
 import com.example.markdown_editor.ui.viewmodel.events.EditorEvent
 import com.example.markdown_editor.ui.viewmodel.events.NavigationEvent
@@ -71,7 +71,11 @@ class EditorActions(
 
     fun insertNoteLink(note: Note) {
         val project = deps.uiState.value.project ?: return
-        val syntax = "[${note.name}](<${project.notesPath}/${note.name}.md>)"
+        val syntax = "[${note.name}](<${
+            project.notesRelativePath.appendRelativePath(
+                RelativePath(note.name),
+            )
+        }.md>)"
         insertWithOffset(syntax, syntax.length)
         dismissLinkNoteDialog()
     }
@@ -94,9 +98,13 @@ class EditorActions(
             is EditorEvent.AttachPhoto -> {
                 val project = deps.uiState.value.project ?: return
                 deps.scope.launch(Dispatchers.IO) {
-                    val relativePath =
-                        deps.projectRepo.copyToAssets(project = project, assetUri = event.uri)
-                    val markdown = "![image](<$relativePath>)"
+                    val projectFile =
+                        deps.projectRepo.copyToAssets(
+                            project = project,
+                            assetPath = FileSystemPath(event.uri.toString()),
+                        )
+                    val label = projectFile.relativePath.basename
+                    val markdown = "![$label](<${projectFile.relativePath.value}>)"
                     withContext(Dispatchers.Main) { insertWithOffset(markdown, 0) }
                 }
             }
@@ -104,10 +112,13 @@ class EditorActions(
             is EditorEvent.AttachFile -> {
                 val project = deps.uiState.value.project ?: return
                 deps.scope.launch(Dispatchers.IO) {
-                    val relativePath =
-                        deps.projectRepo.copyToAssets(project = project, assetUri = event.uri)
-                    val label = event.displayName ?: relativePath.substringAfterLast("/")
-                    val markdown = "[$label](<$relativePath>)"
+                    val projectFile =
+                        deps.projectRepo.copyToAssets(
+                            project = project,
+                            assetPath = FileSystemPath(event.uri.toString()),
+                        )
+                    val label = event.displayName ?: projectFile.relativePath.basename
+                    val markdown = "[$label](<${projectFile.relativePath.value}>)"
                     withContext(Dispatchers.Main) { insertWithOffset(markdown, 0) }
                 }
             }
@@ -145,18 +156,21 @@ class EditorActions(
         }
     }
 
-    fun openLink(span: SpanInfo.Link) {
+    fun openLink(span: SpanInfo.Link) = deps.scope.launch {
         when (val linkType = span.linkType) {
             SpanInfo.Link.LinkType.NOTE, SpanInfo.Link.LinkType.FILE -> {
-                val project = deps.uiState.value.project ?: return
-                val fileUri = project.getFileUri(span.payload)
+                val project = deps.uiState.value.project ?: return@launch
+                val fileUri = deps.projectRepo.getProjectFile(
+                    project,
+                    RelativePath(span.payload),
+                )?.fileSystemPath ?: return@launch
                 val isNote =
-                    linkType == SpanInfo.Link.LinkType.NOTE && span.payload.startsWith("${project.notesPath}/")
+                    linkType == SpanInfo.Link.LinkType.NOTE && span.payload.startsWith("${project.notesRelativePath.value}/")
 
                 if (isNote) {
                     deps.scope.launch(Dispatchers.IO) {
                         try {
-                            val note = deps.noteRepo.getNoteByUri(fileUri)
+                            val note = deps.noteRepo.getNoteByFileSystemPath(fileUri)
                             withContext(Dispatchers.Main) {
                                 deps.globalActions.onEvent(NavigationEvent.GoToEditor(note = note))
                             }
@@ -181,7 +195,7 @@ class EditorActions(
     fun onNoteOpened(noteUriString: String) {
         deps.scope.launch(Dispatchers.IO) {
             try {
-                val note = deps.noteRepo.getNoteByUri(noteUriString.toUri())
+                val note = deps.noteRepo.getNoteByFileSystemPath(FileSystemPath(noteUriString))
                 val text = deps.noteRepo.getNoteText(note)
                 val (frontMatter, body) = FrontMatter.splitFromContent(text)
                 withContext(Dispatchers.Main) {
@@ -221,7 +235,7 @@ class EditorActions(
             it.copy(
                 editorFrontMatter = it.editorFrontMatter?.withField(
                     key,
-                    FrontMatterValue.Scalar(value),
+                    FrontMatter.FrontMatterValue.Scalar(value),
                 ),
             )
         }
@@ -240,7 +254,7 @@ class EditorActions(
             it.copy(
                 editorFrontMatter = fm.withField(
                     newKey,
-                    FrontMatterValue.Scalar(""),
+                    FrontMatter.FrontMatterValue.Scalar(""),
                 ),
             )
         }

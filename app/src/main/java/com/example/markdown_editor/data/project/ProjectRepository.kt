@@ -1,12 +1,12 @@
-package com.example.markdown_editor.data.repository
+package com.example.markdown_editor.data.project
 
-import android.net.Uri
 import androidx.paging.PagingData
-import com.example.markdown_editor.data.model.Note
-import com.example.markdown_editor.data.model.Project
-import com.example.markdown_editor.data.model.SearchQuery
+import com.example.markdown_editor.domain.models.FileSystemPath
+import com.example.markdown_editor.domain.models.Note
+import com.example.markdown_editor.domain.models.Project
 import com.example.markdown_editor.domain.models.ProjectFile
 import com.example.markdown_editor.domain.models.RelativePath
+import com.example.markdown_editor.domain.models.SearchQuery
 import kotlinx.coroutines.flow.Flow
 
 interface ProjectRepository {
@@ -24,14 +24,14 @@ interface ProjectRepository {
         includeFrontMatter: Boolean = true,
     ): Flow<PagingData<Note>>
 
-    fun buildProject(rootUri: Uri): Project
+    fun buildProject(rootUri: FileSystemPath): Project
     suspend fun saveProject(project: Project)
     suspend fun loadSavedProject(): Project?
     suspend fun syncDatabase(project: Project)
-    suspend fun copyToAssets(project: Project, assetUri: Uri): String
+    suspend fun copyToAssets(project: Project, assetPath: FileSystemPath): ProjectFile
     suspend fun getAllTags(): List<String>
     suspend fun writeFile(
-        project: com.example.markdown_editor.domain.models.Project,
+        project: Project,
         relativePath: RelativePath,
         byteArray: ByteArray,
         overwrite: Boolean = true,
@@ -39,16 +39,21 @@ interface ProjectRepository {
     ): ProjectFile?
 
     suspend fun deleteFile(
-        project: com.example.markdown_editor.domain.models.Project,
+        project: Project,
         relativePath: RelativePath,
     )
 
     suspend fun readFile(
-        project: com.example.markdown_editor.domain.models.Project,
+        project: Project,
         relativePath: RelativePath,
     ): ByteArray?
 
     suspend fun getProjectFilesList(
-        project: com.example.markdown_editor.domain.models.Project,
+        project: Project,
     ): List<ProjectFile>
+
+    suspend fun getProjectFile(
+        project: Project,
+        relativePath: RelativePath,
+    ): ProjectFile?
 }

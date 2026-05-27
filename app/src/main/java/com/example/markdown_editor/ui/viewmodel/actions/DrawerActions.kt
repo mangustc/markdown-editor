@@ -4,8 +4,8 @@ import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.runtime.snapshotFlow
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
-import com.example.markdown_editor.data.model.Note
-import com.example.markdown_editor.data.model.SearchQuery
+import com.example.markdown_editor.domain.models.Note
+import com.example.markdown_editor.domain.models.SearchQuery
 import com.example.markdown_editor.ui.viewmodel.AppDeps
 import com.example.markdown_editor.ui.viewmodel.events.NavigationEvent
 import com.example.markdown_editor.ui.viewmodel.events.SearchEvent
@@ -89,9 +89,8 @@ class DrawerActions(
             deps.noteRepo.deleteNote(note)
             deps.projectRepo.syncDatabase(project)
             deps.globalActions.updateNoteLists()
-            if (note.uri == activeNote?.uri)
+            if (note.projectFile.relativePath == activeNote?.projectFile?.relativePath)
                 deps.globalActions.onEvent(NavigationEvent.GoBack)
-
         }
     }
 

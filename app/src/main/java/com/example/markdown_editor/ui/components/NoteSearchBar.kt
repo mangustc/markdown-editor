@@ -72,7 +72,7 @@ import androidx.compose.ui.unit.em
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.itemKey
 import com.example.markdown_editor.R
-import com.example.markdown_editor.data.model.Note
+import com.example.markdown_editor.domain.models.Note
 import com.example.markdown_editor.ui.util.scrollbar
 import com.example.markdown_editor.ui.viewmodel.events.SearchEvent
 
@@ -113,7 +113,7 @@ fun NoteSearchBar(
         ) {
             items(
                 count = searchResults.itemCount,
-                key = searchResults.itemKey { it.uri.toString() },
+                key = searchResults.itemKey { it.projectFile.relativePath.value },
             ) { index ->
                 val note = searchResults[index]
                 if (note != null) {

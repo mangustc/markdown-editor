@@ -38,18 +38,20 @@ class SyncProjectUseCase(
             lastSyncTimestamp = System.currentTimeMillis() / 1000,
             files = snapshotLocal(project),
         )
+
         val baseManifest = runCatching {
             projectRepository.readFile(project, SyncManifest.ProjectRelativePath)?.let {
                 json.decodeFromString<SyncManifest>(it.decodeToString())
             }
         }.getOrNull() ?: SyncManifest.Empty
 
-        val remoteManifest = runCatching {
+        val remoteManifest =
             syncRepository.downloadFile(remoteRoot.appendRelativePath(SyncManifest.ProjectRelativePath))
                 ?.let {
-                    json.decodeFromString<SyncManifest>(it.decodeToString())
-                }
-        }.getOrNull() ?: SyncManifest.Empty
+                    runCatching {
+                        json.decodeFromString<SyncManifest>(it.decodeToString())
+                    }.getOrNull()
+                } ?: SyncManifest.Empty
 
         if (localManifest.files == baseManifest.files && remoteManifest.files == baseManifest.files) {
             return@withContext SyncResult(actions = emptyList(), newManifest = baseManifest)
@@ -68,41 +70,32 @@ class SyncProjectUseCase(
         }
 
         val errors = mutableListOf<String>()
-        var criticalError: Exception? = null
 
         actions.forEach { action ->
-            try {
-                val remotePath = remoteRoot.appendRelativePath(actionPath(action))
-                when (action) {
-                    is SyncFileAction.Upload, is SyncFileAction.ConflictUpload -> {
-                        val bytes = projectRepository.readFile(project, actionPath(action))
-                            ?: throw SyncLocalIoException()
-                        syncRepository.uploadFile(remotePath, bytes)
-                    }
-
-                    is SyncFileAction.Download -> {
-                        val bytes = syncRepository.downloadFile(remotePath)
-                            ?: throw SyncStateException()
-                        projectRepository.writeFile(project, actionPath(action), bytes)
-                    }
-
-                    is SyncFileAction.DeleteLocal -> projectRepository.deleteFile(
-                        project,
-                        actionPath(action),
-                    )
-
-                    is SyncFileAction.DeleteRemote -> syncRepository.deleteFile(remotePath)
-                    is SyncFileAction.NoOp -> Unit
+            val remotePath = remoteRoot.appendRelativePath(actionPath(action))
+            when (action) {
+                is SyncFileAction.Upload, is SyncFileAction.ConflictUpload -> {
+                    val bytes = projectRepository.readFile(project, actionPath(action))
+                        ?: throw SyncLocalIoException()
+                    syncRepository.uploadFile(remotePath, bytes)
                 }
-            } catch (e: SyncException) {
-                criticalError = e
-                return@forEach
-            } catch (e: Exception) {
-                errors.add("${action::class.simpleName}(${actionPath(action)}): ${e.message}")
+
+                is SyncFileAction.Download -> {
+                    val bytes = syncRepository.downloadFile(remotePath)
+                        ?: throw SyncStateException()
+                    projectRepository.writeFile(project, actionPath(action), bytes)
+                }
+
+                is SyncFileAction.DeleteLocal -> projectRepository.deleteFile(
+                    project,
+                    actionPath(action),
+                )
+
+                is SyncFileAction.DeleteRemote -> syncRepository.deleteFile(remotePath)
+                is SyncFileAction.NoOp -> Unit
             }
         }
 
-        criticalError?.let { throw it }
 
         val finalLocalState = snapshotLocal(project)
         val manifest = SyncManifest(

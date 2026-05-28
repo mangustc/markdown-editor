@@ -12,6 +12,8 @@ import com.example.markdown_editor.domain.usecases.messenger.GetMessagesInput
 import com.example.markdown_editor.domain.usecases.messenger.GetMessagesUseCase
 import com.example.markdown_editor.domain.usecases.messenger.GetPinnedMessagesInput
 import com.example.markdown_editor.domain.usecases.messenger.GetPinnedMessagesUseCase
+import com.example.markdown_editor.domain.usecases.project.CopyToAssetsInput
+import com.example.markdown_editor.domain.usecases.project.CopyToAssetsUseCase
 import com.example.markdown_editor.domain.usecases.project.CreateNoteInput
 import com.example.markdown_editor.domain.usecases.project.CreateNoteUseCase
 import com.example.markdown_editor.domain.usecases.project.DeleteNoteInput
@@ -40,6 +42,7 @@ class MessengerActions(
     private val createNoteUseCase: CreateNoteUseCase by inject()
     private val deleteNoteUseCase: DeleteNoteUseCase by inject()
     private val getLinkPreviewUseCase: GetLinkPreviewUseCase by inject()
+    private val copyToAssetsUseCase: CopyToAssetsUseCase by inject()
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val notesPaged: Flow<PagingData<MessageBody>> = deps.uiState
@@ -152,7 +155,12 @@ class MessengerActions(
                     when (attachment) {
                         is Attachment.PendingAttachment -> {
                             val projectFile =
-                                deps.projectRepo.copyToAssets(project, attachment.fileSystemPath)
+                                copyToAssetsUseCase(
+                                    CopyToAssetsInput(
+                                        project = project,
+                                        assetPath = attachment.fileSystemPath,
+                                    ),
+                                )
                             append("\n$firstPart(<${projectFile.relativePath.value}>)")
                         }
 

@@ -41,7 +41,12 @@ interface ProjectRepository {
 
     suspend fun buildProject(projectPath: FileSystemPath): Project
     suspend fun syncDatabase(project: Project)
-    suspend fun copyToAssets(project: Project, assetPath: FileSystemPath): ProjectFile
+    suspend fun copyFromFileSystem(
+        project: Project,
+        fromPath: FileSystemPath,
+        toDirPath: RelativePath,
+    ): ProjectFile
+
     suspend fun getAllTags(project: Project): List<String>
     suspend fun writeFile(
         project: Project,

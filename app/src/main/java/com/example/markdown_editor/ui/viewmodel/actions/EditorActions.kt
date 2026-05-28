@@ -13,8 +13,16 @@ import com.example.markdown_editor.domain.models.FrontMatter
 import com.example.markdown_editor.domain.models.Note
 import com.example.markdown_editor.domain.models.RelativePath
 import com.example.markdown_editor.domain.models.SpanInfo
+import com.example.markdown_editor.domain.usecases.project.CopyToAssetsInput
+import com.example.markdown_editor.domain.usecases.project.CopyToAssetsUseCase
+import com.example.markdown_editor.domain.usecases.project.GetNoteInput
+import com.example.markdown_editor.domain.usecases.project.GetNoteUseCase
 import com.example.markdown_editor.domain.usecases.project.GetNotesInput
 import com.example.markdown_editor.domain.usecases.project.GetNotesUseCase
+import com.example.markdown_editor.domain.usecases.project.GetProjectFileInput
+import com.example.markdown_editor.domain.usecases.project.GetProjectFileUseCase
+import com.example.markdown_editor.domain.usecases.project.GetRealSpanInfoLinkTypeInput
+import com.example.markdown_editor.domain.usecases.project.GetRealSpanInfoLinkTypeUseCase
 import com.example.markdown_editor.ui.viewmodel.AppDeps
 import com.example.markdown_editor.ui.viewmodel.events.EditorEvent
 import com.example.markdown_editor.ui.viewmodel.events.NavigationEvent
@@ -38,6 +46,10 @@ class EditorActions(
     private val deps: AppDeps,
 ) : KoinComponent {
     private val getNotesUseCase: GetNotesUseCase by inject()
+    private val copyToAssetsUseCase: CopyToAssetsUseCase by inject()
+    private val getRealSpanInfoLinkTypeUseCase: GetRealSpanInfoLinkTypeUseCase by inject()
+    private val getNoteUseCase: GetNoteUseCase by inject()
+    private val getProjectFileUseCase: GetProjectFileUseCase by inject()
 
     val state = TextFieldState()
     val linkSearchState = TextFieldState()
@@ -101,9 +113,11 @@ class EditorActions(
                 deps.scope.launch {
                     val project = deps.uiState.value.project ?: return@launch
                     val projectFile =
-                        deps.projectRepo.copyToAssets(
-                            project = project,
-                            assetPath = FileSystemPath(event.uri.toString()),
+                        copyToAssetsUseCase(
+                            CopyToAssetsInput(
+                                project = project,
+                                assetPath = FileSystemPath(event.uri.toString()),
+                            ),
                         )
                     val label = projectFile.relativePath.basename
                     val markdown = "![$label](<${projectFile.relativePath.value}>)"
@@ -115,9 +129,11 @@ class EditorActions(
                 deps.scope.launch {
                     val project = deps.uiState.value.project ?: return@launch
                     val projectFile =
-                        deps.projectRepo.copyToAssets(
-                            project = project,
-                            assetPath = FileSystemPath(event.uri.toString()),
+                        copyToAssetsUseCase(
+                            CopyToAssetsInput(
+                                project = project,
+                                assetPath = FileSystemPath(event.uri.toString()),
+                            ),
                         )
                     val label = event.displayName ?: projectFile.relativePath.basename
                     val markdown = "[$label](<${projectFile.relativePath.value}>)"
@@ -160,26 +176,32 @@ class EditorActions(
 
     fun openLink(span: SpanInfo.Link) {
         deps.scope.launch {
-            when (val linkType = span.linkType) {
-                SpanInfo.Link.LinkType.NOTE, SpanInfo.Link.LinkType.FILE -> {
-                    val project = deps.uiState.value.project ?: return@launch
-                    val fileUri = deps.projectRepo.getProjectFile(
-                        project,
-                        RelativePath(span.payload),
-                    )?.fileSystemPath ?: return@launch
-                    val isNote =
-                        linkType == SpanInfo.Link.LinkType.NOTE && span.payload.startsWith("${project.notesRelativePath.value}/")
+            val project = deps.uiState.value.project ?: return@launch
+            val realLinkType = getRealSpanInfoLinkTypeUseCase(
+                GetRealSpanInfoLinkTypeInput(
+                    project = project,
+                    span = span,
+                ),
+            ) ?: return@launch
+            when (realLinkType) {
+                SpanInfo.Link.LinkType.NOTE -> {
+                    val note = getNoteUseCase(
+                        GetNoteInput(
+                            project = project,
+                            relativePath = RelativePath(span.payload),
+                        ),
+                    ) ?: return@launch
+                    deps.globalActions.onEvent(NavigationEvent.GoToEditor(note = note))
+                }
 
-                    if (isNote) {
-                        try {
-                            val note = deps.noteRepo.getNoteByFileSystemPath(fileUri)
-                            deps.globalActions.onEvent(NavigationEvent.GoToEditor(note = note))
-                        } catch (_: Exception) {
-                            deps.globalActions.onEvent(NavigationEvent.OpenFile(fileUri))
-                        }
-                    } else {
-                        deps.globalActions.onEvent(NavigationEvent.OpenFile(fileUri))
-                    }
+                SpanInfo.Link.LinkType.FILE -> {
+                    val projectFile = getProjectFileUseCase(
+                        GetProjectFileInput(
+                            project = project,
+                            relativePath = RelativePath(span.payload),
+                        ),
+                    ) ?: return@launch
+                    deps.globalActions.onEvent(NavigationEvent.OpenFile(projectFile.fileSystemPath))
                 }
 
                 SpanInfo.Link.LinkType.HTTP -> {

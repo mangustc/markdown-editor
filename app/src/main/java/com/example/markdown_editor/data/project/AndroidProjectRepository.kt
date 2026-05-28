@@ -157,19 +157,25 @@ class AndroidProjectRepository(
             )
         }
 
-    override suspend fun copyToAssets(project: Project, assetPath: FileSystemPath): ProjectFile =
+    override suspend fun copyFromFileSystem(
+        project: Project,
+        fromPath: FileSystemPath,
+        toDirPath: RelativePath,
+    ): ProjectFile =
         withContext(Dispatchers.IO) {
             val resolver = context.contentResolver
-            val assetUri = assetPath.value.toUri()
+            val assetUri = fromPath.value.toUri()
             val sourceFile = DocumentFile.fromSingleUri(context, assetUri)
             val fileName = sourceFile?.name ?: "attachment_${System.currentTimeMillis()}"
             val mimeType = resolver.getType(assetUri) ?: "application/octet-stream"
-            val projectUri = project.rootFileSystemPath.value.toUri()
 
-            val assetsDir =
-                DocumentFile.fromTreeUri(context, getUri(projectUri, project.assetsRelativePath))
-                    ?: throw IllegalStateException("Could not access assets directory")
-            val targetFile = assetsDir.createFile(mimeType, fileName)
+            val rootUri = project.rootFileSystemPath.value.toUri()
+            val rootDoc = DocumentFile.fromTreeUri(context, rootUri)
+                ?: throw IllegalStateException("Could not access assets directory")
+
+            val dir = findDocumentFile(rootDoc, toDirPath)
+                ?: throw IllegalStateException("Could not access assets directory")
+            val targetFile = dir.createFile(mimeType, fileName)
                 ?: throw IllegalStateException("Failed to create file in assets")
 
             try {
@@ -185,7 +191,12 @@ class AndroidProjectRepository(
 
             ProjectFile(
                 fileSystemPath = FileSystemPath(targetFile.uri.toString()),
-                relativePath = RelativePath("assets/${targetFile.name}"),
+                relativePath = toDirPath.appendRelativePath(
+                    RelativePath(
+                        targetFile.name
+                            ?: throw IllegalStateException("Failed to create file in assets"),
+                    ),
+                ),
             )
         }
 

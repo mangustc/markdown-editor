@@ -31,7 +31,7 @@ class SyncProjectUseCase(
     private suspend fun sync(
         project: Project,
         syncRepository: SyncRepository,
-    ): SyncResult = withContext(Dispatchers.IO) {
+    ) = withContext(Dispatchers.IO) {
         val remoteRoot = RelativePath(project.name)
 
         val localManifest = SyncManifest(
@@ -54,7 +54,7 @@ class SyncProjectUseCase(
                 } ?: SyncManifest.Empty
 
         if (localManifest.files == baseManifest.files && remoteManifest.files == baseManifest.files) {
-            return@withContext SyncResult(actions = emptyList(), newManifest = baseManifest)
+            return@withContext
         }
 
         val allPaths =
@@ -68,8 +68,6 @@ class SyncProjectUseCase(
                 baseManifest.files[path],
             )
         }
-
-        val errors = mutableListOf<String>()
 
         actions.forEach { action ->
             val remotePath = remoteRoot.appendRelativePath(actionPath(action))
@@ -109,8 +107,6 @@ class SyncProjectUseCase(
             newManifestBytes,
         )
         projectRepository.writeFile(project, SyncManifest.ProjectRelativePath, newManifestBytes)
-
-        SyncResult(actions = actions, newManifest = manifest, errors = errors)
     }
 
     private fun decide(

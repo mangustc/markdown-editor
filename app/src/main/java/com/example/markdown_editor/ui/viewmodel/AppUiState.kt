@@ -38,7 +38,7 @@ data class AppUiState(
     val messengerLinkPreviews: Map<String, LinkPreview?> = emptyMap(),
     val messengerEditingNote: Note? = null,
     val messengerPinnedMessages: List<MessageBody> = emptyList(),
-    val messengerSelectedNotes: Set<String> = emptySet(),
+    val messengerSelectedNotes: Set<MessageBody> = emptySet(),
 
     val isSettingsDialogVisible: Boolean = false,
 

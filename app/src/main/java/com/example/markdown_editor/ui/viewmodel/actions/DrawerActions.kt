@@ -7,6 +7,8 @@ import androidx.paging.cachedIn
 import com.example.markdown_editor.domain.models.Note
 import com.example.markdown_editor.domain.usecases.project.CreateNoteInput
 import com.example.markdown_editor.domain.usecases.project.CreateNoteUseCase
+import com.example.markdown_editor.domain.usecases.project.DeleteNoteInput
+import com.example.markdown_editor.domain.usecases.project.DeleteNoteUseCase
 import com.example.markdown_editor.domain.usecases.project.GetNotesInput
 import com.example.markdown_editor.domain.usecases.project.GetNotesUseCase
 import com.example.markdown_editor.ui.viewmodel.AppDeps
@@ -29,6 +31,7 @@ class DrawerActions(
 ) : KoinComponent {
     private val getNotesUseCase: GetNotesUseCase by inject()
     private val createNoteUseCase: CreateNoteUseCase by inject()
+    private val deleteNoteUseCase: DeleteNoteUseCase by inject()
 
     val searchState = TextFieldState()
 
@@ -98,8 +101,14 @@ class DrawerActions(
 
     fun onDeleteNote(note: Note) {
         deps.scope.launch {
+            val project = deps.uiState.value.project ?: return@launch
             val activeNote = deps.uiState.value.activeNote
-            deps.noteRepo.deleteNote(note)
+            deleteNoteUseCase(
+                DeleteNoteInput(
+                    project = project,
+                    note = note,
+                ),
+            )
             deps.globalActions.updateNoteLists()
             if (note.projectFile.relativePath == activeNote?.projectFile?.relativePath)
                 deps.globalActions.onEvent(NavigationEvent.GoBack)

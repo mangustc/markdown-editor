@@ -3,6 +3,7 @@ package com.example.markdown_editor.koin.modules
 import com.example.markdown_editor.domain.usecases.messenger.GetMessagesUseCase
 import com.example.markdown_editor.domain.usecases.messenger.GetPinnedMessagesUseCase
 import com.example.markdown_editor.domain.usecases.project.CreateNoteUseCase
+import com.example.markdown_editor.domain.usecases.project.DeleteNoteUseCase
 import com.example.markdown_editor.domain.usecases.project.GetNoteUseCase
 import com.example.markdown_editor.domain.usecases.project.GetNotesUseCase
 import com.example.markdown_editor.domain.usecases.project.LoadSavedProjectUseCase
@@ -26,4 +27,5 @@ val domainModule = module {
     factory<GetNotesUseCase>()
     factory<CreateNoteUseCase>()
     factory<GetNoteUseCase>()
+    factory<DeleteNoteUseCase>()
 }

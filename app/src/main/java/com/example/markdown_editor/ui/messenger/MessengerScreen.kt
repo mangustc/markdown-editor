@@ -482,12 +482,10 @@ fun MessengerScreen(viewModel: AppViewModel) {
                                         },
                                         onPinNote = { viewModel.drawer.onPinNote(it.note) },
                                         isPinned = note.note.tags?.contains("pinned") ?: false,
-                                        isSelected = uiState.messengerSelectedNotes.contains(note.note.projectFile.relativePath.toString()),
+                                        isSelected = uiState.messengerSelectedNotes.contains(note),
                                         isSelectionMode = uiState.messengerSelectedNotes.isNotEmpty(),
                                         onToggleSelect = {
-                                            viewModel.messenger.toggleNoteSelection(
-                                                it.note.projectFile.relativePath.toString(),
-                                            )
+                                            viewModel.messenger.toggleNoteSelection(it)
                                         },
                                         onNoAppFound = {
                                             viewModel.onEvent(NotificationEvent.NoAppFoundToOpenThisFile)

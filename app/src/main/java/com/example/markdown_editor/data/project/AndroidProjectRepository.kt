@@ -333,9 +333,7 @@ class AndroidProjectRepository(
             projectFile = ProjectFile(
                 fileSystemPath = FileSystemPath(entity.uri),
                 relativePath = project.notesRelativePath.appendRelativePath(
-                    RelativePath(
-                        entity.name,
-                    ),
+                    RelativePath("${entity.name}.md"),
                 ),
             ),
             lastModified = entity.lastModified,

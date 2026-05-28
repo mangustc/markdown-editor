@@ -2,9 +2,7 @@ package com.example.markdown_editor.ui.viewmodel.actions
 
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
-import com.example.markdown_editor.domain.markdown.MarkdownParser
 import com.example.markdown_editor.domain.models.Attachment
-import com.example.markdown_editor.domain.models.FileSystemPath
 import com.example.markdown_editor.domain.models.MessageBody
 import com.example.markdown_editor.domain.models.Note
 import com.example.markdown_editor.domain.usecases.messenger.GetMessagesInput
@@ -13,6 +11,8 @@ import com.example.markdown_editor.domain.usecases.messenger.GetPinnedMessagesIn
 import com.example.markdown_editor.domain.usecases.messenger.GetPinnedMessagesUseCase
 import com.example.markdown_editor.domain.usecases.project.CreateNoteInput
 import com.example.markdown_editor.domain.usecases.project.CreateNoteUseCase
+import com.example.markdown_editor.domain.usecases.project.DeleteNoteInput
+import com.example.markdown_editor.domain.usecases.project.DeleteNoteUseCase
 import com.example.markdown_editor.ui.viewmodel.AppDeps
 import com.example.markdown_editor.ui.viewmodel.events.ClipboardEvent
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -35,6 +35,7 @@ class MessengerActions(
     private val getMessagesUseCase: GetMessagesUseCase by inject()
     private val getPinnedMessagesUseCase: GetPinnedMessagesUseCase by inject()
     private val createNoteUseCase: CreateNoteUseCase by inject()
+    private val deleteNoteUseCase: DeleteNoteUseCase by inject()
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val notesPaged: Flow<PagingData<MessageBody>> = deps.uiState
@@ -195,10 +196,10 @@ class MessengerActions(
         }
     }
 
-    fun toggleNoteSelection(uriString: String) {
+    fun toggleNoteSelection(message: MessageBody) {
         deps.uiState.update {
             val sel = it.messengerSelectedNotes
-            it.copy(messengerSelectedNotes = if (sel.contains(uriString)) sel - uriString else sel + uriString)
+            it.copy(messengerSelectedNotes = if (sel.contains(message)) sel - message else sel + message)
         }
     }
 
@@ -208,12 +209,14 @@ class MessengerActions(
 
     fun deleteSelectedNotes() {
         deps.scope.launch {
-            val uris = deps.uiState.value.messengerSelectedNotes
-            uris.forEach { u ->
+            val project = deps.uiState.value.project ?: return@launch
+            val messages = deps.uiState.value.messengerSelectedNotes
+            messages.forEach { message ->
                 runCatching {
-                    deps.noteRepo.deleteNote(
-                        deps.noteRepo.getNoteByFileSystemPath(
-                            FileSystemPath(u),
+                    deleteNoteUseCase(
+                        DeleteNoteInput(
+                            project = project,
+                            note = message.note,
                         ),
                     )
                 }
@@ -225,14 +228,9 @@ class MessengerActions(
 
     fun copySelectedNotesText() {
         deps.scope.launch {
-            val text = deps.uiState.value.messengerSelectedNotes.mapNotNull { u ->
-                runCatching {
-                    val note = deps.noteRepo.getNoteByFileSystemPath(FileSystemPath(u))
-                    val text = deps.noteRepo.getNoteText(note, includeFrontMatter = false)
-
-                    MarkdownParser.stripAttachments(text, MarkdownParser.parse(text))
-                }.getOrNull()?.takeIf { it.isNotBlank() }
-            }.joinToString("\n\n")
+            val text = deps.uiState.value.messengerSelectedNotes.joinToString("\n\n") { message ->
+                message.text
+            }
             deps.globalActions.onEvent(ClipboardEvent.Copy(text))
             clearSelection()
         }

@@ -4,6 +4,7 @@ import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.runtime.snapshotFlow
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
+import com.example.markdown_editor.domain.PINNED_TAG
 import com.example.markdown_editor.domain.models.Note
 import com.example.markdown_editor.domain.usecases.project.CreateNoteInput
 import com.example.markdown_editor.domain.usecases.project.CreateNoteUseCase
@@ -11,6 +12,10 @@ import com.example.markdown_editor.domain.usecases.project.DeleteNoteInput
 import com.example.markdown_editor.domain.usecases.project.DeleteNoteUseCase
 import com.example.markdown_editor.domain.usecases.project.GetNotesInput
 import com.example.markdown_editor.domain.usecases.project.GetNotesUseCase
+import com.example.markdown_editor.domain.usecases.project.RenameNoteInput
+import com.example.markdown_editor.domain.usecases.project.RenameNoteUseCase
+import com.example.markdown_editor.domain.usecases.project.ToggleNoteTagInput
+import com.example.markdown_editor.domain.usecases.project.ToggleNoteTagUseCase
 import com.example.markdown_editor.ui.viewmodel.AppDeps
 import com.example.markdown_editor.ui.viewmodel.events.NavigationEvent
 import com.example.markdown_editor.ui.viewmodel.events.SearchEvent
@@ -32,6 +37,8 @@ class DrawerActions(
     private val getNotesUseCase: GetNotesUseCase by inject()
     private val createNoteUseCase: CreateNoteUseCase by inject()
     private val deleteNoteUseCase: DeleteNoteUseCase by inject()
+    private val renameNoteUseCase: RenameNoteUseCase by inject()
+    private val toggleNoteTagUseCase: ToggleNoteTagUseCase by inject()
 
     val searchState = TextFieldState()
 
@@ -145,14 +152,28 @@ class DrawerActions(
 
     fun onRenameNote(note: Note, newName: String) {
         deps.scope.launch {
-            deps.noteRepo.renameNote(note, newName)
+            val project = deps.uiState.value.project ?: return@launch
+            renameNoteUseCase(
+                RenameNoteInput(
+                    project = project,
+                    note = note,
+                    newName = newName,
+                ),
+            )
             deps.globalActions.updateNoteLists()
         }
     }
 
     fun onPinNote(note: Note) {
         deps.scope.launch {
-            deps.noteRepo.toggleNotePin(note)
+            val project = deps.uiState.value.project ?: return@launch
+            toggleNoteTagUseCase(
+                ToggleNoteTagInput(
+                    project = project,
+                    note = note,
+                    tag = PINNED_TAG,
+                ),
+            )
             deps.globalActions.updateNoteLists()
         }
     }

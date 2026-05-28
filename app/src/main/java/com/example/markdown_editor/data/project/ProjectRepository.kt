@@ -56,6 +56,22 @@ interface ProjectRepository {
         relativePath: RelativePath,
     )
 
+    suspend fun copyFile(
+        project: Project,
+        relativePath: RelativePath,
+        newRelativePath: RelativePath,
+        fileExistsStrategy: FileExistsStrategy = FileExistsStrategy.OVERWRITE,
+        createParents: Boolean = true,
+    ): ProjectFile?
+
+    suspend fun moveFile(
+        project: Project,
+        relativePath: RelativePath,
+        newRelativePath: RelativePath,
+        fileExistsStrategy: FileExistsStrategy = FileExistsStrategy.OVERWRITE,
+        createParents: Boolean = true,
+    ): ProjectFile?
+
     suspend fun readFile(
         project: Project,
         relativePath: RelativePath,

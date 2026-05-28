@@ -273,6 +273,37 @@ class AndroidProjectRepository(
         }
     }
 
+    override suspend fun copyFile(
+        project: Project,
+        relativePath: RelativePath,
+        newRelativePath: RelativePath,
+        fileExistsStrategy: ProjectRepository.FileExistsStrategy,
+        createParents: Boolean,
+    ): ProjectFile? = withContext(Dispatchers.IO) {
+        val bytes = readFile(project, relativePath) ?: return@withContext null
+        return@withContext writeFile(
+            project,
+            newRelativePath,
+            bytes,
+            fileExistsStrategy,
+            createParents,
+        )
+    }
+
+    override suspend fun moveFile(
+        project: Project,
+        relativePath: RelativePath,
+        newRelativePath: RelativePath,
+        fileExistsStrategy: ProjectRepository.FileExistsStrategy,
+        createParents: Boolean,
+    ): ProjectFile? = withContext(Dispatchers.IO) {
+        val newProjectFile =
+            copyFile(project, relativePath, newRelativePath, fileExistsStrategy, createParents)
+                ?: return@withContext null
+        deleteFile(project, relativePath)
+        return@withContext newProjectFile
+    }
+
     override suspend fun readFile(
         project: Project,
         relativePath: RelativePath,

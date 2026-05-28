@@ -7,8 +7,10 @@ import com.example.markdown_editor.domain.usecases.project.DeleteNoteUseCase
 import com.example.markdown_editor.domain.usecases.project.GetNoteUseCase
 import com.example.markdown_editor.domain.usecases.project.GetNotesUseCase
 import com.example.markdown_editor.domain.usecases.project.LoadSavedProjectUseCase
+import com.example.markdown_editor.domain.usecases.project.RenameNoteUseCase
 import com.example.markdown_editor.domain.usecases.project.SelectProjectUseCase
 import com.example.markdown_editor.domain.usecases.project.SyncDatabaseUseCase
+import com.example.markdown_editor.domain.usecases.project.ToggleNoteTagUseCase
 import com.example.markdown_editor.domain.usecases.settings.GetSettingsUseCase
 import com.example.markdown_editor.domain.usecases.settings.SetSettingsUseCase
 import com.example.markdown_editor.domain.usecases.sync.SyncProjectUseCase
@@ -28,4 +30,6 @@ val domainModule = module {
     factory<CreateNoteUseCase>()
     factory<GetNoteUseCase>()
     factory<DeleteNoteUseCase>()
+    factory<RenameNoteUseCase>()
+    factory<ToggleNoteTagUseCase>()
 }

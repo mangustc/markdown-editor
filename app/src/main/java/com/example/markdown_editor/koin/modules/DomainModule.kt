@@ -4,6 +4,7 @@ import com.example.markdown_editor.domain.usecases.messenger.GetMessagesUseCase
 import com.example.markdown_editor.domain.usecases.messenger.GetPinnedMessagesUseCase
 import com.example.markdown_editor.domain.usecases.project.CreateNoteUseCase
 import com.example.markdown_editor.domain.usecases.project.DeleteNoteUseCase
+import com.example.markdown_editor.domain.usecases.project.GetAllTagsUseCase
 import com.example.markdown_editor.domain.usecases.project.GetNoteUseCase
 import com.example.markdown_editor.domain.usecases.project.GetNotesUseCase
 import com.example.markdown_editor.domain.usecases.project.LoadSavedProjectUseCase
@@ -32,4 +33,5 @@ val domainModule = module {
     factory<DeleteNoteUseCase>()
     factory<RenameNoteUseCase>()
     factory<ToggleNoteTagUseCase>()
+    factory<GetAllTagsUseCase>()
 }

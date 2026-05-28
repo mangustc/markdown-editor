@@ -7,6 +7,8 @@ import com.example.markdown_editor.data.linkPreview.LinkPreviewRepository
 import com.example.markdown_editor.data.project.NoteRepository
 import com.example.markdown_editor.data.project.ProjectRepository
 import com.example.markdown_editor.domain.models.Attachment
+import com.example.markdown_editor.domain.usecases.project.GetAllTagsInput
+import com.example.markdown_editor.domain.usecases.project.GetAllTagsUseCase
 import com.example.markdown_editor.domain.usecases.project.SyncDatabaseInput
 import com.example.markdown_editor.domain.usecases.project.SyncDatabaseUseCase
 import com.example.markdown_editor.ui.viewmodel.actions.DrawerActions
@@ -34,6 +36,7 @@ class AppViewModel(
     private val noteRepo: NoteRepository,
     private val linkRepo: LinkPreviewRepository,
     private val syncDatabaseUseCase: SyncDatabaseUseCase,
+    private val getAllTagsUseCase: GetAllTagsUseCase,
 ) : AndroidViewModel(application), AppGlobalActions {
     private val _uiState = MutableStateFlow(AppUiState())
     val uiState: StateFlow<AppUiState> = _uiState.asStateFlow()
@@ -88,7 +91,15 @@ class AppViewModel(
                 project = project,
             ),
         )
-        _uiState.update { it.copy(allProjectTags = projectRepo.getAllTags()) }
+        _uiState.update {
+            it.copy(
+                allProjectTags = getAllTagsUseCase(
+                    GetAllTagsInput(
+                        project = project,
+                    ),
+                ),
+            )
+        }
         messenger.updateMessages()
     }
 

@@ -188,7 +188,7 @@ class AndroidProjectRepository(
             )
         }
 
-    override suspend fun getAllTags(): List<String> = withContext(Dispatchers.IO) {
+    override suspend fun getAllTags(project: Project): List<String> = withContext(Dispatchers.IO) {
         noteDao.getAllTags().flatMap { it.split(" ") }.filter { it.isNotBlank() }.distinct()
     }
 

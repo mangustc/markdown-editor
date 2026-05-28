@@ -24,7 +24,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class AppViewModel(
@@ -71,23 +70,19 @@ class AppViewModel(
     val focusEvents = _focusEvents.receiveAsFlow()
 
     override fun onEvent(event: AppEvent) {
-        deps.scope.launch {
-            when (event) {
-                is NavigationEvent -> _navigationEvents.send(event)
-                is NotificationEvent -> _notificationEvents.send(event)
-                is ClipboardEvent -> _clipboardEvents.send(event)
-                is FocusEvent -> _focusEvents.send(event)
-            }
+        when (event) {
+            is NavigationEvent -> _navigationEvents.trySend(event)
+            is NotificationEvent -> _notificationEvents.trySend(event)
+            is ClipboardEvent -> _clipboardEvents.trySend(event)
+            is FocusEvent -> _focusEvents.trySend(event)
         }
     }
 
-    override fun updateNoteLists() {
-        deps.scope.launch {
-            val project = _uiState.value.project ?: return@launch
-            projectRepo.syncDatabase(project)
-            _uiState.update { it.copy(allProjectTags = projectRepo.getAllTags()) }
-            messenger.updateMessages()
-        }
+    override suspend fun updateNoteLists() {
+        val project = _uiState.value.project ?: return
+        projectRepo.syncDatabase(project)
+        _uiState.update { it.copy(allProjectTags = projectRepo.getAllTags()) }
+        messenger.updateMessages()
     }
 
     fun onShareIntent(text: String?, attachments: List<Attachment>) {

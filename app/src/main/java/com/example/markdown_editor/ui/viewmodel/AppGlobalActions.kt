@@ -3,7 +3,7 @@ package com.example.markdown_editor.ui.viewmodel
 import com.example.markdown_editor.ui.viewmodel.events.AppEvent
 
 interface AppGlobalActions {
-    fun updateNoteLists()
+    suspend fun updateNoteLists()
 
     fun onEvent(event: AppEvent)
 }

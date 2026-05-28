@@ -43,22 +43,18 @@ class MessengerActions(
         }
         .cachedIn(deps.scope)
 
-    fun updateMessages(afterUpdate: () -> Unit = {}) {
-        deps.scope.launch {
-            val project = deps.uiState.value.project ?: return@launch
-            deps.projectRepo.syncDatabase(project)
-            val pinnedMessages = getPinnedMessagesUseCase(
-                GetPinnedMessagesInput(
-                    project = project,
-                ),
+    suspend fun updateMessages() {
+        val project = deps.uiState.value.project ?: return
+        val pinnedMessages = getPinnedMessagesUseCase(
+            GetPinnedMessagesInput(
+                project = project,
+            ),
+        )
+        deps.uiState.update {
+            it.copy(
+                messengerPinnedMessages = pinnedMessages,
+                messengerIsLoading = false,
             )
-            deps.uiState.update {
-                it.copy(
-                    messengerPinnedMessages = pinnedMessages,
-                    messengerIsLoading = false,
-                )
-            }
-            afterUpdate()
         }
     }
 
@@ -162,7 +158,6 @@ class MessengerActions(
             }
 
             deps.noteRepo.saveNoteText(targetNote, finalContent)
-
             deps.uiState.update { state ->
                 state.copy(
                     messengerNewNoteText = "",

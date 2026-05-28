@@ -5,7 +5,8 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import com.example.markdown_editor.domain.models.Note
-import com.example.markdown_editor.domain.models.SearchQuery
+import com.example.markdown_editor.domain.usecases.project.GetNotesInput
+import com.example.markdown_editor.domain.usecases.project.GetNotesUseCase
 import com.example.markdown_editor.ui.viewmodel.AppDeps
 import com.example.markdown_editor.ui.viewmodel.events.NavigationEvent
 import com.example.markdown_editor.ui.viewmodel.events.SearchEvent
@@ -18,10 +19,14 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import org.koin.core.component.KoinComponent
+import org.koin.core.component.inject
 
 class DrawerActions(
     private val deps: AppDeps,
-) {
+) : KoinComponent {
+    private val getNotesUseCase: GetNotesUseCase by inject()
+
     val searchState = TextFieldState()
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -31,12 +36,12 @@ class DrawerActions(
     ) { project, text -> project to text.toString() }
         .flatMapLatest { (project, queryStr) ->
             if (project == null) return@flatMapLatest emptyFlow()
-            val parsedInit = SearchQuery.parse(queryStr.trim())
-            val parsed = parsedInit.copy(
-                negatedTagFilters = parsedInit.negatedTagFilters + "quick-note",
-                pinnedFirst = true,
+            getNotesUseCase(
+                GetNotesInput(
+                    project = project,
+                    searchQueryString = queryStr,
+                ),
             )
-            deps.projectRepo.getNotesPaged(project, parsed)
         }
         .cachedIn(deps.scope)
 

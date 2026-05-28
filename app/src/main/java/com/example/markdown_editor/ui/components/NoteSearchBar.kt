@@ -72,6 +72,7 @@ import androidx.compose.ui.unit.em
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.itemKey
 import com.example.markdown_editor.R
+import com.example.markdown_editor.domain.PINNED_TAG
 import com.example.markdown_editor.domain.models.Note
 import com.example.markdown_editor.ui.util.scrollbar
 import com.example.markdown_editor.ui.viewmodel.events.SearchEvent
@@ -285,7 +286,7 @@ fun NoteDrawerItem(
                             ) {
                                 Icon(
                                     Icons.Filled.PushPin,
-                                    "pinned",
+                                    PINNED_TAG,
                                     tint = MaterialTheme.colorScheme.primary,
                                 )
                             },

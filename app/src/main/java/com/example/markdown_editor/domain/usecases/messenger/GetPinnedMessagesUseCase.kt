@@ -1,6 +1,8 @@
 package com.example.markdown_editor.domain.usecases.messenger
 
 import com.example.markdown_editor.data.project.ProjectRepository
+import com.example.markdown_editor.domain.PINNED_TAG
+import com.example.markdown_editor.domain.QUICK_NOTE_TAG
 import com.example.markdown_editor.domain.models.MessageBody
 import com.example.markdown_editor.domain.models.Project
 import com.example.markdown_editor.domain.models.SearchQuery
@@ -20,7 +22,7 @@ class GetPinnedMessagesUseCase(
             projectRepository.getNotes(
                 input.project,
                 SearchQuery(
-                    tagFilters = listOf("quick-note", "pinned"),
+                    tagFilters = listOf(QUICK_NOTE_TAG, PINNED_TAG),
                     sortBy = SearchQuery.SortBy.CREATED_AT,
                 ),
                 includeText = true,

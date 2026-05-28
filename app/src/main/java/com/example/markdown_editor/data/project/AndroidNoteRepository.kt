@@ -5,6 +5,7 @@ import android.net.Uri
 import android.provider.DocumentsContract
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
+import com.example.markdown_editor.domain.PINNED_TAG
 import com.example.markdown_editor.domain.models.FileSystemPath
 import com.example.markdown_editor.domain.models.FrontMatter
 import com.example.markdown_editor.domain.models.Note
@@ -24,7 +25,9 @@ class AndroidNoteRepository(
         val (frontMatter, body) = FrontMatter.splitFromContent(fullText)
 
         val currentTags = frontMatter.tags.toMutableList()
-        if ("pinned" in currentTags) currentTags.remove("pinned") else currentTags.add("pinned")
+        if (PINNED_TAG in currentTags) currentTags.remove(PINNED_TAG) else currentTags.add(
+            PINNED_TAG,
+        )
 
         val updatedFields = frontMatter.fields.toMutableMap().apply {
             put("tags", FrontMatter.FrontMatterValue.StringList(currentTags))

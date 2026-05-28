@@ -8,6 +8,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.text.TextRange
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
+import com.example.markdown_editor.domain.QUICK_NOTE_TAG
 import com.example.markdown_editor.domain.models.FileSystemPath
 import com.example.markdown_editor.domain.models.FrontMatter
 import com.example.markdown_editor.domain.models.Note
@@ -46,7 +47,7 @@ class EditorActions(
             if (project == null) return@flatMapLatest emptyFlow()
             val parsedInit = SearchQuery.parse(queryStr.trim())
             val parsed = parsedInit.copy(
-                negatedTagFilters = parsedInit.negatedTagFilters + "quick-note",
+                negatedTagFilters = parsedInit.negatedTagFilters + QUICK_NOTE_TAG,
                 pinnedFirst = true,
             )
             deps.projectRepo.getNotesPaged(project, parsed)

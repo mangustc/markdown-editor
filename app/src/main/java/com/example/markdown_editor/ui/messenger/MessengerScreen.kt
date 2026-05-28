@@ -136,6 +136,7 @@ import coil3.ImageLoader
 import coil3.compose.AsyncImage
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import com.example.markdown_editor.R
+import com.example.markdown_editor.domain.PINNED_TAG
 import com.example.markdown_editor.domain.markdown.MarkdownParser
 import com.example.markdown_editor.domain.messenger.LinkPreviewFetcher
 import com.example.markdown_editor.domain.models.Attachment
@@ -481,7 +482,7 @@ fun MessengerScreen(viewModel: AppViewModel) {
                                             imagePagerState = idx to uris
                                         },
                                         onPinNote = { viewModel.drawer.onPinNote(it.note) },
-                                        isPinned = note.note.tags?.contains("pinned") ?: false,
+                                        isPinned = note.note.tags?.contains(PINNED_TAG) ?: false,
                                         isSelected = uiState.messengerSelectedNotes.contains(note),
                                         isSelectionMode = uiState.messengerSelectedNotes.isNotEmpty(),
                                         onToggleSelect = {

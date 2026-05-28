@@ -2,6 +2,7 @@ package com.example.markdown_editor.ui.viewmodel.actions
 
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
+import com.example.markdown_editor.domain.QUICK_NOTE_TAG
 import com.example.markdown_editor.domain.models.Attachment
 import com.example.markdown_editor.domain.models.MessageBody
 import com.example.markdown_editor.domain.models.Note
@@ -105,7 +106,7 @@ class MessengerActions(
                     .withZone(ZoneId.systemDefault())
                     .format(Instant.now())
                 val name = "quick-note-$timestamp"
-                val tags = listOf("quick-note")
+                val tags = listOf(QUICK_NOTE_TAG)
                 val note = try {
                     createNoteUseCase(
                         CreateNoteInput(

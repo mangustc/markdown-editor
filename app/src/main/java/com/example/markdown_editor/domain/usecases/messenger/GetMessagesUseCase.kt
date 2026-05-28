@@ -3,6 +3,7 @@ package com.example.markdown_editor.domain.usecases.messenger
 import androidx.paging.PagingData
 import androidx.paging.map
 import com.example.markdown_editor.data.project.ProjectRepository
+import com.example.markdown_editor.domain.QUICK_NOTE_TAG
 import com.example.markdown_editor.domain.models.MessageBody
 import com.example.markdown_editor.domain.models.Note
 import com.example.markdown_editor.domain.models.Project
@@ -21,7 +22,10 @@ class GetMessagesUseCase(
     override fun invoke(input: GetMessagesInput): Flow<PagingData<MessageBody>> {
         val notesFlow: Flow<PagingData<Note>> = projectRepository.getNotesPaged(
             input.project,
-            SearchQuery(tagFilters = listOf("quick-note"), sortBy = SearchQuery.SortBy.CREATED_AT),
+            SearchQuery(
+                tagFilters = listOf(QUICK_NOTE_TAG),
+                sortBy = SearchQuery.SortBy.CREATED_AT,
+            ),
             includeText = true,
             includeFrontMatter = false,
         )

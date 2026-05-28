@@ -111,6 +111,7 @@ import com.example.markdown_editor.domain.markdown.MarkdownParser
 import com.example.markdown_editor.domain.models.FrontMatter
 import com.example.markdown_editor.domain.models.Project
 import com.example.markdown_editor.domain.models.RelativePath
+import com.example.markdown_editor.domain.models.Settings
 import com.example.markdown_editor.domain.models.SpanInfo
 import com.example.markdown_editor.ui.components.NoteDrawerItem
 import com.example.markdown_editor.ui.components.NoteSearchBar
@@ -435,7 +436,8 @@ fun EditorScreen(
                         searchResults = linkSearchResults,
                         onSearchEvent = viewModel.editor::onLinkSearchEvent,
                         paddingValues = PaddingValues(horizontal = 16.dp),
-                        reverseLayout = true,
+                        reverseLayout = uiState.settings?.reverseLayout
+                            ?: Settings.EMPTY.reverseLayout,
                     ) { note ->
                         NoteDrawerItem(
                             name = note.name,

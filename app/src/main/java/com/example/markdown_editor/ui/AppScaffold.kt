@@ -93,13 +93,13 @@ import com.example.markdown_editor.R
 import com.example.markdown_editor.domain.PINNED_TAG
 import com.example.markdown_editor.domain.models.FileSystemPath
 import com.example.markdown_editor.domain.models.Note
-import com.example.markdown_editor.domain.navigation.EditorDestination
-import com.example.markdown_editor.domain.navigation.MessengerDestination
 import com.example.markdown_editor.ui.components.NoteDrawerItem
 import com.example.markdown_editor.ui.components.NoteSearchBar
 import com.example.markdown_editor.ui.components.TooltipIconButton
 import com.example.markdown_editor.ui.editor.EditorScreen
 import com.example.markdown_editor.ui.messenger.MessengerScreen
+import com.example.markdown_editor.ui.navigation.EditorDestination
+import com.example.markdown_editor.ui.navigation.MessengerDestination
 import com.example.markdown_editor.ui.settings.SettingsDialog
 import com.example.markdown_editor.ui.viewmodel.AppViewModel
 import com.example.markdown_editor.ui.viewmodel.events.ClipboardEvent

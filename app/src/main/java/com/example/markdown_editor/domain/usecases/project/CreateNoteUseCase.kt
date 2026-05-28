@@ -18,6 +18,7 @@ data class CreateNoteInput(
 
 class CreateNoteUseCase(
     private val projectRepository: ProjectRepository,
+    private val getNoteUseCase: GetNoteUseCase,
 ) : UseCase<CreateNoteInput, Note> {
     override suspend fun invoke(input: CreateNoteInput): Note {
         val isoDate = Instant.now().toString()
@@ -34,12 +35,14 @@ class CreateNoteUseCase(
             byteArray = initialContent.toByteArray(),
             fileExistsStrategy = ProjectRepository.FileExistsStrategy.AUTO_RENAME,
         ) ?: throw Exception("could not get created file")
-        val note = projectRepository.getNote(
-            project = input.project,
-            relativePath = newProjectFile.relativePath,
-            includeText = input.includeText,
-            includeFrontMatter = input.includeFrontMatter,
-        ) ?: throw Exception("could not get created file")
+        val note = getNoteUseCase(
+            GetNoteInput(
+                project = input.project,
+                relativePath = newProjectFile.relativePath,
+                includeText = input.includeText,
+                includeFrontMatter = input.includeFrontMatter,
+            ),
+        )
 
         return note
     }

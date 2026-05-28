@@ -3,7 +3,6 @@ package com.example.markdown_editor.ui.viewmodel
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.markdown_editor.data.linkPreview.LinkPreviewRepository
 import com.example.markdown_editor.data.project.NoteRepository
 import com.example.markdown_editor.data.project.ProjectRepository
 import com.example.markdown_editor.domain.models.Attachment
@@ -34,7 +33,6 @@ class AppViewModel(
     application: Application,
     private val projectRepo: ProjectRepository,
     private val noteRepo: NoteRepository,
-    private val linkRepo: LinkPreviewRepository,
     private val syncDatabaseUseCase: SyncDatabaseUseCase,
     private val getAllTagsUseCase: GetAllTagsUseCase,
 ) : AndroidViewModel(application), AppGlobalActions {
@@ -46,7 +44,6 @@ class AppViewModel(
             scope = viewModelScope,
             projectRepo = projectRepo,
             noteRepo = noteRepo,
-            linkRepo = linkRepo,
             uiState = _uiState,
             globalActions = this,
         )

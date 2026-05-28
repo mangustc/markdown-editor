@@ -6,6 +6,8 @@ import com.example.markdown_editor.domain.QUICK_NOTE_TAG
 import com.example.markdown_editor.domain.models.Attachment
 import com.example.markdown_editor.domain.models.MessageBody
 import com.example.markdown_editor.domain.models.Note
+import com.example.markdown_editor.domain.usecases.linkPreview.GetLinkPreviewInput
+import com.example.markdown_editor.domain.usecases.linkPreview.GetLinkPreviewUseCase
 import com.example.markdown_editor.domain.usecases.messenger.GetMessagesInput
 import com.example.markdown_editor.domain.usecases.messenger.GetMessagesUseCase
 import com.example.markdown_editor.domain.usecases.messenger.GetPinnedMessagesInput
@@ -37,6 +39,7 @@ class MessengerActions(
     private val getPinnedMessagesUseCase: GetPinnedMessagesUseCase by inject()
     private val createNoteUseCase: CreateNoteUseCase by inject()
     private val deleteNoteUseCase: DeleteNoteUseCase by inject()
+    private val getLinkPreviewUseCase: GetLinkPreviewUseCase by inject()
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val notesPaged: Flow<PagingData<MessageBody>> = deps.uiState
@@ -188,7 +191,11 @@ class MessengerActions(
     fun ensureLinkPreview(url: String) {
         deps.scope.launch {
             if (deps.uiState.value.messengerLinkPreviews.containsKey(url)) return@launch
-            val preview = deps.linkRepo.getLinkPreview(url)
+            val preview = getLinkPreviewUseCase(
+                GetLinkPreviewInput(
+                    url = url,
+                ),
+            )
             if (preview != null) {
                 deps.uiState.update {
                     it.copy(messengerLinkPreviews = it.messengerLinkPreviews + (url to preview))

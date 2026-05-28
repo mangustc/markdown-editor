@@ -31,7 +31,6 @@ class DrawerActions(
     ) { project, text -> project to text.toString() }
         .flatMapLatest { (project, queryStr) ->
             if (project == null) return@flatMapLatest emptyFlow()
-            deps.projectRepo.syncDatabase(project)
             val parsedInit = SearchQuery.parse(queryStr.trim())
             val parsed = parsedInit.copy(
                 negatedTagFilters = parsedInit.negatedTagFilters + "quick-note",
@@ -68,7 +67,6 @@ class DrawerActions(
             val nameToUse = deps.uiState.value.newNoteNameInput
             val uri = deps.noteRepo.createNote(project, nameToUse)
             if (uri != null) {
-                deps.projectRepo.syncDatabase(project)
                 deps.globalActions.updateNoteLists()
             }
         }
@@ -84,10 +82,8 @@ class DrawerActions(
 
     fun onDeleteNote(note: Note) {
         deps.scope.launch {
-            val project = deps.uiState.value.project ?: return@launch
             val activeNote = deps.uiState.value.activeNote
             deps.noteRepo.deleteNote(note)
-            deps.projectRepo.syncDatabase(project)
             deps.globalActions.updateNoteLists()
             if (note.projectFile.relativePath == activeNote?.projectFile?.relativePath)
                 deps.globalActions.onEvent(NavigationEvent.GoBack)
@@ -124,18 +120,14 @@ class DrawerActions(
 
     fun onRenameNote(note: Note, newName: String) {
         deps.scope.launch {
-            val project = deps.uiState.value.project ?: return@launch
             deps.noteRepo.renameNote(note, newName)
-            deps.projectRepo.syncDatabase(project)
             deps.globalActions.updateNoteLists()
         }
     }
 
     fun onPinNote(note: Note) {
         deps.scope.launch {
-            val project = deps.uiState.value.project ?: return@launch
             deps.noteRepo.toggleNotePin(note)
-            deps.projectRepo.syncDatabase(project)
             deps.globalActions.updateNoteLists()
         }
     }

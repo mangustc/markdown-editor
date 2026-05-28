@@ -7,6 +7,8 @@ import com.example.markdown_editor.data.linkPreview.LinkPreviewRepository
 import com.example.markdown_editor.data.project.NoteRepository
 import com.example.markdown_editor.data.project.ProjectRepository
 import com.example.markdown_editor.domain.models.Attachment
+import com.example.markdown_editor.domain.usecases.project.SyncDatabaseInput
+import com.example.markdown_editor.domain.usecases.project.SyncDatabaseUseCase
 import com.example.markdown_editor.ui.viewmodel.actions.DrawerActions
 import com.example.markdown_editor.ui.viewmodel.actions.EditorActions
 import com.example.markdown_editor.ui.viewmodel.actions.MessengerActions
@@ -31,6 +33,7 @@ class AppViewModel(
     private val projectRepo: ProjectRepository,
     private val noteRepo: NoteRepository,
     private val linkRepo: LinkPreviewRepository,
+    private val syncDatabaseUseCase: SyncDatabaseUseCase,
 ) : AndroidViewModel(application), AppGlobalActions {
     private val _uiState = MutableStateFlow(AppUiState())
     val uiState: StateFlow<AppUiState> = _uiState.asStateFlow()
@@ -80,7 +83,11 @@ class AppViewModel(
 
     override suspend fun updateNoteLists() {
         val project = _uiState.value.project ?: return
-        projectRepo.syncDatabase(project)
+        syncDatabaseUseCase(
+            SyncDatabaseInput(
+                project = project,
+            ),
+        )
         _uiState.update { it.copy(allProjectTags = projectRepo.getAllTags()) }
         messenger.updateMessages()
     }

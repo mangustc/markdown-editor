@@ -36,7 +36,6 @@ class ProjectActions(
                 ),
             )
             deps.uiState.update { it.copy(project = project, settings = settings) }
-            deps.projectRepo.syncDatabase(project)
             deps.globalActions.updateNoteLists()
         }
     }

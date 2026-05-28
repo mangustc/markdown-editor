@@ -195,7 +195,6 @@ class MessengerActions(
     fun deleteSelectedNotes() {
         deps.scope.launch {
             val uris = deps.uiState.value.messengerSelectedNotes
-            val project = deps.uiState.value.project ?: return@launch
             uris.forEach { u ->
                 runCatching {
                     deps.noteRepo.deleteNote(
@@ -205,7 +204,6 @@ class MessengerActions(
                     )
                 }
             }
-            deps.projectRepo.syncDatabase(project)
             clearSelection()
             deps.globalActions.updateNoteLists()
         }

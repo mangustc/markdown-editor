@@ -44,7 +44,6 @@ class EditorActions(
     ) { project, text -> project to text.toString() }
         .flatMapLatest { (project, queryStr) ->
             if (project == null) return@flatMapLatest emptyFlow()
-            deps.projectRepo.syncDatabase(project)
             val parsedInit = SearchQuery.parse(queryStr.trim())
             val parsed = parsedInit.copy(
                 negatedTagFilters = parsedInit.negatedTagFilters + "quick-note",
@@ -276,7 +275,7 @@ class EditorActions(
 
     fun onSave() {
         deps.scope.launch {
-            val project = deps.uiState.value.project ?: return@launch
+            deps.uiState.value.project ?: return@launch
             val note = deps.uiState.value.activeNote ?: return@launch
             val bodyText = state.text.toString()
             val fm = deps.uiState.value.editorFrontMatter
@@ -288,7 +287,6 @@ class EditorActions(
             }
 
             deps.noteRepo.saveNoteText(note, textToSave)
-            deps.projectRepo.syncDatabase(project)
             deps.globalActions.updateNoteLists()
             deps.uiState.update { it.copy(editorSavedVersion = it.editorVersion) }
         }

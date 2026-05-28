@@ -15,14 +15,14 @@ data class GetNoteInput(
 
 class GetNoteUseCase(
     private val projectRepository: ProjectRepository,
-) : UseCase<GetNoteInput, Note> {
-    override suspend fun invoke(input: GetNoteInput): Note {
+) : UseCase<GetNoteInput, Note?> {
+    override suspend fun invoke(input: GetNoteInput): Note? {
         val note = projectRepository.getNote(
             project = input.project,
             relativePath = input.relativePath,
             includeText = input.includeText,
             includeFrontMatter = input.includeFrontMatter,
-        ) ?: throw Exception("could not get file")
+        )
 
         return note
     }

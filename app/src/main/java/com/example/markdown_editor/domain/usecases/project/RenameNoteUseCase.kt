@@ -34,7 +34,7 @@ class RenameNoteUseCase(
                 includeText = input.includeText,
                 includeFrontMatter = input.includeFrontMatter,
             ),
-        )
+        ) ?: throw Exception("failed to get created file")
 
         return note
     }

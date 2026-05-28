@@ -8,13 +8,13 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.text.TextRange
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
-import com.example.markdown_editor.domain.QUICK_NOTE_TAG
 import com.example.markdown_editor.domain.models.FileSystemPath
 import com.example.markdown_editor.domain.models.FrontMatter
 import com.example.markdown_editor.domain.models.Note
 import com.example.markdown_editor.domain.models.RelativePath
-import com.example.markdown_editor.domain.models.SearchQuery
 import com.example.markdown_editor.domain.models.SpanInfo
+import com.example.markdown_editor.domain.usecases.project.GetNotesInput
+import com.example.markdown_editor.domain.usecases.project.GetNotesUseCase
 import com.example.markdown_editor.ui.viewmodel.AppDeps
 import com.example.markdown_editor.ui.viewmodel.events.EditorEvent
 import com.example.markdown_editor.ui.viewmodel.events.NavigationEvent
@@ -30,11 +30,15 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import org.koin.core.component.KoinComponent
+import org.koin.core.component.inject
 
 @OptIn(FlowPreview::class)
 class EditorActions(
     private val deps: AppDeps,
-) {
+) : KoinComponent {
+    private val getNotesUseCase: GetNotesUseCase by inject()
+
     val state = TextFieldState()
     val linkSearchState = TextFieldState()
 
@@ -45,12 +49,12 @@ class EditorActions(
     ) { project, text -> project to text.toString() }
         .flatMapLatest { (project, queryStr) ->
             if (project == null) return@flatMapLatest emptyFlow()
-            val parsedInit = SearchQuery.parse(queryStr.trim())
-            val parsed = parsedInit.copy(
-                negatedTagFilters = parsedInit.negatedTagFilters + QUICK_NOTE_TAG,
-                pinnedFirst = true,
+            getNotesUseCase(
+                GetNotesInput(
+                    project = project,
+                    searchQueryString = queryStr,
+                ),
             )
-            deps.projectRepo.getNotesPaged(project, parsed)
         }
         .cachedIn(deps.scope)
 

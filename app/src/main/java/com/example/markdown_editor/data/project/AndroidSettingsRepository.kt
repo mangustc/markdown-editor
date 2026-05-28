@@ -8,6 +8,7 @@ import androidx.core.net.toUri
 import com.example.markdown_editor.domain.models.FileSystemPath
 import com.example.markdown_editor.domain.models.Project
 import com.example.markdown_editor.domain.models.Settings
+import com.example.markdown_editor.domain.repositories.SettingsRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json

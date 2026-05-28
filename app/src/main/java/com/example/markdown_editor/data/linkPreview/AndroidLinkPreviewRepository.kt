@@ -3,6 +3,7 @@ package com.example.markdown_editor.data.linkPreview
 import com.example.markdown_editor.data.database.LinkPreviewDao
 import com.example.markdown_editor.data.database.LinkPreviewEntity
 import com.example.markdown_editor.domain.models.LinkPreview
+import com.example.markdown_editor.domain.repositories.LinkPreviewRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.net.HttpURLConnection

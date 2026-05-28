@@ -3,9 +3,9 @@ package com.example.markdown_editor.ui.viewmodel
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.markdown_editor.data.project.NoteRepository
-import com.example.markdown_editor.data.project.ProjectRepository
 import com.example.markdown_editor.domain.models.Attachment
+import com.example.markdown_editor.domain.repositories.NoteRepository
+import com.example.markdown_editor.domain.repositories.ProjectRepository
 import com.example.markdown_editor.domain.usecases.project.GetAllTagsInput
 import com.example.markdown_editor.domain.usecases.project.GetAllTagsUseCase
 import com.example.markdown_editor.domain.usecases.project.SyncDatabaseInput

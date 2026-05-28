@@ -1,6 +1,7 @@
 package com.example.markdown_editor.data.sync
 
 import com.example.markdown_editor.domain.models.RelativePath
+import com.example.markdown_editor.domain.repositories.SyncRepository
 import com.example.markdown_editor.domain.usecases.sync.SyncAuthException
 import com.example.markdown_editor.domain.usecases.sync.SyncNetworkException
 import com.example.markdown_editor.domain.usecases.sync.SyncQuotaException

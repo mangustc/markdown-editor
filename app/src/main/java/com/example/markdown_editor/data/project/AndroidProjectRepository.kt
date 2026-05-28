@@ -21,6 +21,7 @@ import com.example.markdown_editor.domain.models.Project
 import com.example.markdown_editor.domain.models.ProjectFile
 import com.example.markdown_editor.domain.models.RelativePath
 import com.example.markdown_editor.domain.models.SearchQuery
+import com.example.markdown_editor.domain.repositories.ProjectRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map

@@ -12,6 +12,7 @@ import com.example.markdown_editor.domain.models.Note
 import com.example.markdown_editor.domain.models.Project
 import com.example.markdown_editor.domain.models.ProjectFile
 import com.example.markdown_editor.domain.models.RelativePath
+import com.example.markdown_editor.domain.repositories.NoteRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.time.Instant

@@ -1,4 +1,4 @@
-package com.example.markdown_editor.data.sync
+package com.example.markdown_editor.domain.repositories
 
 import com.example.markdown_editor.domain.models.RelativePath
 

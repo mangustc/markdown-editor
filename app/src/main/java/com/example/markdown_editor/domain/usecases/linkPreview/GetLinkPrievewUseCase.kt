@@ -1,7 +1,7 @@
 package com.example.markdown_editor.domain.usecases.linkPreview
 
-import com.example.markdown_editor.data.linkPreview.LinkPreviewRepository
 import com.example.markdown_editor.domain.models.LinkPreview
+import com.example.markdown_editor.domain.repositories.LinkPreviewRepository
 import com.example.markdown_editor.domain.usecases.UseCase
 
 data class GetLinkPreviewInput(

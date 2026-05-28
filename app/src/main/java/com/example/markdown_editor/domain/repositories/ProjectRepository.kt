@@ -1,4 +1,4 @@
-package com.example.markdown_editor.data.project
+package com.example.markdown_editor.domain.repositories
 
 import androidx.paging.PagingData
 import com.example.markdown_editor.domain.models.FileSystemPath

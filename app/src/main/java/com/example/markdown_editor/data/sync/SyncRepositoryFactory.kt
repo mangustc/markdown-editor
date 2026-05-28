@@ -1,6 +1,7 @@
 package com.example.markdown_editor.data.sync
 
 import com.example.markdown_editor.domain.models.Settings
+import com.example.markdown_editor.domain.repositories.SyncRepository
 import com.example.markdown_editor.domain.usecases.sync.ValidSyncProvider
 
 class SyncRepositoryFactory {

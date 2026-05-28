@@ -10,6 +10,8 @@ import com.example.markdown_editor.domain.models.SearchQuery
 import kotlinx.coroutines.flow.Flow
 
 interface ProjectRepository {
+    enum class FileExistsStrategy { OVERWRITE, AUTO_RENAME }
+
     suspend fun getNotes(
         project: Project,
         query: SearchQuery = SearchQuery(),
@@ -24,6 +26,19 @@ interface ProjectRepository {
         includeFrontMatter: Boolean = true,
     ): Flow<PagingData<Note>>
 
+    suspend fun getNoteDatabase(
+        project: Project,
+        relativePath: RelativePath,
+        includeText: Boolean = false,
+    ): Note?
+
+    suspend fun getNote(
+        project: Project,
+        relativePath: RelativePath,
+        includeText: Boolean = false,
+        includeFrontMatter: Boolean = true,
+    ): Note?
+
     suspend fun buildProject(projectPath: FileSystemPath): Project
     suspend fun syncDatabase(project: Project)
     suspend fun copyToAssets(project: Project, assetPath: FileSystemPath): ProjectFile
@@ -32,7 +47,7 @@ interface ProjectRepository {
         project: Project,
         relativePath: RelativePath,
         byteArray: ByteArray,
-        overwrite: Boolean = true,
+        fileExistsStrategy: FileExistsStrategy = FileExistsStrategy.OVERWRITE,
         createParents: Boolean = true,
     ): ProjectFile?
 

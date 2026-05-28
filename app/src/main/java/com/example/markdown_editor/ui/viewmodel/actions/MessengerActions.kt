@@ -11,6 +11,8 @@ import com.example.markdown_editor.domain.usecases.messenger.GetMessagesInput
 import com.example.markdown_editor.domain.usecases.messenger.GetMessagesUseCase
 import com.example.markdown_editor.domain.usecases.messenger.GetPinnedMessagesInput
 import com.example.markdown_editor.domain.usecases.messenger.GetPinnedMessagesUseCase
+import com.example.markdown_editor.domain.usecases.project.CreateNoteInput
+import com.example.markdown_editor.domain.usecases.project.CreateNoteUseCase
 import com.example.markdown_editor.ui.viewmodel.AppDeps
 import com.example.markdown_editor.ui.viewmodel.events.ClipboardEvent
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -32,6 +34,7 @@ class MessengerActions(
 ) : KoinComponent {
     private val getMessagesUseCase: GetMessagesUseCase by inject()
     private val getPinnedMessagesUseCase: GetPinnedMessagesUseCase by inject()
+    private val createNoteUseCase: CreateNoteUseCase by inject()
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val notesPaged: Flow<PagingData<MessageBody>> = deps.uiState
@@ -102,8 +105,19 @@ class MessengerActions(
                     .format(Instant.now())
                 val name = "quick-note-$timestamp"
                 val tags = listOf("quick-note")
-                val uri = deps.noteRepo.createNote(project, name, tags) ?: return@launch
-                deps.noteRepo.getNoteByFileSystemPath(uri)
+                val note = try {
+                    createNoteUseCase(
+                        CreateNoteInput(
+                            project = project,
+                            name = name,
+                            tags = tags,
+                        ),
+                    )
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    return@launch
+                }
+                note
             }
 
             val baseText = deps.noteRepo.getNoteText(targetNote, includeFrontMatter = true)

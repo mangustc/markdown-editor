@@ -1,7 +1,6 @@
 package com.example.markdown_editor.data.project
 
 import android.content.Context
-import android.content.SharedPreferences
 import android.net.Uri
 import android.provider.DocumentsContract
 import android.webkit.MimeTypeMap
@@ -31,11 +30,6 @@ class AndroidProjectRepository(
     private val context: Context,
     private val noteDao: NoteDao,
 ) : ProjectRepository {
-    private val prefs: SharedPreferences = context.getSharedPreferences(
-        "project_prefs",
-        Context.MODE_PRIVATE,
-    )
-
     override suspend fun getNotes(
         project: Project,
         query: SearchQuery,
@@ -45,19 +39,7 @@ class AndroidProjectRepository(
         val sqlQuery = buildSQLiteQuery(query)
         val entities = noteDao.searchNotes(sqlQuery)
 
-        entities.map { entity ->
-            Note(
-                name = entity.name,
-                projectFile = ProjectFile(
-                    fileSystemPath = FileSystemPath(entity.uri),
-                    relativePath = project.notesRelativePath.appendRelativePath(RelativePath(entity.name)),
-                ),
-                lastModified = entity.lastModified,
-                createdAt = entity.createdAt,
-                body = if (includeText) entity.body else null,
-                tags = if (entity.tags.isNotEmpty()) entity.tags.split(" ") else emptyList(),
-            )
-        }
+        entities.map { entity -> getNoteFromEntity(project, includeText, entity) }
     }
 
     override fun getNotesPaged(
@@ -76,24 +58,50 @@ class AndroidProjectRepository(
         ) {
             noteDao.searchNotesPaged(sqlQuery)
         }.flow.map { pagingData ->
-            pagingData.map { entity ->
-                Note(
-                    name = entity.name,
-                    projectFile = ProjectFile(
-                        fileSystemPath = FileSystemPath(entity.uri),
-                        relativePath = project.notesRelativePath.appendRelativePath(
-                            RelativePath(
-                                entity.name,
-                            ),
-                        ),
-                    ),
-                    lastModified = entity.lastModified,
-                    createdAt = entity.createdAt,
-                    body = if (includeText) entity.body else null,
-                    tags = if (entity.tags.isNotEmpty()) entity.tags.split(" ") else emptyList(),
-                )
-            }
+            pagingData.map { entity -> getNoteFromEntity(project, includeText, entity) }
         }
+    }
+
+    override suspend fun getNoteDatabase(
+        project: Project,
+        relativePath: RelativePath,
+        includeText: Boolean,
+    ): Note? = withContext(Dispatchers.IO) {
+        val noteUri = getUri(project.rootFileSystemPath.value.toUri(), relativePath)
+        noteDao.getNoteByUri(noteUri.toString())
+            ?.let { entity -> getNoteFromEntity(project, includeText, entity) }
+    }
+
+    override suspend fun getNote(
+        project: Project,
+        relativePath: RelativePath,
+        includeText: Boolean,
+        includeFrontMatter: Boolean,
+    ): Note? = withContext(Dispatchers.IO) {
+        val uri = getUri(project.rootFileSystemPath.value.toUri(), relativePath)
+        val (frontMatter, text) = FrontMatter.splitFromContent(readFullText(uri))
+        val documentFile = DocumentFile.fromSingleUri(context, uri)
+            ?: return@withContext null
+        val name = documentFile.name?.removeSuffix(".md") ?: return@withContext null
+
+        Note(
+            name = name,
+            projectFile = ProjectFile(
+                fileSystemPath = FileSystemPath(uri.toString()),
+                relativePath = relativePath,
+            ),
+            lastModified = documentFile.lastModified(),
+            createdAt = frontMatter.toCreatedAtMillis(),
+            tags = frontMatter.tags,
+            body = if (includeText || includeFrontMatter) {
+                var body = ""
+                if (includeFrontMatter) body += frontMatter.toString()
+                if (includeText) body += text
+                body
+            } else {
+                null
+            },
+        )
     }
 
     override suspend fun syncDatabase(project: Project) = withContext(Dispatchers.IO) {
@@ -188,7 +196,7 @@ class AndroidProjectRepository(
         project: Project,
         relativePath: RelativePath,
         byteArray: ByteArray,
-        overwrite: Boolean,
+        fileExistsStrategy: ProjectRepository.FileExistsStrategy,
         createParents: Boolean,
     ): ProjectFile? = withContext(Dispatchers.IO) {
         val rootUri = project.rootFileSystemPath.value.toUri()
@@ -214,11 +222,13 @@ class AndroidProjectRepository(
         }
 
         var fileDoc = currentDir.findFile(fileName)
-        if (fileDoc != null) {
+        val shouldCreateFile =
+            fileDoc == null || fileExistsStrategy == ProjectRepository.FileExistsStrategy.AUTO_RENAME
+        if (!shouldCreateFile) {
             if (fileDoc.isDirectory) {
                 return@withContext null
             }
-            if (!overwrite) {
+            if (fileExistsStrategy != ProjectRepository.FileExistsStrategy.OVERWRITE) {
                 return@withContext null
             }
         } else {
@@ -237,9 +247,10 @@ class AndroidProjectRepository(
             return@withContext null
         }
 
+        val actualName = fileDoc.name ?: return@withContext null
         ProjectFile(
             fileSystemPath = FileSystemPath(fileDoc.uri.toString()),
-            relativePath = relativePath,
+            relativePath = relativePath.dirRelativePath.appendRelativePath(RelativePath(actualName)),
         )
     }
 
@@ -309,6 +320,28 @@ class AndroidProjectRepository(
                 targetDoc.uri.toString(),
             ),
             relativePath = relativePath,
+        )
+    }
+
+    private fun getNoteFromEntity(
+        project: Project,
+        includeText: Boolean,
+        entity: NoteEntity,
+    ): Note {
+        return Note(
+            name = entity.name,
+            projectFile = ProjectFile(
+                fileSystemPath = FileSystemPath(entity.uri),
+                relativePath = project.notesRelativePath.appendRelativePath(
+                    RelativePath(
+                        entity.name,
+                    ),
+                ),
+            ),
+            lastModified = entity.lastModified,
+            createdAt = entity.createdAt,
+            body = if (includeText) entity.body else null,
+            tags = if (entity.tags.isNotEmpty()) entity.tags.split(" ") else emptyList(),
         )
     }
 

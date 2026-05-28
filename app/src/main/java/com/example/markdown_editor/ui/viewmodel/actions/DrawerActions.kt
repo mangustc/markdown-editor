@@ -5,6 +5,8 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import com.example.markdown_editor.domain.models.Note
+import com.example.markdown_editor.domain.usecases.project.CreateNoteInput
+import com.example.markdown_editor.domain.usecases.project.CreateNoteUseCase
 import com.example.markdown_editor.domain.usecases.project.GetNotesInput
 import com.example.markdown_editor.domain.usecases.project.GetNotesUseCase
 import com.example.markdown_editor.ui.viewmodel.AppDeps
@@ -26,6 +28,7 @@ class DrawerActions(
     private val deps: AppDeps,
 ) : KoinComponent {
     private val getNotesUseCase: GetNotesUseCase by inject()
+    private val createNoteUseCase: CreateNoteUseCase by inject()
 
     val searchState = TextFieldState()
 
@@ -70,10 +73,18 @@ class DrawerActions(
         deps.scope.launch {
             val project = deps.uiState.value.project ?: return@launch
             val nameToUse = deps.uiState.value.newNoteNameInput
-            val uri = deps.noteRepo.createNote(project, nameToUse)
-            if (uri != null) {
-                deps.globalActions.updateNoteLists()
+            try {
+                createNoteUseCase(
+                    CreateNoteInput(
+                        project = project,
+                        name = nameToUse,
+                    ),
+                )
+            } catch (e: Exception) {
+                e.printStackTrace()
+                return@launch
             }
+            deps.globalActions.updateNoteLists()
         }
     }
 

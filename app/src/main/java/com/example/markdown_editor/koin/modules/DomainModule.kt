@@ -2,6 +2,7 @@ package com.example.markdown_editor.koin.modules
 
 import com.example.markdown_editor.domain.usecases.messenger.GetMessagesUseCase
 import com.example.markdown_editor.domain.usecases.messenger.GetPinnedMessagesUseCase
+import com.example.markdown_editor.domain.usecases.project.CreateNoteUseCase
 import com.example.markdown_editor.domain.usecases.project.GetNotesUseCase
 import com.example.markdown_editor.domain.usecases.project.LoadSavedProjectUseCase
 import com.example.markdown_editor.domain.usecases.project.SelectProjectUseCase
@@ -22,4 +23,5 @@ val domainModule = module {
     factory<GetSettingsUseCase>()
     factory<SyncDatabaseUseCase>()
     factory<GetNotesUseCase>()
+    factory<CreateNoteUseCase>()
 }

@@ -15,10 +15,12 @@ import com.example.markdown_editor.domain.usecases.project.RenameNoteInput
 import com.example.markdown_editor.domain.usecases.project.RenameNoteUseCase
 import com.example.markdown_editor.domain.usecases.project.ToggleNoteTagInput
 import com.example.markdown_editor.domain.usecases.project.ToggleNoteTagUseCase
+import com.example.markdown_editor.domain.usecases.search.ApplySearchEventInput
+import com.example.markdown_editor.domain.usecases.search.ApplySearchEventUseCase
+import com.example.markdown_editor.domain.usecases.search.SearchEvent
 import com.example.markdown_editor.ui.components.ComposeTextState
 import com.example.markdown_editor.ui.viewmodel.AppDeps
 import com.example.markdown_editor.ui.viewmodel.events.NavigationEvent
-import com.example.markdown_editor.ui.viewmodel.events.SearchEvent
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -39,6 +41,7 @@ class DrawerActions(
     private val deleteNoteUseCase: DeleteNoteUseCase by inject()
     private val renameNoteUseCase: RenameNoteUseCase by inject()
     private val toggleNoteTagUseCase: ToggleNoteTagUseCase by inject()
+    private val applySearchEventUseCase: ApplySearchEventUseCase by inject()
 
     val searchState = ComposeTextState()
 
@@ -59,7 +62,14 @@ class DrawerActions(
         .cachedIn(deps.scope)
 
     fun onSearchEvent(event: SearchEvent) {
-        event.execute(state = searchState)
+        deps.scope.launch {
+            applySearchEventUseCase(
+                ApplySearchEventInput(
+                    event = event,
+                    state = searchState,
+                ),
+            )
+        }
     }
 
     fun onNoteSelected(note: Note) {

@@ -3,10 +3,6 @@ package com.example.markdown_editor.domain.usecases.editor
 import com.example.markdown_editor.domain.models.FileSystemPath
 import com.example.markdown_editor.domain.models.Project
 import com.example.markdown_editor.domain.models.TextState
-import com.example.markdown_editor.domain.textStateExtensions.bold
-import com.example.markdown_editor.domain.textStateExtensions.code
-import com.example.markdown_editor.domain.textStateExtensions.insertLink
-import com.example.markdown_editor.domain.textStateExtensions.italic
 import com.example.markdown_editor.domain.usecases.UseCase
 import com.example.markdown_editor.domain.usecases.project.CopyToAssetsInput
 import com.example.markdown_editor.domain.usecases.project.CopyToAssetsUseCase

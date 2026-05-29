@@ -19,6 +19,7 @@ import com.example.markdown_editor.domain.usecases.project.SaveNoteTextUseCase
 import com.example.markdown_editor.domain.usecases.project.SelectProjectUseCase
 import com.example.markdown_editor.domain.usecases.project.SyncDatabaseUseCase
 import com.example.markdown_editor.domain.usecases.project.ToggleNoteTagUseCase
+import com.example.markdown_editor.domain.usecases.search.ApplySearchEventUseCase
 import com.example.markdown_editor.domain.usecases.settings.GetSettingsUseCase
 import com.example.markdown_editor.domain.usecases.settings.SetSettingsUseCase
 import com.example.markdown_editor.domain.usecases.sync.SyncProjectUseCase
@@ -48,4 +49,5 @@ val domainModule = module {
     factory<SaveNoteTextUseCase>()
     factory<SendNoteUseCase>()
     factory<ApplyEditorEventUseCase>()
+    factory<ApplySearchEventUseCase>()
 }

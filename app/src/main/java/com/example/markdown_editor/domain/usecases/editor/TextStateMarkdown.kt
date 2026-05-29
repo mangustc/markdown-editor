@@ -1,4 +1,4 @@
-package com.example.markdown_editor.domain.textStateExtensions
+package com.example.markdown_editor.domain.usecases.editor
 
 import com.example.markdown_editor.domain.models.MutableTextState
 import com.example.markdown_editor.domain.models.TextSelection

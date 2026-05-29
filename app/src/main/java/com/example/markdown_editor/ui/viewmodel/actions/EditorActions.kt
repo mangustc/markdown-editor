@@ -11,7 +11,6 @@ import com.example.markdown_editor.domain.models.SpanInfo
 import com.example.markdown_editor.domain.usecases.editor.ApplyEditorEventInput
 import com.example.markdown_editor.domain.usecases.editor.ApplyEditorEventUseCase
 import com.example.markdown_editor.domain.usecases.editor.EditorEvent
-import com.example.markdown_editor.domain.usecases.project.CopyToAssetsUseCase
 import com.example.markdown_editor.domain.usecases.project.GetNoteInput
 import com.example.markdown_editor.domain.usecases.project.GetNoteUseCase
 import com.example.markdown_editor.domain.usecases.project.GetNotesInput
@@ -22,10 +21,12 @@ import com.example.markdown_editor.domain.usecases.project.GetRealSpanInfoLinkTy
 import com.example.markdown_editor.domain.usecases.project.GetRealSpanInfoLinkTypeUseCase
 import com.example.markdown_editor.domain.usecases.project.SaveNoteTextInput
 import com.example.markdown_editor.domain.usecases.project.SaveNoteTextUseCase
+import com.example.markdown_editor.domain.usecases.search.ApplySearchEventInput
+import com.example.markdown_editor.domain.usecases.search.ApplySearchEventUseCase
+import com.example.markdown_editor.domain.usecases.search.SearchEvent
 import com.example.markdown_editor.ui.components.ComposeTextState
 import com.example.markdown_editor.ui.viewmodel.AppDeps
 import com.example.markdown_editor.ui.viewmodel.events.NavigationEvent
-import com.example.markdown_editor.ui.viewmodel.events.SearchEvent
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.Flow
@@ -45,12 +46,12 @@ class EditorActions(
     private val deps: AppDeps,
 ) : KoinComponent {
     private val getNotesUseCase: GetNotesUseCase by inject()
-    private val copyToAssetsUseCase: CopyToAssetsUseCase by inject()
     private val getRealSpanInfoLinkTypeUseCase: GetRealSpanInfoLinkTypeUseCase by inject()
     private val getNoteUseCase: GetNoteUseCase by inject()
     private val getProjectFileUseCase: GetProjectFileUseCase by inject()
     private val saveNoteTextUseCase: SaveNoteTextUseCase by inject()
     private val applyEditorEventUseCase: ApplyEditorEventUseCase by inject()
+    private val applySearchEventUseCase: ApplySearchEventUseCase by inject()
 
     val state = ComposeTextState()
     val linkSearchState = ComposeTextState()
@@ -72,7 +73,14 @@ class EditorActions(
         .cachedIn(deps.scope)
 
     fun onLinkSearchEvent(event: SearchEvent) {
-        event.execute(linkSearchState)
+        deps.scope.launch {
+            applySearchEventUseCase(
+                ApplySearchEventInput(
+                    event = event,
+                    state = linkSearchState,
+                ),
+            )
+        }
     }
 
     fun showLinkNoteDialog() {

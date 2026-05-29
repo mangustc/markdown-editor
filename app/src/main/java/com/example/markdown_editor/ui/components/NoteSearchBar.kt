@@ -73,8 +73,8 @@ import androidx.paging.compose.itemKey
 import com.example.markdown_editor.R
 import com.example.markdown_editor.domain.PINNED_TAG
 import com.example.markdown_editor.domain.models.Note
+import com.example.markdown_editor.domain.usecases.search.SearchEvent
 import com.example.markdown_editor.ui.util.scrollbar
-import com.example.markdown_editor.ui.viewmodel.events.SearchEvent
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable

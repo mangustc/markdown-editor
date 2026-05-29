@@ -5,12 +5,10 @@ import com.example.markdown_editor.data.database.LinkPreviewDao
 import com.example.markdown_editor.data.database.NoteDao
 import com.example.markdown_editor.data.database.NoteDb
 import com.example.markdown_editor.data.linkPreview.AndroidLinkPreviewRepository
-import com.example.markdown_editor.data.project.AndroidNoteRepository
 import com.example.markdown_editor.data.project.AndroidProjectRepository
 import com.example.markdown_editor.data.project.AndroidSettingsRepository
 import com.example.markdown_editor.data.sync.SyncRepositoryFactory
 import com.example.markdown_editor.domain.repositories.LinkPreviewRepository
-import com.example.markdown_editor.domain.repositories.NoteRepository
 import com.example.markdown_editor.domain.repositories.ProjectRepository
 import com.example.markdown_editor.domain.repositories.SettingsRepository
 import org.koin.dsl.bind
@@ -38,7 +36,6 @@ val dataModule = module {
 
     single<AndroidProjectRepository>() bind ProjectRepository::class
     single<AndroidSettingsRepository>() bind SettingsRepository::class
-    single<AndroidNoteRepository>() bind NoteRepository::class
     single<AndroidLinkPreviewRepository>() bind LinkPreviewRepository::class
     single<SyncRepositoryFactory>()
 }

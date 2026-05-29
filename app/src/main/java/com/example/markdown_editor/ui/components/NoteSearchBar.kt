@@ -21,7 +21,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.appendInlineContent
-import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.OpenInNew
 import androidx.compose.material.icons.filled.Abc
@@ -80,7 +79,7 @@ import com.example.markdown_editor.ui.viewmodel.events.SearchEvent
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun NoteSearchBar(
-    searchState: TextFieldState,
+    searchState: ComposeTextState,
     searchResults: LazyPagingItems<Note>,
     onSearchEvent: (SearchEvent) -> Unit,
     paddingValues: PaddingValues = PaddingValues(),
@@ -178,7 +177,7 @@ fun NoteSearchBar(
 
     val inputFieldComponent = @Composable {
         OutlinedTextField(
-            state = searchState,
+            state = searchState.state,
             placeholder = { Text(stringResource(R.string.search_notes)) },
             leadingIcon = { Icon(Icons.Default.Search, null) },
             trailingIcon = {

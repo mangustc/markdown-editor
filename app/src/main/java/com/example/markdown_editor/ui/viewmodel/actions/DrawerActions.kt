@@ -1,6 +1,5 @@
 package com.example.markdown_editor.ui.viewmodel.actions
 
-import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.runtime.snapshotFlow
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
@@ -16,6 +15,7 @@ import com.example.markdown_editor.domain.usecases.project.RenameNoteInput
 import com.example.markdown_editor.domain.usecases.project.RenameNoteUseCase
 import com.example.markdown_editor.domain.usecases.project.ToggleNoteTagInput
 import com.example.markdown_editor.domain.usecases.project.ToggleNoteTagUseCase
+import com.example.markdown_editor.ui.components.ComposeTextState
 import com.example.markdown_editor.ui.viewmodel.AppDeps
 import com.example.markdown_editor.ui.viewmodel.events.NavigationEvent
 import com.example.markdown_editor.ui.viewmodel.events.SearchEvent
@@ -40,7 +40,7 @@ class DrawerActions(
     private val renameNoteUseCase: RenameNoteUseCase by inject()
     private val toggleNoteTagUseCase: ToggleNoteTagUseCase by inject()
 
-    val searchState = TextFieldState()
+    val searchState = ComposeTextState()
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val searchResultsPaged: Flow<PagingData<Note>> = combine(
@@ -59,7 +59,7 @@ class DrawerActions(
         .cachedIn(deps.scope)
 
     fun onSearchEvent(event: SearchEvent) {
-        event.execute(searchState = searchState)
+        event.execute(state = searchState)
     }
 
     fun onNoteSelected(note: Note) {

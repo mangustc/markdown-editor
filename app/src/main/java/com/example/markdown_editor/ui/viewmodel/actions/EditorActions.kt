@@ -1,11 +1,7 @@
 package com.example.markdown_editor.ui.viewmodel.actions
 
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.text.input.TextFieldState
-import androidx.compose.foundation.text.input.insert
-import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.runtime.snapshotFlow
-import androidx.compose.ui.text.TextRange
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import com.example.markdown_editor.domain.models.FileSystemPath
@@ -13,6 +9,8 @@ import com.example.markdown_editor.domain.models.FrontMatter
 import com.example.markdown_editor.domain.models.Note
 import com.example.markdown_editor.domain.models.RelativePath
 import com.example.markdown_editor.domain.models.SpanInfo
+import com.example.markdown_editor.domain.textStateExtensions.insertLink
+import com.example.markdown_editor.domain.textStateExtensions.insertWithOffset
 import com.example.markdown_editor.domain.usecases.project.CopyToAssetsInput
 import com.example.markdown_editor.domain.usecases.project.CopyToAssetsUseCase
 import com.example.markdown_editor.domain.usecases.project.GetNoteInput
@@ -25,6 +23,7 @@ import com.example.markdown_editor.domain.usecases.project.GetRealSpanInfoLinkTy
 import com.example.markdown_editor.domain.usecases.project.GetRealSpanInfoLinkTypeUseCase
 import com.example.markdown_editor.domain.usecases.project.SaveNoteTextInput
 import com.example.markdown_editor.domain.usecases.project.SaveNoteTextUseCase
+import com.example.markdown_editor.ui.components.ComposeTextState
 import com.example.markdown_editor.ui.viewmodel.AppDeps
 import com.example.markdown_editor.ui.viewmodel.events.EditorEvent
 import com.example.markdown_editor.ui.viewmodel.events.NavigationEvent
@@ -54,8 +53,8 @@ class EditorActions(
     private val getProjectFileUseCase: GetProjectFileUseCase by inject()
     private val saveNoteTextUseCase: SaveNoteTextUseCase by inject()
 
-    val state = TextFieldState()
-    val linkSearchState = TextFieldState()
+    val state = ComposeTextState()
+    val linkSearchState = ComposeTextState()
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val linkSearchResultsPaged: Flow<PagingData<Note>> = combine(
@@ -93,7 +92,9 @@ class EditorActions(
                 RelativePath(note.name),
             )
         }.md>)"
-        insertWithOffset(syntax, syntax.length)
+        state.edit {
+            insertWithOffset(syntax, syntax.length)
+        }
         dismissLinkNoteDialog()
     }
 
@@ -109,7 +110,9 @@ class EditorActions(
     fun onEvent(event: EditorEvent) {
         when (event) {
             is EditorEvent.InsertSyntax -> {
-                insertWithOffset(event.syntax, event.cursorOffset)
+                state.edit {
+                    insertWithOffset(event.syntax, event.cursorOffset)
+                }
             }
 
             is EditorEvent.AttachPhoto -> {
@@ -122,9 +125,11 @@ class EditorActions(
                                 assetPath = FileSystemPath(event.uri.toString()),
                             ),
                         )
-                    val label = projectFile.relativePath.basename
-                    val markdown = "![$label](<${projectFile.relativePath.value}>)"
-                    insertWithOffset(markdown, 0)
+                    state.insertLink(
+                        label = projectFile.relativePath.basename,
+                        payload = projectFile.relativePath.value,
+                        isImage = true,
+                    )
                 }
             }
 
@@ -138,9 +143,11 @@ class EditorActions(
                                 assetPath = FileSystemPath(event.uri.toString()),
                             ),
                         )
-                    val label = event.displayName ?: projectFile.relativePath.basename
-                    val markdown = "[$label](<${projectFile.relativePath.value}>)"
-                    insertWithOffset(markdown, 0)
+                    state.insertLink(
+                        label = event.displayName ?: projectFile.relativePath.basename,
+                        payload = projectFile.relativePath.value,
+                        isImage = false,
+                    )
                 }
             }
 
@@ -150,29 +157,6 @@ class EditorActions(
 
             is EditorEvent.Redo -> {
                 state.undoState.redo()
-            }
-        }
-    }
-
-    private fun insertWithOffset(text: String, offset: Int) {
-        state.edit {
-            val sel = selection
-            if (sel.collapsed) {
-                val start = sel.start
-                replace(start, start, text)
-                placeCursorAfterCharAt(start + offset - 1)
-            } else {
-                val selStart = selection.min
-                val selEnd = selection.max
-                val selLength = selection.length
-                val prefix = text.substring(0, offset)
-                val suffix = text.substring(offset)
-                insert(selEnd, suffix)
-                insert(selStart, prefix)
-                selection = TextRange(
-                    selStart + prefix.length,
-                    selStart + prefix.length + selLength,
-                )
             }
         }
     }

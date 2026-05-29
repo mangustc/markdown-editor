@@ -1,5 +1,6 @@
 package com.example.markdown_editor.koin.modules
 
+import android.content.Context
 import androidx.room.Room
 import com.example.markdown_editor.data.database.LinkPreviewDao
 import com.example.markdown_editor.data.database.NoteDao
@@ -16,7 +17,7 @@ import org.koin.dsl.module
 import org.koin.plugin.module.dsl.create
 import org.koin.plugin.module.dsl.single
 
-fun provideNoteDb(context: android.content.Context): NoteDb {
+fun provideNoteDb(context: Context): NoteDb {
     return Room.databaseBuilder(
         context,
         NoteDb::class.java, "database-notes",

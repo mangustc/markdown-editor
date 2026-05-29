@@ -168,7 +168,7 @@ fun EditorScreen(
     val dimmedTextColor = MaterialTheme.colorScheme.primaryFixedDim
     val outputTransformation = remember {
         MarkdownOutputTransformation(
-            state = viewModel.editor.state,
+            state = viewModel.editor.state.state,
             density = density,
             widthProvider = { editorWidth },
             spansProvider = { editorSpans },
@@ -369,7 +369,7 @@ fun EditorScreen(
                     }
                     Box {
                         MarkdownEditorField(
-                            state = viewModel.editor.state,
+                            state = viewModel.editor.state.state,
                             transformation = outputTransformation,
                             onTextLayout = onLayoutChange,
                             readOnly = isViewingMode,
@@ -390,7 +390,7 @@ fun EditorScreen(
                                     key(span.payload) {
                                         MarkdownImageOverlay(
                                             span = span,
-                                            state = viewModel.editor.state,
+                                            state = viewModel.editor.state.state,
                                             layoutResult = state.layout,
                                             project = uiState.project!!,
                                             density = density,
@@ -412,7 +412,7 @@ fun EditorScreen(
                                     key(span.payload) {
                                         MarkdownLinkOverlay(
                                             span = span,
-                                            state = viewModel.editor.state,
+                                            state = viewModel.editor.state.state,
                                             layoutResult = state.layout,
                                             viewModel = viewModel,
                                         )

@@ -225,9 +225,6 @@ fun MessengerScreen(viewModel: AppViewModel) {
             }
         }
     }
-    LaunchedEffect(uiState.project) {
-        uiState.project?.let { viewModel.messenger.updateMessages() }
-    }
 
     LaunchedEffect(Unit) {
         val pending = viewModel.consumePendingIntentAttachments()

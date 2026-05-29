@@ -5,7 +5,6 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.markdown_editor.domain.models.Attachment
 import com.example.markdown_editor.domain.repositories.NoteRepository
-import com.example.markdown_editor.domain.repositories.ProjectRepository
 import com.example.markdown_editor.domain.usecases.project.GetAllTagsInput
 import com.example.markdown_editor.domain.usecases.project.GetAllTagsUseCase
 import com.example.markdown_editor.domain.usecases.project.SyncDatabaseInput
@@ -31,7 +30,6 @@ import kotlinx.coroutines.flow.update
 @OptIn(ExperimentalCoroutinesApi::class)
 class AppViewModel(
     application: Application,
-    private val projectRepo: ProjectRepository,
     private val noteRepo: NoteRepository,
     private val syncDatabaseUseCase: SyncDatabaseUseCase,
     private val getAllTagsUseCase: GetAllTagsUseCase,
@@ -42,7 +40,6 @@ class AppViewModel(
     private val deps by lazy {
         AppDeps(
             scope = viewModelScope,
-            projectRepo = projectRepo,
             noteRepo = noteRepo,
             uiState = _uiState,
             globalActions = this,

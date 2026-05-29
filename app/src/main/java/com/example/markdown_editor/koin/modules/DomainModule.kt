@@ -3,6 +3,7 @@ package com.example.markdown_editor.koin.modules
 import com.example.markdown_editor.domain.usecases.linkPreview.GetLinkPreviewUseCase
 import com.example.markdown_editor.domain.usecases.messenger.GetMessagesUseCase
 import com.example.markdown_editor.domain.usecases.messenger.GetPinnedMessagesUseCase
+import com.example.markdown_editor.domain.usecases.messenger.SendNoteUseCase
 import com.example.markdown_editor.domain.usecases.project.CopyToAssetsUseCase
 import com.example.markdown_editor.domain.usecases.project.CreateNoteUseCase
 import com.example.markdown_editor.domain.usecases.project.DeleteNoteUseCase
@@ -44,4 +45,5 @@ val domainModule = module {
     factory<GetProjectFileUseCase>()
     factory<GetRealSpanInfoLinkTypeUseCase>()
     factory<SaveNoteTextUseCase>()
+    factory<SendNoteUseCase>()
 }

@@ -2,7 +2,6 @@ package com.example.markdown_editor.ui.viewmodel.actions
 
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
-import com.example.markdown_editor.domain.QUICK_NOTE_TAG
 import com.example.markdown_editor.domain.models.Attachment
 import com.example.markdown_editor.domain.models.MessageBody
 import com.example.markdown_editor.domain.models.Note
@@ -12,10 +11,8 @@ import com.example.markdown_editor.domain.usecases.messenger.GetMessagesInput
 import com.example.markdown_editor.domain.usecases.messenger.GetMessagesUseCase
 import com.example.markdown_editor.domain.usecases.messenger.GetPinnedMessagesInput
 import com.example.markdown_editor.domain.usecases.messenger.GetPinnedMessagesUseCase
-import com.example.markdown_editor.domain.usecases.project.CopyToAssetsInput
-import com.example.markdown_editor.domain.usecases.project.CopyToAssetsUseCase
-import com.example.markdown_editor.domain.usecases.project.CreateNoteInput
-import com.example.markdown_editor.domain.usecases.project.CreateNoteUseCase
+import com.example.markdown_editor.domain.usecases.messenger.SendNoteInput
+import com.example.markdown_editor.domain.usecases.messenger.SendNoteUseCase
 import com.example.markdown_editor.domain.usecases.project.DeleteNoteInput
 import com.example.markdown_editor.domain.usecases.project.DeleteNoteUseCase
 import com.example.markdown_editor.ui.viewmodel.AppDeps
@@ -30,19 +27,15 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 
 class MessengerActions(
     private val deps: AppDeps,
 ) : KoinComponent {
     private val getMessagesUseCase: GetMessagesUseCase by inject()
     private val getPinnedMessagesUseCase: GetPinnedMessagesUseCase by inject()
-    private val createNoteUseCase: CreateNoteUseCase by inject()
     private val deleteNoteUseCase: DeleteNoteUseCase by inject()
     private val getLinkPreviewUseCase: GetLinkPreviewUseCase by inject()
-    private val copyToAssetsUseCase: CopyToAssetsUseCase by inject()
+    private val sendNoteUseCase: SendNoteUseCase by inject()
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val notesPaged: Flow<PagingData<MessageBody>> = deps.uiState
@@ -97,94 +90,20 @@ class MessengerActions(
             val project = deps.uiState.value.project ?: return@launch
             val text = deps.uiState.value.messengerNewNoteText.trim()
 
-            val editNote = if (isEditedNote) {
-                deps.uiState.value.messengerEditingNote ?: return@launch
-            } else {
-                if (text.isBlank() && attachments.isEmpty()) return@launch
-                null
-            }
+            sendNoteUseCase(
+                SendNoteInput(
+                    project = project,
+                    body = text,
+                    attachments = attachments,
+                    editNote = if (isEditedNote) {
+                        deps.uiState.value.messengerEditingNote ?: return@launch
+                    } else {
+                        if (text.isBlank() && attachments.isEmpty()) return@launch
+                        null
+                    },
+                ),
+            )
 
-            val targetNote = if (isEditedNote) {
-                editNote!!
-            } else {
-                val timestamp = DateTimeFormatter
-                    .ofPattern("yyyyMMdd_HHmmss")
-                    .withZone(ZoneId.systemDefault())
-                    .format(Instant.now())
-                val name = "quick-note-$timestamp"
-                val tags = listOf(QUICK_NOTE_TAG)
-                val note = try {
-                    createNoteUseCase(
-                        CreateNoteInput(
-                            project = project,
-                            name = name,
-                            tags = tags,
-                        ),
-                    )
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                    return@launch
-                }
-                note
-            }
-
-            val baseText = deps.noteRepo.getNoteText(targetNote, includeFrontMatter = true)
-
-            val parentContent = if (isEditedNote) {
-                val frontMatterEnd = run {
-                    if (!baseText.trimStart().startsWith("---")) return@run 0
-                    val lines = baseText.lines()
-                    val closeIdx = lines.drop(1).indexOfFirst { it.trim() == "---" }
-                    if (closeIdx < 0) 0
-                    else lines.take(closeIdx + 2).joinToString("\n").length
-                }
-                baseText.substring(0, frontMatterEnd).trimEnd()
-            } else {
-                baseText
-            }
-
-            val attachmentLines = buildString {
-                attachments.forEach { attachment ->
-                    val label = attachment.displayName
-                        .replace("[", "\\[")
-                        .replace("]", "\\]")
-                    val firstPart = when (attachment.type) {
-                        Attachment.AttachmentType.IMAGE -> "![$label]"
-                        Attachment.AttachmentType.FILE -> "[$label]"
-                    }
-                    when (attachment) {
-                        is Attachment.PendingAttachment -> {
-                            val projectFile =
-                                copyToAssetsUseCase(
-                                    CopyToAssetsInput(
-                                        project = project,
-                                        assetPath = attachment.fileSystemPath,
-                                    ),
-                                )
-                            append("\n$firstPart(<${projectFile.relativePath.value}>)")
-                        }
-
-                        is Attachment.ProjectAttachment -> {
-                            if (isEditedNote) append("\n$firstPart(<${attachment.relativePath.value}>)")
-                        }
-                    }
-                }
-            }
-
-            val finalContent = when {
-                text.isNotEmpty() && attachmentLines.isNotEmpty() ->
-                    "$parentContent\n\n$text$attachmentLines"
-
-                text.isNotEmpty() ->
-                    "$parentContent\n\n$text"
-
-                attachmentLines.isNotEmpty() ->
-                    "$parentContent\n$attachmentLines"
-
-                else -> parentContent
-            }
-
-            deps.noteRepo.saveNoteText(targetNote, finalContent)
             deps.uiState.update { state ->
                 state.copy(
                     messengerNewNoteText = "",

@@ -107,6 +107,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.compose.collectAsLazyPagingItems
 import coil3.compose.AsyncImage
 import com.example.markdown_editor.R
+import com.example.markdown_editor.domain.CREATED_AT_FIELD
+import com.example.markdown_editor.domain.TAGS_FIELD
 import com.example.markdown_editor.domain.markdown.MarkdownParser
 import com.example.markdown_editor.domain.models.FrontMatter
 import com.example.markdown_editor.domain.models.Project
@@ -490,7 +492,7 @@ fun FrontMatterProperties(
                         .weight(1f)
                         .onFocusChanged { focusState ->
                             if (!focusState.isFocused) {
-                                if (localKey.isBlank() && key != "createdAt" && key != "tags") {
+                                if (localKey.isBlank() && key != CREATED_AT_FIELD && key != TAGS_FIELD) {
                                     onRemoveProperty(key)
                                 } else if (localKey.isBlank()) {
                                     localKey = key
@@ -503,7 +505,7 @@ fun FrontMatterProperties(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontWeight = FontWeight.Bold,
                     ),
-                    readOnly = key == "createdAt" || key == "tags",
+                    readOnly = key == CREATED_AT_FIELD || key == TAGS_FIELD,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                     keyboardActions = KeyboardActions(
                         onDone = {
@@ -516,7 +518,7 @@ fun FrontMatterProperties(
                 Spacer(Modifier.width(8.dp))
 
                 Box(modifier = Modifier.weight(2f)) {
-                    if (key == "tags") {
+                    if (key == TAGS_FIELD) {
                         TagEditor(
                             tags = frontMatter.tags,
                             allTags = allTags,

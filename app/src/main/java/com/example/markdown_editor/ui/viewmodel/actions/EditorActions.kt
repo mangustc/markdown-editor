@@ -302,8 +302,6 @@ class EditorActions(
     }
 
     fun removeFmProperty(key: String) {
-        if (key == "createdAt" || key == "tags") return
-
         deps.uiState.update { it.copy(editorFrontMatter = it.editorFrontMatter?.withoutField(key)) }
         onSave()
     }

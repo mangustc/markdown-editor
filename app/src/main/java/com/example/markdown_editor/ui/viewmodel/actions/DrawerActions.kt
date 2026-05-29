@@ -82,12 +82,11 @@ class DrawerActions(
     fun onCreateNote() {
         deps.scope.launch {
             val project = deps.uiState.value.project ?: return@launch
-            val nameToUse = deps.uiState.value.newNoteNameInput
             try {
                 createNoteUseCase(
                     CreateNoteInput(
                         project = project,
-                        name = nameToUse,
+                        name = deps.uiState.value.newNoteNameInput,
                     ),
                 )
             } catch (e: Exception) {
@@ -109,7 +108,6 @@ class DrawerActions(
     fun onDeleteNote(note: Note) {
         deps.scope.launch {
             val project = deps.uiState.value.project ?: return@launch
-            val activeNote = deps.uiState.value.activeNote
             deleteNoteUseCase(
                 DeleteNoteInput(
                     project = project,
@@ -117,6 +115,8 @@ class DrawerActions(
                 ),
             )
             deps.globalActions.updateNoteLists()
+
+            val activeNote = deps.uiState.value.activeNote
             if (note.projectFile.relativePath == activeNote?.projectFile?.relativePath)
                 deps.globalActions.onEvent(NavigationEvent.GoBack)
         }

@@ -1,5 +1,7 @@
 package com.example.markdown_editor.domain.models
 
+import com.example.markdown_editor.domain.CREATED_AT_FIELD
+import com.example.markdown_editor.domain.TAGS_FIELD
 import java.time.Instant
 
 data class FrontMatter(
@@ -10,9 +12,9 @@ data class FrontMatter(
         data class StringList(val values: List<String>) : FrontMatterValue
     }
 
-    val createdAt: String? get() = (fields["createdAt"] as? FrontMatterValue.Scalar)?.value
+    val createdAt: String? get() = (fields[CREATED_AT_FIELD] as? FrontMatterValue.Scalar)?.value
     val tags: List<String>
-        get() = (fields["tags"] as? FrontMatterValue.StringList)?.values ?: emptyList()
+        get() = (fields[TAGS_FIELD] as? FrontMatterValue.StringList)?.values ?: emptyList()
 
     operator fun get(key: String): FrontMatterValue? = fields[key]
 
@@ -45,16 +47,18 @@ data class FrontMatter(
         if (tag.isBlank()) return this
         val currentTags = tags.toMutableList()
         if (!currentTags.contains(tag)) currentTags.add(tag)
-        return withField("tags", FrontMatterValue.StringList(currentTags))
+        return withField(TAGS_FIELD, FrontMatterValue.StringList(currentTags))
     }
 
     fun withoutTag(tag: String): FrontMatter {
         val currentTags = tags.toMutableList()
         currentTags.remove(tag)
-        return withField("tags", FrontMatterValue.StringList(currentTags))
+        return withField(TAGS_FIELD, FrontMatterValue.StringList(currentTags))
     }
 
     fun withoutField(key: String): FrontMatter {
+        if (key == TAGS_FIELD || key == CREATED_AT_FIELD) return this
+
         val newFields = fields.toMutableMap()
         newFields.remove(key)
         return copy(fields = newFields)

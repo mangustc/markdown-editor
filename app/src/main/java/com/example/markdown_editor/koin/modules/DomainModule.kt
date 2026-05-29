@@ -1,5 +1,6 @@
 package com.example.markdown_editor.koin.modules
 
+import com.example.markdown_editor.domain.usecases.editor.ApplyEditorEventUseCase
 import com.example.markdown_editor.domain.usecases.linkPreview.GetLinkPreviewUseCase
 import com.example.markdown_editor.domain.usecases.messenger.GetMessagesUseCase
 import com.example.markdown_editor.domain.usecases.messenger.GetPinnedMessagesUseCase
@@ -46,4 +47,5 @@ val domainModule = module {
     factory<GetRealSpanInfoLinkTypeUseCase>()
     factory<SaveNoteTextUseCase>()
     factory<SendNoteUseCase>()
+    factory<ApplyEditorEventUseCase>()
 }

@@ -4,14 +4,13 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.runtime.snapshotFlow
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
-import com.example.markdown_editor.domain.models.FileSystemPath
 import com.example.markdown_editor.domain.models.FrontMatter
 import com.example.markdown_editor.domain.models.Note
 import com.example.markdown_editor.domain.models.RelativePath
 import com.example.markdown_editor.domain.models.SpanInfo
-import com.example.markdown_editor.domain.textStateExtensions.insertLink
-import com.example.markdown_editor.domain.textStateExtensions.insertWithOffset
-import com.example.markdown_editor.domain.usecases.project.CopyToAssetsInput
+import com.example.markdown_editor.domain.usecases.editor.ApplyEditorEventInput
+import com.example.markdown_editor.domain.usecases.editor.ApplyEditorEventUseCase
+import com.example.markdown_editor.domain.usecases.editor.EditorEvent
 import com.example.markdown_editor.domain.usecases.project.CopyToAssetsUseCase
 import com.example.markdown_editor.domain.usecases.project.GetNoteInput
 import com.example.markdown_editor.domain.usecases.project.GetNoteUseCase
@@ -25,7 +24,6 @@ import com.example.markdown_editor.domain.usecases.project.SaveNoteTextInput
 import com.example.markdown_editor.domain.usecases.project.SaveNoteTextUseCase
 import com.example.markdown_editor.ui.components.ComposeTextState
 import com.example.markdown_editor.ui.viewmodel.AppDeps
-import com.example.markdown_editor.ui.viewmodel.events.EditorEvent
 import com.example.markdown_editor.ui.viewmodel.events.NavigationEvent
 import com.example.markdown_editor.ui.viewmodel.events.SearchEvent
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -52,6 +50,7 @@ class EditorActions(
     private val getNoteUseCase: GetNoteUseCase by inject()
     private val getProjectFileUseCase: GetProjectFileUseCase by inject()
     private val saveNoteTextUseCase: SaveNoteTextUseCase by inject()
+    private val applyEditorEventUseCase: ApplyEditorEventUseCase by inject()
 
     val state = ComposeTextState()
     val linkSearchState = ComposeTextState()
@@ -85,19 +84,6 @@ class EditorActions(
         linkSearchState.setTextAndPlaceCursorAtEnd("")
     }
 
-    fun insertNoteLink(note: Note) {
-        val project = deps.uiState.value.project ?: return
-        val syntax = "[${note.name}](<${
-            project.notesRelativePath.appendRelativePath(
-                RelativePath(note.name),
-            )
-        }.md>)"
-        state.edit {
-            insertWithOffset(syntax, syntax.length)
-        }
-        dismissLinkNoteDialog()
-    }
-
     init {
         deps.scope.launch {
             snapshotFlow { state.text }
@@ -108,55 +94,29 @@ class EditorActions(
 
     @OptIn(ExperimentalFoundationApi::class)
     fun onEvent(event: EditorEvent) {
-        when (event) {
-            is EditorEvent.InsertSyntax -> {
-                state.edit {
-                    insertWithOffset(event.syntax, event.cursorOffset)
+        deps.scope.launch {
+            val project = deps.uiState.value.project ?: return@launch
+            when (event) {
+                is EditorEvent.InsertNoteLink -> {
+                    applyEditorEventUseCase(
+                        ApplyEditorEventInput(
+                            project = project,
+                            state = state,
+                            event = event,
+                        ),
+                    )
+                    dismissLinkNoteDialog()
                 }
-            }
 
-            is EditorEvent.AttachPhoto -> {
-                deps.scope.launch {
-                    val project = deps.uiState.value.project ?: return@launch
-                    val projectFile =
-                        copyToAssetsUseCase(
-                            CopyToAssetsInput(
-                                project = project,
-                                assetPath = FileSystemPath(event.uri.toString()),
-                            ),
-                        )
-                    state.insertLink(
-                        label = projectFile.relativePath.basename,
-                        payload = projectFile.relativePath.value,
-                        isImage = true,
+                else -> {
+                    applyEditorEventUseCase(
+                        ApplyEditorEventInput(
+                            project = project,
+                            state = state,
+                            event = event,
+                        ),
                     )
                 }
-            }
-
-            is EditorEvent.AttachFile -> {
-                deps.scope.launch {
-                    val project = deps.uiState.value.project ?: return@launch
-                    val projectFile =
-                        copyToAssetsUseCase(
-                            CopyToAssetsInput(
-                                project = project,
-                                assetPath = FileSystemPath(event.uri.toString()),
-                            ),
-                        )
-                    state.insertLink(
-                        label = event.displayName ?: projectFile.relativePath.basename,
-                        payload = projectFile.relativePath.value,
-                        isImage = false,
-                    )
-                }
-            }
-
-            is EditorEvent.Undo -> {
-                state.undoState.undo()
-            }
-
-            is EditorEvent.Redo -> {
-                state.undoState.redo()
             }
         }
     }

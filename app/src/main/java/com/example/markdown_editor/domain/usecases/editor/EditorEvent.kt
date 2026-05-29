@@ -1,15 +1,20 @@
-package com.example.markdown_editor.ui.viewmodel.events
+package com.example.markdown_editor.domain.usecases.editor
 
 import android.net.Uri
+import com.example.markdown_editor.domain.models.Note
 
 sealed interface EditorEvent {
-    data class InsertSyntax(val syntax: String, val cursorOffset: Int) : EditorEvent
     data class AttachPhoto(val uri: Uri) : EditorEvent
     data class AttachFile(
         val uri: Uri,
         val displayName: String? = null,
     ) : EditorEvent
 
+    data class InsertNoteLink(val note: Note) : EditorEvent
+
+    data object Bold : EditorEvent
+    data object Italic : EditorEvent
+    data object Code : EditorEvent
     data object Undo : EditorEvent
     data object Redo : EditorEvent
 }

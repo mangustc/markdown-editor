@@ -115,11 +115,12 @@ import com.example.markdown_editor.domain.models.Project
 import com.example.markdown_editor.domain.models.RelativePath
 import com.example.markdown_editor.domain.models.Settings
 import com.example.markdown_editor.domain.models.SpanInfo
+import com.example.markdown_editor.domain.usecases.editor.EditorEvent
 import com.example.markdown_editor.ui.components.NoteDrawerItem
 import com.example.markdown_editor.ui.components.NoteSearchBar
 import com.example.markdown_editor.ui.components.TooltipIconButton
 import com.example.markdown_editor.ui.viewmodel.AppViewModel
-import com.example.markdown_editor.ui.viewmodel.events.EditorEvent
+import com.example.markdown_editor.ui.viewmodel.events.FocusEvent
 
 data class EditorLayoutState(
     val layout: TextLayoutResult,
@@ -222,8 +223,6 @@ fun EditorScreen(
         }
     }
 
-    val focusManager = LocalFocusManager.current
-
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -279,36 +278,21 @@ fun EditorScreen(
                     )
                     TooltipIconButton(
                         onClick = {
-                            viewModel.editor.onEvent(
-                                EditorEvent.InsertSyntax(
-                                    "****",
-                                    2,
-                                ),
-                            )
+                            viewModel.editor.onEvent(EditorEvent.Bold)
                         },
                         icon = Icons.Default.FormatBold,
                         tooltip = stringResource(R.string.bold),
                     )
                     TooltipIconButton(
                         onClick = {
-                            viewModel.editor.onEvent(
-                                EditorEvent.InsertSyntax(
-                                    "**",
-                                    1,
-                                ),
-                            )
+                            viewModel.editor.onEvent(EditorEvent.Italic)
                         },
                         icon = Icons.Default.FormatItalic,
                         tooltip = stringResource(R.string.italic),
                     )
                     TooltipIconButton(
                         onClick = {
-                            viewModel.editor.onEvent(
-                                EditorEvent.InsertSyntax(
-                                    "``",
-                                    1,
-                                ),
-                            )
+                            viewModel.editor.onEvent(EditorEvent.Code)
                         },
                         icon = Icons.Default.Code,
                         tooltip = stringResource(R.string.inline_code),
@@ -446,7 +430,10 @@ fun EditorScreen(
                             supportingText = if (!note.tags.isNullOrEmpty()) note.tags.joinToString(
                                 ", ",
                             ) else null,
-                            onClick = { viewModel.editor.insertNoteLink(note); focusManager.clearFocus() },
+                            onClick = {
+                                viewModel.editor.onEvent(EditorEvent.InsertNoteLink(note))
+                                viewModel.onEvent(FocusEvent.ClearFocus)
+                            },
                         )
                     }
                 }

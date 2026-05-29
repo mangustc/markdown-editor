@@ -36,7 +36,7 @@ fun MutableTextState.insertWithOffset(text: String, offset: Int) {
 }
 
 fun MutableTextState.bold() {
-    insertWithOffset("****", 1)
+    insertWithOffset("****", 2)
 }
 
 fun MutableTextState.italic() {

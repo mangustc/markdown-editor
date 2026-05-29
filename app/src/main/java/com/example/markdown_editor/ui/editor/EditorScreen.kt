@@ -131,15 +131,15 @@ data class EditorLayoutState(
 @Composable
 fun EditorScreen(
     viewModel: AppViewModel,
-    noteUriString: String,
+    noteRelativePath: String,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val density = LocalDensity.current
     val scrollState = rememberScrollState()
     val isViewingMode by rememberUpdatedState(uiState.isViewingMode)
 
-    LaunchedEffect(noteUriString) {
-        viewModel.editor.onNoteOpened(noteUriString)
+    LaunchedEffect(noteRelativePath) {
+        viewModel.editor.onNoteOpened(RelativePath(noteRelativePath))
     }
 
     val editorSpans by remember {

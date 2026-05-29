@@ -212,12 +212,21 @@ class EditorActions(
     }
 
     @OptIn(ExperimentalFoundationApi::class)
-    fun onNoteOpened(noteUriString: String) {
+    fun onNoteOpened(notePath: RelativePath) {
         deps.scope.launch {
             try {
-                val note = deps.noteRepo.getNoteByFileSystemPath(FileSystemPath(noteUriString))
-                val text = deps.noteRepo.getNoteText(note)
-                val (frontMatter, body) = FrontMatter.splitFromContent(text)
+                val project = deps.uiState.value.project ?: throw Exception()
+                val note = getNoteUseCase(
+                    GetNoteInput(
+                        project = project,
+                        relativePath = notePath,
+                        includeText = true,
+                        includeFrontMatter = true,
+                    ),
+                )
+                val (frontMatter, body) = FrontMatter.splitFromContent(
+                    note?.body ?: throw Exception(),
+                )
                 deps.uiState.update {
                     it.copy(
                         activeNote = note,

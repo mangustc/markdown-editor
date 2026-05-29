@@ -136,7 +136,7 @@ fun AppScaffold(
         appViewModel.navigationEvents.collect {
             when (it) {
                 is NavigationEvent.GoToEditor ->
-                    navController.navigate(EditorDestination(it.note.projectFile.fileSystemPath.value))
+                    navController.navigate(EditorDestination(it.note.projectFile.relativePath.value))
 
                 is NavigationEvent.GoBack -> navController.popBackStack()
                 is NavigationEvent.OpenDrawer -> scope.launch { drawerState.open() }
@@ -503,7 +503,7 @@ fun AppScaffold(
             ) {
                 composable<EditorDestination> { backStackEntry ->
                     val data: EditorDestination = backStackEntry.toRoute()
-                    EditorScreen(viewModel = appViewModel, noteUriString = data.noteUriString)
+                    EditorScreen(viewModel = appViewModel, noteRelativePath = data.noteRelativePath)
                 }
                 composable<MessengerDestination> {
                     MessengerScreen(viewModel = appViewModel)

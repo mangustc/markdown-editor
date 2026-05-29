@@ -94,11 +94,10 @@ class AndroidProjectRepository(
             lastModified = documentFile.lastModified(),
             createdAt = frontMatter.toCreatedAtMillis(),
             tags = frontMatter.tags,
-            body = if (includeText || includeFrontMatter) {
-                var body = ""
-                if (includeFrontMatter) body += frontMatter.toString()
-                if (includeText) body += text
-                body
+            body = if (includeText || includeFrontMatter) buildString {
+                if (includeFrontMatter) append(frontMatter.toString())
+                if (includeFrontMatter && includeText) append('\n')
+                if (includeText) append(text)
             } else {
                 null
             },

@@ -23,6 +23,8 @@ import com.example.markdown_editor.domain.usecases.project.GetProjectFileInput
 import com.example.markdown_editor.domain.usecases.project.GetProjectFileUseCase
 import com.example.markdown_editor.domain.usecases.project.GetRealSpanInfoLinkTypeInput
 import com.example.markdown_editor.domain.usecases.project.GetRealSpanInfoLinkTypeUseCase
+import com.example.markdown_editor.domain.usecases.project.SaveNoteTextInput
+import com.example.markdown_editor.domain.usecases.project.SaveNoteTextUseCase
 import com.example.markdown_editor.ui.viewmodel.AppDeps
 import com.example.markdown_editor.ui.viewmodel.events.EditorEvent
 import com.example.markdown_editor.ui.viewmodel.events.NavigationEvent
@@ -50,6 +52,7 @@ class EditorActions(
     private val getRealSpanInfoLinkTypeUseCase: GetRealSpanInfoLinkTypeUseCase by inject()
     private val getNoteUseCase: GetNoteUseCase by inject()
     private val getProjectFileUseCase: GetProjectFileUseCase by inject()
+    private val saveNoteTextUseCase: SaveNoteTextUseCase by inject()
 
     val state = TextFieldState()
     val linkSearchState = TextFieldState()
@@ -311,7 +314,7 @@ class EditorActions(
 
     fun onSave() {
         deps.scope.launch {
-            deps.uiState.value.project ?: return@launch
+            val project = deps.uiState.value.project ?: return@launch
             val note = deps.uiState.value.activeNote ?: return@launch
             val bodyText = state.text.toString()
             val fm = deps.uiState.value.editorFrontMatter
@@ -322,7 +325,13 @@ class EditorActions(
                 bodyText
             }
 
-            deps.noteRepo.saveNoteText(note, textToSave)
+            saveNoteTextUseCase(
+                SaveNoteTextInput(
+                    project = project,
+                    note = note,
+                    text = textToSave,
+                ),
+            )
             deps.globalActions.updateNoteLists()
             deps.uiState.update { it.copy(editorSavedVersion = it.editorVersion) }
         }

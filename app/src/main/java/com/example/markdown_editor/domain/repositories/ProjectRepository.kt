@@ -52,7 +52,7 @@ interface ProjectRepository {
         project: Project,
         relativePath: RelativePath,
         byteArray: ByteArray,
-        fileExistsStrategy: FileExistsStrategy = FileExistsStrategy.OVERWRITE,
+        fileExistsStrategy: FileExistsStrategy,
         createParents: Boolean = true,
     ): ProjectFile?
 
@@ -65,7 +65,7 @@ interface ProjectRepository {
         project: Project,
         relativePath: RelativePath,
         newRelativePath: RelativePath,
-        fileExistsStrategy: FileExistsStrategy = FileExistsStrategy.OVERWRITE,
+        fileExistsStrategy: FileExistsStrategy,
         createParents: Boolean = true,
     ): ProjectFile?
 
@@ -73,7 +73,7 @@ interface ProjectRepository {
         project: Project,
         relativePath: RelativePath,
         newRelativePath: RelativePath,
-        fileExistsStrategy: FileExistsStrategy = FileExistsStrategy.OVERWRITE,
+        fileExistsStrategy: FileExistsStrategy,
         createParents: Boolean = true,
     ): ProjectFile?
 

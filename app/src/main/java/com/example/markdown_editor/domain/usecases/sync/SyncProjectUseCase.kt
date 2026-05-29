@@ -81,12 +81,17 @@ class SyncProjectUseCase(
                 is SyncFileAction.Download -> {
                     val bytes = syncRepository.downloadFile(remotePath)
                         ?: throw SyncStateException()
-                    projectRepository.writeFile(project, actionPath(action), bytes)
+                    projectRepository.writeFile(
+                        project = project,
+                        relativePath = actionPath(action),
+                        byteArray = bytes,
+                        fileExistsStrategy = ProjectRepository.FileExistsStrategy.OVERWRITE,
+                    )
                 }
 
                 is SyncFileAction.DeleteLocal -> projectRepository.deleteFile(
-                    project,
-                    actionPath(action),
+                    project = project,
+                    relativePath = actionPath(action),
                 )
 
                 is SyncFileAction.DeleteRemote -> syncRepository.deleteFile(remotePath)
@@ -106,7 +111,12 @@ class SyncProjectUseCase(
             remoteRoot.appendRelativePath(SyncManifest.ProjectRelativePath),
             newManifestBytes,
         )
-        projectRepository.writeFile(project, SyncManifest.ProjectRelativePath, newManifestBytes)
+        projectRepository.writeFile(
+            project = project,
+            relativePath = SyncManifest.ProjectRelativePath,
+            byteArray = newManifestBytes,
+            fileExistsStrategy = ProjectRepository.FileExistsStrategy.OVERWRITE,
+        )
     }
 
     private fun decide(

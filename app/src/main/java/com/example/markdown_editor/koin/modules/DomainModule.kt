@@ -13,6 +13,7 @@ import com.example.markdown_editor.domain.usecases.project.GetProjectFileUseCase
 import com.example.markdown_editor.domain.usecases.project.GetRealSpanInfoLinkTypeUseCase
 import com.example.markdown_editor.domain.usecases.project.LoadSavedProjectUseCase
 import com.example.markdown_editor.domain.usecases.project.RenameNoteUseCase
+import com.example.markdown_editor.domain.usecases.project.SaveNoteTextUseCase
 import com.example.markdown_editor.domain.usecases.project.SelectProjectUseCase
 import com.example.markdown_editor.domain.usecases.project.SyncDatabaseUseCase
 import com.example.markdown_editor.domain.usecases.project.ToggleNoteTagUseCase
@@ -42,4 +43,5 @@ val domainModule = module {
     factory<CopyToAssetsUseCase>()
     factory<GetProjectFileUseCase>()
     factory<GetRealSpanInfoLinkTypeUseCase>()
+    factory<SaveNoteTextUseCase>()
 }

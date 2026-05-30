@@ -98,15 +98,19 @@ class DrawerActions(
     fun onCreateNote() {
         deps.scope.launch {
             val project = deps.uiState.value.project ?: return@launch
-            runUseCase(deps.globalActions::onEvent) {
+            val name = deps.uiState.value.newNoteNameInput
+            val note = runUseCase(deps.globalActions::onEvent) {
                 createNoteUseCase(
                     CreateNoteInput(
                         project = project,
-                        name = deps.uiState.value.newNoteNameInput,
+                        name = name,
+                        initialText = "# $name\n\n",
                     ),
                 )
             }.getOrElse { return@launch }
             deps.globalActions.updateNoteLists()
+            deps.globalActions.onEvent(NavigationEvent.GoToEditor(note))
+            deps.globalActions.onEvent(NavigationEvent.CloseDrawer)
         }
     }
 

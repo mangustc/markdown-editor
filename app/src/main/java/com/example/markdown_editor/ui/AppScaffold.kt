@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Abc
@@ -79,6 +80,7 @@ import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
@@ -527,6 +529,9 @@ fun CreateNoteDialog(
                 OutlinedTextField(
                     value = initialName,
                     onValueChange = { onNameChange(it) },
+                    keyboardOptions = KeyboardOptions(
+                        capitalization = KeyboardCapitalization.Sentences,
+                    ),
                     label = { Text(stringResource(R.string.note_name)) },
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -561,6 +566,9 @@ fun RenameNoteDialog(
                     value = name,
                     onValueChange = { onNameChange(it) },
                     label = { Text(stringResource(R.string.note_name)) },
+                    keyboardOptions = KeyboardOptions(
+                        capitalization = KeyboardCapitalization.Sentences,
+                    ),
                     modifier = Modifier.fillMaxWidth(),
                 )
             }

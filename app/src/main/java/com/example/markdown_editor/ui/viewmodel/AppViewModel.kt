@@ -8,6 +8,7 @@ import com.example.markdown_editor.domain.usecases.project.GetAllTagsInput
 import com.example.markdown_editor.domain.usecases.project.GetAllTagsUseCase
 import com.example.markdown_editor.domain.usecases.project.SyncDatabaseInput
 import com.example.markdown_editor.domain.usecases.project.SyncDatabaseUseCase
+import com.example.markdown_editor.ui.util.runUseCase
 import com.example.markdown_editor.ui.viewmodel.actions.DrawerActions
 import com.example.markdown_editor.ui.viewmodel.actions.EditorActions
 import com.example.markdown_editor.ui.viewmodel.actions.MessengerActions
@@ -77,11 +78,13 @@ class AppViewModel(
 
     override suspend fun updateNoteLists() {
         val project = _uiState.value.project ?: return
-        syncDatabaseUseCase(
-            SyncDatabaseInput(
-                project = project,
-            ),
-        )
+        runUseCase(::onEvent) {
+            syncDatabaseUseCase(
+                SyncDatabaseInput(
+                    project = project,
+                ),
+            )
+        }.getOrElse { return }
         _uiState.update {
             it.copy(
                 allProjectTags = getAllTagsUseCase(

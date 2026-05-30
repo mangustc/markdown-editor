@@ -1,4 +1,4 @@
-package com.example.markdown_editor.domain.usecases.project
+package com.example.markdown_editor.domain.usecases.notes
 
 import com.example.markdown_editor.domain.models.FrontMatter
 import com.example.markdown_editor.domain.models.Note

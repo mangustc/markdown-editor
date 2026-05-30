@@ -1,4 +1,4 @@
-package com.example.markdown_editor.domain.usecases.project
+package com.example.markdown_editor.domain.usecases.notes
 
 import com.example.markdown_editor.domain.models.Note
 import com.example.markdown_editor.domain.models.Project
@@ -20,7 +20,6 @@ class SaveNoteTextUseCase(
             relativePath = input.note.projectFile.relativePath,
             byteArray = input.text.toByteArray(),
             fileExistsStrategy = ProjectRepository.FileExistsStrategy.OVERWRITE,
-
-            )
+        )
     }
 }

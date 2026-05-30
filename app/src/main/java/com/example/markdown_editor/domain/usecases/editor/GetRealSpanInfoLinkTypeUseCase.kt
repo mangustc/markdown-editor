@@ -1,4 +1,4 @@
-package com.example.markdown_editor.domain.usecases.project
+package com.example.markdown_editor.domain.usecases.editor
 
 import com.example.markdown_editor.domain.models.Project
 import com.example.markdown_editor.domain.models.RelativePath

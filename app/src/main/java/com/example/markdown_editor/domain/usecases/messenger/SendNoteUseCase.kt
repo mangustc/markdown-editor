@@ -6,12 +6,12 @@ import com.example.markdown_editor.domain.models.Note
 import com.example.markdown_editor.domain.models.Project
 import com.example.markdown_editor.domain.repositories.ProjectRepository
 import com.example.markdown_editor.domain.usecases.UseCase
+import com.example.markdown_editor.domain.usecases.notes.CreateNoteInput
+import com.example.markdown_editor.domain.usecases.notes.CreateNoteUseCase
+import com.example.markdown_editor.domain.usecases.notes.SaveNoteTextInput
+import com.example.markdown_editor.domain.usecases.notes.SaveNoteTextUseCase
 import com.example.markdown_editor.domain.usecases.project.CopyToAssetsInput
 import com.example.markdown_editor.domain.usecases.project.CopyToAssetsUseCase
-import com.example.markdown_editor.domain.usecases.project.CreateNoteInput
-import com.example.markdown_editor.domain.usecases.project.CreateNoteUseCase
-import com.example.markdown_editor.domain.usecases.project.SaveNoteTextInput
-import com.example.markdown_editor.domain.usecases.project.SaveNoteTextUseCase
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter

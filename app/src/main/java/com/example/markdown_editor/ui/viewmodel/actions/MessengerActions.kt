@@ -13,8 +13,8 @@ import com.example.markdown_editor.domain.usecases.messenger.GetPinnedMessagesIn
 import com.example.markdown_editor.domain.usecases.messenger.GetPinnedMessagesUseCase
 import com.example.markdown_editor.domain.usecases.messenger.SendNoteInput
 import com.example.markdown_editor.domain.usecases.messenger.SendNoteUseCase
-import com.example.markdown_editor.domain.usecases.project.DeleteNoteInput
-import com.example.markdown_editor.domain.usecases.project.DeleteNoteUseCase
+import com.example.markdown_editor.domain.usecases.notes.DeleteNoteInput
+import com.example.markdown_editor.domain.usecases.notes.DeleteNoteUseCase
 import com.example.markdown_editor.ui.viewmodel.AppDeps
 import com.example.markdown_editor.ui.viewmodel.events.ClipboardEvent
 import kotlinx.coroutines.ExperimentalCoroutinesApi

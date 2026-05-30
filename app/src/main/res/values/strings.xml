@@ -85,4 +85,10 @@
     <string name="cloud_storage_full_free_up_space">Cloud storage is full. Please free up space</string>
     <string name="no_sync_service_configured_configure_one_in_settings">No sync service configured. Configure one in settings</string>
     <string name="yandex_disk">Yandex Disk</string>
+    <string name="file_not_found">File not found: %1$s</string>
+    <string name="file_not_readable">Failed to read from file: %1$s</string>
+    <string name="file_not_writable">Failed to write to file: %1$s</string>
+    <string name="failed_to_access_project_directory">Failed to access the project directory: %1$s</string>
+    <string name="failed_to_fetch_link_information">Failed to fetch link information: %1$s</string>
+    <string name="unknown_error">Unknown error: %1$s</string>
 </resources>

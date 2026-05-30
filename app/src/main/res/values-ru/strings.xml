@@ -86,4 +86,10 @@
     <string name="cloud_storage_full_free_up_space">Облачное хранилище заполнено. Пожалуйста, освободите место</string>
     <string name="no_sync_service_configured_configure_one_in_settings">Служба синхронизации не настроена. Настройте ее в параметрах</string>
     <string name="yandex_disk">Яндекс Диск</string>
+    <string name="file_not_found">Файл не найден: %1$s</string>
+    <string name="file_not_readable">Не удалось прочитать данные из файла: %1$s</string>
+    <string name="file_not_writable">Не удалось записать данные в файл: %1$s</string>
+    <string name="failed_to_access_project_directory">Не удалось получить доступ к каталогу проекта: %1$s</string>
+    <string name="failed_to_fetch_link_information">Не удалось получить информацию о ссылке: %1$s</string>
+    <string name="unknown_error">Неизвесная ошибка: %1$s</string>
 </resources>

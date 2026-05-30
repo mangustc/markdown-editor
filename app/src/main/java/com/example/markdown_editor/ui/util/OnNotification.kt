@@ -35,17 +35,50 @@ fun onNotificationToast(event: NotificationEvent, toast: (String) -> Unit, resou
             }
 
             is ProjectException -> when (e) {
-                is FileNotFoundException -> toast("File not found: ${e.path}")
-                is FileNotReadableException -> toast("File not readable: ${e.path}")
-                is FileNotWritableException -> toast("File not writable: ${e.path}")
-                is ProjectAccessException -> toast("Failed to access project directory: ${e.path}")
+                is FileNotFoundException -> toast(
+                    resources.getString(
+                        R.string.file_not_found,
+                        e.path,
+                    ),
+                )
+
+                is FileNotReadableException -> toast(
+                    resources.getString(
+                        R.string.file_not_readable,
+                        e.path,
+                    ),
+                )
+
+                is FileNotWritableException -> toast(
+                    resources.getString(
+                        R.string.file_not_writable,
+                        e.path,
+                    ),
+                )
+
+                is ProjectAccessException -> toast(
+                    resources.getString(
+                        R.string.failed_to_access_project_directory,
+                        e.path,
+                    ),
+                )
             }
 
             is LinkPreviewException -> when (e) {
-                is LinkFetchException -> toast("Failed to fetch link information: ${e.path}")
+                is LinkFetchException -> toast(
+                    resources.getString(
+                        R.string.failed_to_fetch_link_information,
+                        e.path,
+                    ),
+                )
             }
 
-            else -> toast(e.message ?: "Unknown error")
+            else -> toast(
+                e.message ?: resources.getString(
+                    R.string.unknown_error,
+                    e.localizedMessage ?: "Unknown",
+                ),
+            )
         }
     }
 }

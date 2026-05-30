@@ -80,7 +80,8 @@ class AndroidProjectRepository(
         includeFrontMatter: Boolean,
     ): Note? = withContext(Dispatchers.IO) {
         val uri = getUri(project.rootFileSystemPath.value.toUri(), relativePath)
-        val (frontMatter, text) = FrontMatter.splitFromContent(readFullText(uri))
+        val fullText = readFullText(uri)
+        val (frontMatter, text) = FrontMatter.splitFromContent(fullText)
         val documentFile = DocumentFile.fromSingleUri(context, uri)
             ?: return@withContext null
         val name = documentFile.name?.removeSuffix(".md") ?: return@withContext null
@@ -94,9 +95,10 @@ class AndroidProjectRepository(
             lastModified = documentFile.lastModified(),
             createdAt = frontMatter.toCreatedAtMillis(),
             tags = frontMatter.tags,
-            body = if (includeText || includeFrontMatter) buildString {
+            body = if (includeText && includeFrontMatter) {
+                fullText
+            } else if (includeText || includeFrontMatter) buildString {
                 if (includeFrontMatter) append(frontMatter.toString())
-                if (includeFrontMatter && includeText) append('\n')
                 if (includeText) append(text)
             } else {
                 null

@@ -21,6 +21,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.appendInlineContent
+import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.OpenInNew
 import androidx.compose.material.icons.filled.Abc
@@ -180,6 +181,7 @@ fun NoteSearchBar(
             state = searchState.state,
             placeholder = { Text(stringResource(R.string.search_notes)) },
             leadingIcon = { Icon(Icons.Default.Search, null) },
+            lineLimits = TextFieldLineLimits.SingleLine,
             trailingIcon = {
                 if (searchState.text.isNotEmpty()) {
                     TooltipIconButton(

@@ -88,6 +88,19 @@ class EditorActions(
         }
     }
 
+    fun onCloseEditor() {
+        deps.scope.launch {
+            deps.globalActions.onEvent(NavigationEvent.GoBack)
+            deps.uiState.update {
+                it.copy(
+                    isLinkNoteDialogVisible = false,
+                    activeNote = null,
+                    editorFrontMatter = null,
+                )
+            }
+        }
+    }
+
     fun showLinkNoteDialog() {
         deps.uiState.update { it.copy(isLinkNoteDialogVisible = true) }
     }

@@ -396,9 +396,7 @@ fun AppScaffold(
                             )
                         } else if (navBackStackEntry?.destination?.route != MessengerDestination::class.qualifiedName) {
                             TooltipIconButton(
-                                onClick = {
-                                    appViewModel.onEvent(NavigationEvent.GoBack)
-                                },
+                                onClick = { appViewModel.editor.onCloseEditor() },
                                 icon = Icons.AutoMirrored.Filled.ArrowBack,
                                 tooltip = stringResource(R.string.go_back),
                                 tooltipAnchorPosition = TooltipAnchorPosition.Below,

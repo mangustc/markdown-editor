@@ -4,6 +4,7 @@ import com.example.markdown_editor.domain.models.Settings
 import com.example.markdown_editor.domain.usecases.settings.SetSettingsInput
 import com.example.markdown_editor.domain.usecases.settings.SetSettingsUseCase
 import com.example.markdown_editor.domain.usecases.sync.ValidSyncProvider
+import com.example.markdown_editor.ui.util.runUseCase
 import com.example.markdown_editor.ui.viewmodel.AppDeps
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -42,11 +43,13 @@ class SettingsActions(
     private fun updateSettings(newSettings: Settings) = deps.scope.launch {
         val project = deps.uiState.value.project ?: return@launch
         deps.uiState.update { it.copy(settings = newSettings) }
-        setSettingsUseCase(
-            SetSettingsInput(
-                project = project,
-                newSettings = newSettings,
-            ),
-        )
+        runUseCase(deps.globalActions::onEvent) {
+            setSettingsUseCase(
+                SetSettingsInput(
+                    project = project,
+                    newSettings = newSettings,
+                ),
+            )
+        }.getOrElse { return@launch }
     }
 }

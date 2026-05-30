@@ -1,6 +1,7 @@
 package com.example.markdown_editor.domain.usecases.sync
 
 import com.example.markdown_editor.data.sync.SyncRepositoryFactory
+import com.example.markdown_editor.domain.exceptions.SyncStateException
 import com.example.markdown_editor.domain.models.Project
 import com.example.markdown_editor.domain.models.RelativePath
 import com.example.markdown_editor.domain.models.Settings
@@ -40,7 +41,7 @@ class SyncProjectUseCase(
         )
 
         val baseManifest = runCatching {
-            projectRepository.readFile(project, SyncManifest.ProjectRelativePath)?.let {
+            projectRepository.readFile(project, SyncManifest.ProjectRelativePath).let {
                 json.decodeFromString<SyncManifest>(it.decodeToString())
             }
         }.getOrNull() ?: SyncManifest.Empty
@@ -74,7 +75,6 @@ class SyncProjectUseCase(
             when (action) {
                 is SyncFileAction.Upload, is SyncFileAction.ConflictUpload -> {
                     val bytes = projectRepository.readFile(project, actionPath(action))
-                        ?: throw SyncLocalIoException()
                     syncRepository.uploadFile(remotePath, bytes)
                 }
 
@@ -143,11 +143,7 @@ class SyncProjectUseCase(
                 null
             } else {
                 val bytes = projectRepository.readFile(project, file.relativePath)
-                if (bytes == null) {
-                    null
-                } else {
-                    file.relativePath.toString() to md5(bytes)
-                }
+                file.relativePath.toString() to md5(bytes)
             }
         }.toMap()
     }

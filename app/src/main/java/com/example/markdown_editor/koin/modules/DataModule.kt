@@ -5,6 +5,7 @@ import androidx.room.Room
 import com.example.markdown_editor.data.database.LinkPreviewDao
 import com.example.markdown_editor.data.database.NoteDao
 import com.example.markdown_editor.data.database.NoteDb
+import com.example.markdown_editor.data.database.ProjectDao
 import com.example.markdown_editor.data.linkPreview.AndroidLinkPreviewRepository
 import com.example.markdown_editor.data.project.AndroidProjectRepository
 import com.example.markdown_editor.data.project.AndroidSettingsRepository
@@ -26,12 +27,15 @@ fun provideNoteDb(context: Context): NoteDb {
         .build()
 }
 
+fun provideProjectDao(db: NoteDb): ProjectDao = db.projectDao()
+
 fun provideNoteDao(db: NoteDb): NoteDao = db.noteDao()
 
 fun provideLinkPreviewDao(db: NoteDb): LinkPreviewDao = db.linkPreviewDao()
 
 val dataModule = module {
     single { create(::provideNoteDb) }
+    single { create(::provideProjectDao) }
     single { create(::provideNoteDao) }
     single { create(::provideLinkPreviewDao) }
 

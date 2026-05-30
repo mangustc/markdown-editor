@@ -15,6 +15,7 @@ import com.example.markdown_editor.domain.usecases.messenger.SendNoteInput
 import com.example.markdown_editor.domain.usecases.messenger.SendNoteUseCase
 import com.example.markdown_editor.domain.usecases.notes.DeleteNoteInput
 import com.example.markdown_editor.domain.usecases.notes.DeleteNoteUseCase
+import com.example.markdown_editor.ui.util.runUseCase
 import com.example.markdown_editor.ui.viewmodel.AppDeps
 import com.example.markdown_editor.ui.viewmodel.events.ClipboardEvent
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -43,17 +44,21 @@ class MessengerActions(
         .distinctUntilChanged()
         .flatMapLatest { project ->
             if (project == null) return@flatMapLatest emptyFlow()
-            getMessagesUseCase(GetMessagesInput(project))
+            runUseCase(deps.globalActions::onEvent) {
+                getMessagesUseCase(GetMessagesInput(project))
+            }.getOrElse { emptyFlow() }
         }
         .cachedIn(deps.scope)
 
     suspend fun updateMessages() {
         val project = deps.uiState.value.project ?: return
-        val pinnedMessages = getPinnedMessagesUseCase(
-            GetPinnedMessagesInput(
-                project = project,
-            ),
-        )
+        val pinnedMessages = runUseCase(deps.globalActions::onEvent) {
+            getPinnedMessagesUseCase(
+                GetPinnedMessagesInput(
+                    project = project,
+                ),
+            )
+        }.getOrElse { return }
         deps.uiState.update {
             it.copy(
                 messengerPinnedMessages = pinnedMessages,
@@ -90,19 +95,21 @@ class MessengerActions(
             val project = deps.uiState.value.project ?: return@launch
             val text = deps.uiState.value.messengerNewNoteText.trim()
 
-            sendNoteUseCase(
-                SendNoteInput(
-                    project = project,
-                    body = text,
-                    attachments = attachments,
-                    editNote = if (isEditedNote) {
-                        deps.uiState.value.messengerEditingNote ?: return@launch
-                    } else {
-                        if (text.isBlank() && attachments.isEmpty()) return@launch
-                        null
-                    },
-                ),
-            )
+            runUseCase(deps.globalActions::onEvent) {
+                sendNoteUseCase(
+                    SendNoteInput(
+                        project = project,
+                        body = text,
+                        attachments = attachments,
+                        editNote = if (isEditedNote) {
+                            deps.uiState.value.messengerEditingNote ?: return@launch
+                        } else {
+                            if (text.isBlank() && attachments.isEmpty()) return@launch
+                            null
+                        },
+                    ),
+                )
+            }.getOrElse { return@launch }
 
             deps.uiState.update { state ->
                 state.copy(
@@ -118,11 +125,13 @@ class MessengerActions(
     fun ensureLinkPreview(url: String) {
         deps.scope.launch {
             if (deps.uiState.value.messengerLinkPreviews.containsKey(url)) return@launch
-            val preview = getLinkPreviewUseCase(
-                GetLinkPreviewInput(
-                    url = url,
-                ),
-            )
+            val preview = runUseCase(deps.globalActions::onEvent) {
+                getLinkPreviewUseCase(
+                    GetLinkPreviewInput(
+                        url = url,
+                    ),
+                )
+            }.getOrElse { return@launch }
             if (preview != null) {
                 deps.uiState.update {
                     it.copy(messengerLinkPreviews = it.messengerLinkPreviews + (url to preview))
@@ -147,7 +156,7 @@ class MessengerActions(
             val project = deps.uiState.value.project ?: return@launch
             val messages = deps.uiState.value.messengerSelectedNotes
             messages.forEach { message ->
-                runCatching {
+                runUseCase(deps.globalActions::onEvent) {
                     deleteNoteUseCase(
                         DeleteNoteInput(
                             project = project,

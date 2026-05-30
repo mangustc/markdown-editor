@@ -18,8 +18,7 @@ class ToggleNoteTagUseCase(
     override suspend fun invoke(input: ToggleNoteTagInput): FrontMatter {
         val fullText =
             projectRepository.readFile(input.project, input.note.projectFile.relativePath)
-                ?.decodeToString()
-                ?: throw Exception("Failed to read file")
+                .decodeToString()
         val (frontMatter, body) = FrontMatter.splitFromContent(fullText)
 
         val updatedFrontMatter = if (input.tag in frontMatter.tags) {

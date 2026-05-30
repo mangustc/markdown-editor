@@ -9,6 +9,8 @@ import com.example.markdown_editor.domain.models.Project
 import com.example.markdown_editor.domain.models.SearchQuery
 import com.example.markdown_editor.domain.repositories.ProjectRepository
 import com.example.markdown_editor.domain.usecases.FlowUseCase
+import com.example.markdown_editor.domain.usecases.project.GetProjectFileInput
+import com.example.markdown_editor.domain.usecases.project.GetProjectFileUseCase
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -18,6 +20,7 @@ data class GetMessagesInput(
 
 class GetMessagesUseCase(
     private val projectRepository: ProjectRepository,
+    private val getProjectFileUseCase: GetProjectFileUseCase,
 ) : FlowUseCase<GetMessagesInput, PagingData<MessageBody>> {
     override fun invoke(input: GetMessagesInput): Flow<PagingData<MessageBody>> {
         val notesFlow: Flow<PagingData<Note>> = projectRepository.getNotesPaged(
@@ -35,7 +38,12 @@ class GetMessagesUseCase(
                 MessageBody.parse(
                     note = note,
                     getProjectFile = {
-                        projectRepository.getProjectFile(input.project, it)
+                        getProjectFileUseCase(
+                            GetProjectFileInput(
+                                project = input.project,
+                                relativePath = it,
+                            ),
+                        )
                     },
                 )
             }

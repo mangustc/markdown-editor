@@ -19,6 +19,7 @@ import com.example.markdown_editor.domain.usecases.search.ApplySearchEventInput
 import com.example.markdown_editor.domain.usecases.search.ApplySearchEventUseCase
 import com.example.markdown_editor.domain.usecases.search.SearchEvent
 import com.example.markdown_editor.ui.components.ComposeTextState
+import com.example.markdown_editor.ui.util.runUseCase
 import com.example.markdown_editor.ui.viewmodel.AppDeps
 import com.example.markdown_editor.ui.viewmodel.events.NavigationEvent
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -52,23 +53,28 @@ class DrawerActions(
     ) { project, text -> project to text.toString() }
         .flatMapLatest { (project, queryStr) ->
             if (project == null) return@flatMapLatest emptyFlow()
-            getNotesUseCase(
-                GetNotesInput(
-                    project = project,
-                    searchQueryString = queryStr,
-                ),
-            )
+
+            runUseCase(deps.globalActions::onEvent) {
+                getNotesUseCase(
+                    GetNotesInput(
+                        project = project,
+                        searchQueryString = queryStr,
+                    ),
+                )
+            }.getOrElse { emptyFlow() }
         }
         .cachedIn(deps.scope)
 
     fun onSearchEvent(event: SearchEvent) {
         deps.scope.launch {
-            applySearchEventUseCase(
-                ApplySearchEventInput(
-                    event = event,
-                    state = searchState,
-                ),
-            )
+            runUseCase(deps.globalActions::onEvent) {
+                applySearchEventUseCase(
+                    ApplySearchEventInput(
+                        event = event,
+                        state = searchState,
+                    ),
+                )
+            }.getOrElse { return@launch }
         }
     }
 
@@ -92,17 +98,14 @@ class DrawerActions(
     fun onCreateNote() {
         deps.scope.launch {
             val project = deps.uiState.value.project ?: return@launch
-            try {
+            runUseCase(deps.globalActions::onEvent) {
                 createNoteUseCase(
                     CreateNoteInput(
                         project = project,
                         name = deps.uiState.value.newNoteNameInput,
                     ),
                 )
-            } catch (e: Exception) {
-                e.printStackTrace()
-                return@launch
-            }
+            }.getOrElse { return@launch }
             deps.globalActions.updateNoteLists()
         }
     }
@@ -118,12 +121,14 @@ class DrawerActions(
     fun onDeleteNote(note: Note) {
         deps.scope.launch {
             val project = deps.uiState.value.project ?: return@launch
-            deleteNoteUseCase(
-                DeleteNoteInput(
-                    project = project,
-                    note = note,
-                ),
-            )
+            runUseCase(deps.globalActions::onEvent) {
+                deleteNoteUseCase(
+                    DeleteNoteInput(
+                        project = project,
+                        note = note,
+                    ),
+                )
+            }.getOrElse { return@launch }
             deps.globalActions.updateNoteLists()
 
             val activeNote = deps.uiState.value.activeNote
@@ -163,13 +168,15 @@ class DrawerActions(
     fun onRenameNote(note: Note, newName: String) {
         deps.scope.launch {
             val project = deps.uiState.value.project ?: return@launch
-            renameNoteUseCase(
-                RenameNoteInput(
-                    project = project,
-                    note = note,
-                    newName = newName,
-                ),
-            )
+            runUseCase(deps.globalActions::onEvent) {
+                renameNoteUseCase(
+                    RenameNoteInput(
+                        project = project,
+                        note = note,
+                        newName = newName,
+                    ),
+                )
+            }.getOrElse { return@launch }
             deps.globalActions.updateNoteLists()
         }
     }
@@ -177,13 +184,15 @@ class DrawerActions(
     fun onPinNote(note: Note) {
         deps.scope.launch {
             val project = deps.uiState.value.project ?: return@launch
-            toggleNoteTagUseCase(
-                ToggleNoteTagInput(
-                    project = project,
-                    note = note,
-                    tag = PINNED_TAG,
-                ),
-            )
+            runUseCase(deps.globalActions::onEvent) {
+                toggleNoteTagUseCase(
+                    ToggleNoteTagInput(
+                        project = project,
+                        note = note,
+                        tag = PINNED_TAG,
+                    ),
+                )
+            }.getOrElse { return@launch }
             deps.globalActions.updateNoteLists()
         }
     }

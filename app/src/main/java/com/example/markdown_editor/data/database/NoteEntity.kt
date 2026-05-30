@@ -1,6 +1,7 @@
 package com.example.markdown_editor.data.database
 
 import androidx.room.Entity
+import androidx.room.ForeignKey
 import androidx.room.Fts4
 import androidx.room.FtsOptions
 import androidx.room.Index
@@ -8,10 +9,22 @@ import androidx.room.PrimaryKey
 
 @Entity(
     tableName = "notes",
-    indices = [Index(value = ["uri"], unique = true)],
+    indices = [
+        Index(value = ["uri"], unique = true),
+        Index(value = ["projectId"]),
+    ],
+    foreignKeys = [
+        ForeignKey(
+            entity = ProjectEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["projectId"],
+            onDelete = ForeignKey.CASCADE,
+        ),
+    ],
 )
 data class NoteEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val projectId: Long,
     val uri: String,
     val name: String,
     val lastModified: Long,

@@ -26,7 +26,7 @@ class RenameNoteUseCase(
                 RelativePath("${input.newName}.md"),
             ),
             fileExistsStrategy = ProjectRepository.FileExistsStrategy.AUTO_RENAME,
-        ) ?: throw Exception("failed to rename file")
+        )
         val note = getNoteUseCase(
             GetNoteInput(
                 project = input.project,
@@ -34,7 +34,7 @@ class RenameNoteUseCase(
                 includeText = input.includeText,
                 includeFrontMatter = input.includeFrontMatter,
             ),
-        ) ?: throw Exception("failed to get created file")
+        )
 
         return note
     }

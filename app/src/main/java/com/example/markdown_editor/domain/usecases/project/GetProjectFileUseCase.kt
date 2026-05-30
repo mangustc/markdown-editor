@@ -13,8 +13,8 @@ data class GetProjectFileInput(
 
 class GetProjectFileUseCase(
     private val projectRepository: ProjectRepository,
-) : UseCase<GetProjectFileInput, ProjectFile?> {
-    override suspend fun invoke(input: GetProjectFileInput): ProjectFile? {
+) : UseCase<GetProjectFileInput, ProjectFile> {
+    override suspend fun invoke(input: GetProjectFileInput): ProjectFile {
         return projectRepository.getProjectFile(input.project, input.relativePath)
     }
 }

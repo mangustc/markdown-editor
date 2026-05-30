@@ -52,7 +52,7 @@ class SendNoteUseCase(
         val baseText = projectRepository.readFile(
             project = input.project,
             relativePath = targetNote.projectFile.relativePath,
-        )?.decodeToString() ?: throw Exception("could not read file")
+        ).decodeToString()
 
         val parentContent = if (isEditedNote) {
             val frontMatterEnd = run {

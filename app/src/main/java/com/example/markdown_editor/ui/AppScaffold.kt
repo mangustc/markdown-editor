@@ -101,11 +101,11 @@ import com.example.markdown_editor.ui.messenger.MessengerScreen
 import com.example.markdown_editor.ui.navigation.EditorDestination
 import com.example.markdown_editor.ui.navigation.MessengerDestination
 import com.example.markdown_editor.ui.settings.SettingsDialog
+import com.example.markdown_editor.ui.util.onNotificationToast
 import com.example.markdown_editor.ui.viewmodel.AppViewModel
 import com.example.markdown_editor.ui.viewmodel.events.ClipboardEvent
 import com.example.markdown_editor.ui.viewmodel.events.FocusEvent
 import com.example.markdown_editor.ui.viewmodel.events.NavigationEvent
-import com.example.markdown_editor.ui.viewmodel.events.NotificationEvent
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
@@ -189,55 +189,7 @@ fun AppScaffold(
             ).show()
         }
         appViewModel.notificationEvents.collect {
-            when (it) {
-                is NotificationEvent.LinkCopied -> {
-                    toast(resources.getString(R.string.link_copied))
-                }
-
-                is NotificationEvent.FailedToAddPhoto -> {
-                    toast(resources.getString(R.string.failed_to_create_photo_container))
-                }
-
-                is NotificationEvent.FailedToStartCamera -> {
-                    toast(resources.getString(R.string.failed_to_start_camera))
-                }
-
-                is NotificationEvent.NoAppFoundToOpenThisFile -> {
-                    toast(resources.getString(R.string.no_app_found_to_open_this_file))
-                }
-
-                is NotificationEvent.SyncAuthException -> {
-                    toast(resources.getString(R.string.authentication_failed_please_log_in_again))
-                }
-
-                is NotificationEvent.SyncNetworkException -> {
-                    toast(resources.getString(R.string.network_error_check_internet_connection))
-                }
-
-                is NotificationEvent.SyncServerException -> {
-                    toast(resources.getString(R.string.sync_server_unavailable_try_again_later))
-                }
-
-                is NotificationEvent.SyncLocalIoException -> {
-                    toast(resources.getString(R.string.local_file_error_check_storage_space_and_permissions))
-                }
-
-                is NotificationEvent.SyncStateException -> {
-                    toast(resources.getString(R.string.sync_data_corrupted_please_reset_sync))
-                }
-
-                is NotificationEvent.SyncQuotaException -> {
-                    toast(resources.getString(R.string.cloud_storage_full_free_up_space))
-                }
-
-                is NotificationEvent.SyncServiceIsNone -> {
-                    toast(resources.getString(R.string.no_sync_service_configured_configure_one_in_settings))
-                }
-
-                is NotificationEvent.CustomMessage -> {
-                    toast(it.message)
-                }
-            }
+            onNotificationToast(it, ::toast, resources)
         }
     }
 

@@ -1,11 +1,11 @@
 package com.example.markdown_editor.data.sync
 
+import com.example.markdown_editor.domain.exceptions.SyncAuthException
+import com.example.markdown_editor.domain.exceptions.SyncNetworkException
+import com.example.markdown_editor.domain.exceptions.SyncQuotaException
+import com.example.markdown_editor.domain.exceptions.SyncServerException
 import com.example.markdown_editor.domain.models.RelativePath
 import com.example.markdown_editor.domain.repositories.SyncRepository
-import com.example.markdown_editor.domain.usecases.sync.SyncAuthException
-import com.example.markdown_editor.domain.usecases.sync.SyncNetworkException
-import com.example.markdown_editor.domain.usecases.sync.SyncQuotaException
-import com.example.markdown_editor.domain.usecases.sync.SyncServerException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable

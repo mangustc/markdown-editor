@@ -7,6 +7,8 @@ import com.example.markdown_editor.domain.models.Project
 import com.example.markdown_editor.domain.models.SearchQuery
 import com.example.markdown_editor.domain.repositories.ProjectRepository
 import com.example.markdown_editor.domain.usecases.UseCase
+import com.example.markdown_editor.domain.usecases.project.GetProjectFileInput
+import com.example.markdown_editor.domain.usecases.project.GetProjectFileUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -16,6 +18,7 @@ data class GetPinnedMessagesInput(
 
 class GetPinnedMessagesUseCase(
     private val projectRepository: ProjectRepository,
+    private val getProjectFileUseCase: GetProjectFileUseCase,
 ) : UseCase<GetPinnedMessagesInput, List<MessageBody>> {
     override suspend fun invoke(input: GetPinnedMessagesInput): List<MessageBody> =
         withContext(Dispatchers.Default) {
@@ -30,7 +33,14 @@ class GetPinnedMessagesUseCase(
             ).map { note ->
                 MessageBody.parse(
                     note = note,
-                    getProjectFile = { projectRepository.getProjectFile(input.project, it) },
+                    getProjectFile = {
+                        getProjectFileUseCase(
+                            GetProjectFileInput(
+                                project = input.project,
+                                relativePath = it,
+                            ),
+                        )
+                    },
                 )
             }
         }

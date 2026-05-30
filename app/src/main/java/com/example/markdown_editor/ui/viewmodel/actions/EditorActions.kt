@@ -25,6 +25,7 @@ import com.example.markdown_editor.domain.usecases.search.ApplySearchEventInput
 import com.example.markdown_editor.domain.usecases.search.ApplySearchEventUseCase
 import com.example.markdown_editor.domain.usecases.search.SearchEvent
 import com.example.markdown_editor.ui.components.ComposeTextState
+import com.example.markdown_editor.ui.util.runUseCase
 import com.example.markdown_editor.ui.viewmodel.AppDeps
 import com.example.markdown_editor.ui.viewmodel.events.NavigationEvent
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -63,23 +64,27 @@ class EditorActions(
     ) { project, text -> project to text.toString() }
         .flatMapLatest { (project, queryStr) ->
             if (project == null) return@flatMapLatest emptyFlow()
-            getNotesUseCase(
-                GetNotesInput(
-                    project = project,
-                    searchQueryString = queryStr,
-                ),
-            )
+            runUseCase(deps.globalActions::onEvent) {
+                getNotesUseCase(
+                    GetNotesInput(
+                        project = project,
+                        searchQueryString = queryStr,
+                    ),
+                )
+            }.getOrElse { emptyFlow() }
         }
         .cachedIn(deps.scope)
 
     fun onLinkSearchEvent(event: SearchEvent) {
         deps.scope.launch {
-            applySearchEventUseCase(
-                ApplySearchEventInput(
-                    event = event,
-                    state = linkSearchState,
-                ),
-            )
+            runUseCase(deps.globalActions::onEvent) {
+                applySearchEventUseCase(
+                    ApplySearchEventInput(
+                        event = event,
+                        state = linkSearchState,
+                    ),
+                )
+            }.getOrElse { return@launch }
         }
     }
 
@@ -106,24 +111,28 @@ class EditorActions(
             val project = deps.uiState.value.project ?: return@launch
             when (event) {
                 is EditorEvent.InsertNoteLink -> {
-                    applyEditorEventUseCase(
-                        ApplyEditorEventInput(
-                            project = project,
-                            state = state,
-                            event = event,
-                        ),
-                    )
+                    runUseCase(deps.globalActions::onEvent) {
+                        applyEditorEventUseCase(
+                            ApplyEditorEventInput(
+                                project = project,
+                                state = state,
+                                event = event,
+                            ),
+                        )
+                    }.getOrElse { return@launch }
                     dismissLinkNoteDialog()
                 }
 
                 else -> {
-                    applyEditorEventUseCase(
-                        ApplyEditorEventInput(
-                            project = project,
-                            state = state,
-                            event = event,
-                        ),
-                    )
+                    runUseCase(deps.globalActions::onEvent) {
+                        applyEditorEventUseCase(
+                            ApplyEditorEventInput(
+                                project = project,
+                                state = state,
+                                event = event,
+                            ),
+                        )
+                    }.getOrElse { return@launch }
                 }
             }
         }
@@ -132,30 +141,37 @@ class EditorActions(
     fun openLink(span: SpanInfo.Link) {
         deps.scope.launch {
             val project = deps.uiState.value.project ?: return@launch
-            val realLinkType = getRealSpanInfoLinkTypeUseCase(
-                GetRealSpanInfoLinkTypeInput(
-                    project = project,
-                    span = span,
-                ),
-            ) ?: return@launch
+
+            val realLinkType = runUseCase(deps.globalActions::onEvent) {
+                getRealSpanInfoLinkTypeUseCase(
+                    GetRealSpanInfoLinkTypeInput(
+                        project = project,
+                        span = span,
+                    ),
+                )
+            }.getOrElse { return@launch }
             when (realLinkType) {
                 SpanInfo.Link.LinkType.NOTE -> {
-                    val note = getNoteUseCase(
-                        GetNoteInput(
-                            project = project,
-                            relativePath = RelativePath(span.payload),
-                        ),
-                    ) ?: return@launch
+                    val note = runUseCase(deps.globalActions::onEvent) {
+                        getNoteUseCase(
+                            GetNoteInput(
+                                project = project,
+                                relativePath = RelativePath(span.payload),
+                            ),
+                        )
+                    }.getOrElse { return@launch }
                     deps.globalActions.onEvent(NavigationEvent.GoToEditor(note = note))
                 }
 
                 SpanInfo.Link.LinkType.FILE -> {
-                    val projectFile = getProjectFileUseCase(
-                        GetProjectFileInput(
-                            project = project,
-                            relativePath = RelativePath(span.payload),
-                        ),
-                    ) ?: return@launch
+                    val projectFile = runUseCase(deps.globalActions::onEvent) {
+                        getProjectFileUseCase(
+                            GetProjectFileInput(
+                                project = project,
+                                relativePath = RelativePath(span.payload),
+                            ),
+                        )
+                    }.getOrElse { return@launch }
                     deps.globalActions.onEvent(NavigationEvent.OpenFile(projectFile.fileSystemPath))
                 }
 
@@ -171,16 +187,18 @@ class EditorActions(
         deps.scope.launch {
             try {
                 val project = deps.uiState.value.project ?: throw Exception()
-                val note = getNoteUseCase(
-                    GetNoteInput(
-                        project = project,
-                        relativePath = notePath,
-                        includeText = true,
-                        includeFrontMatter = true,
-                    ),
-                )
+                val note = runUseCase(deps.globalActions::onEvent) {
+                    getNoteUseCase(
+                        GetNoteInput(
+                            project = project,
+                            relativePath = notePath,
+                            includeText = true,
+                            includeFrontMatter = true,
+                        ),
+                    )
+                }.getOrElse { return@launch }
                 val (frontMatter, body) = FrontMatter.splitFromContent(
-                    note?.body ?: throw Exception(),
+                    note.body ?: throw Exception(),
                 )
                 deps.uiState.update {
                     it.copy(
@@ -275,13 +293,15 @@ class EditorActions(
                 bodyText
             }
 
-            saveNoteTextUseCase(
-                SaveNoteTextInput(
-                    project = project,
-                    note = note,
-                    text = textToSave,
-                ),
-            )
+            runUseCase(deps.globalActions::onEvent) {
+                saveNoteTextUseCase(
+                    SaveNoteTextInput(
+                        project = project,
+                        note = note,
+                        text = textToSave,
+                    ),
+                )
+            }.getOrElse { return@launch }
             deps.globalActions.updateNoteLists()
             deps.uiState.update { it.copy(editorSavedVersion = it.editorVersion) }
         }

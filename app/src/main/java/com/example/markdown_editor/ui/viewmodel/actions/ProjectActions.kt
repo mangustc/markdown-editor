@@ -8,7 +8,10 @@ import com.example.markdown_editor.domain.usecases.settings.GetSettingsInput
 import com.example.markdown_editor.domain.usecases.settings.GetSettingsUseCase
 import com.example.markdown_editor.domain.usecases.sync.SyncProjectInput
 import com.example.markdown_editor.domain.usecases.sync.SyncProjectUseCase
+import com.example.markdown_editor.domain.usecases.sync.ValidSyncProvider
+import com.example.markdown_editor.ui.util.runUseCase
 import com.example.markdown_editor.ui.viewmodel.AppDeps
+import com.example.markdown_editor.ui.viewmodel.events.NotificationEvent
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -25,16 +28,20 @@ class ProjectActions(
 
     fun onProjectSelected(projectPath: FileSystemPath) {
         deps.scope.launch {
-            val project = selectProjectUseCase(
-                SelectProjectInput(
-                    projectPath = projectPath,
-                ),
-            )
-            val settings = getSettingsUseCase(
-                GetSettingsInput(
-                    project = project,
-                ),
-            )
+            val project = runUseCase(deps.globalActions::onEvent) {
+                selectProjectUseCase(
+                    SelectProjectInput(
+                        projectPath = projectPath,
+                    ),
+                )
+            }.getOrElse { return@launch }
+            val settings = runUseCase(deps.globalActions::onEvent) {
+                getSettingsUseCase(
+                    GetSettingsInput(
+                        project = project,
+                    ),
+                )
+            }.getOrElse { return@launch }
             deps.uiState.update { it.copy(project = project, settings = settings) }
             deps.globalActions.updateNoteLists()
         }
@@ -42,13 +49,17 @@ class ProjectActions(
 
     fun loadSavedProject() {
         deps.scope.launch {
-            val project = loadSavedProjectUseCase(Unit)
+            val project = runUseCase(deps.globalActions::onEvent) {
+                loadSavedProjectUseCase(Unit)
+            }.getOrElse { return@launch }
             if (project != null) {
-                val settings = getSettingsUseCase(
-                    GetSettingsInput(
-                        project = project,
-                    ),
-                )
+                val settings = runUseCase(deps.globalActions::onEvent) {
+                    getSettingsUseCase(
+                        GetSettingsInput(
+                            project = project,
+                        ),
+                    )
+                }.getOrElse { return@launch }
                 deps.uiState.update { it.copy(project = project, settings = settings) }
                 deps.globalActions.updateNoteLists()
             } else {
@@ -65,15 +76,25 @@ class ProjectActions(
             val project = deps.uiState.value.project ?: return@launch
             val settings = deps.uiState.value.settings ?: return@launch
 
-            deps.uiState.update { it.copy(isSyncInProgress = true) }
-            syncProjectUseCase(
-                SyncProjectInput(
-                    project = project,
-                    settings = settings,
-                ),
-            )
-            deps.uiState.update { it.copy(isSyncInProgress = false) }
-            deps.globalActions.updateNoteLists()
+            try {
+                if (settings.syncProvider == ValidSyncProvider.NONE) {
+                    deps.globalActions.onEvent(NotificationEvent.SyncServiceIsNone)
+                    return@launch
+                }
+
+                deps.uiState.update { it.copy(isSyncInProgress = true) }
+                runUseCase(deps.globalActions::onEvent) {
+                    syncProjectUseCase(
+                        SyncProjectInput(
+                            project = project,
+                            settings = settings,
+                        ),
+                    )
+                }.getOrElse { return@launch }
+            } finally {
+                deps.uiState.update { it.copy(isSyncInProgress = false) }
+                deps.globalActions.updateNoteLists()
+            }
         }
     }
 }

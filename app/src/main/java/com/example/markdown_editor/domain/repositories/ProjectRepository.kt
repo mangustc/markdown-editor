@@ -26,18 +26,12 @@ interface ProjectRepository {
         includeFrontMatter: Boolean = true,
     ): Flow<PagingData<Note>>
 
-    suspend fun getNoteDatabase(
-        project: Project,
-        relativePath: RelativePath,
-        includeText: Boolean = false,
-    ): Note?
-
     suspend fun getNote(
         project: Project,
         relativePath: RelativePath,
         includeText: Boolean = false,
         includeFrontMatter: Boolean = true,
-    ): Note?
+    ): Note
 
     suspend fun buildProject(projectPath: FileSystemPath): Project
     suspend fun syncDatabase(project: Project)
@@ -54,7 +48,7 @@ interface ProjectRepository {
         byteArray: ByteArray,
         fileExistsStrategy: FileExistsStrategy,
         createParents: Boolean = true,
-    ): ProjectFile?
+    ): ProjectFile
 
     suspend fun deleteFile(
         project: Project,
@@ -67,7 +61,7 @@ interface ProjectRepository {
         newRelativePath: RelativePath,
         fileExistsStrategy: FileExistsStrategy,
         createParents: Boolean = true,
-    ): ProjectFile?
+    ): ProjectFile
 
     suspend fun moveFile(
         project: Project,
@@ -75,12 +69,12 @@ interface ProjectRepository {
         newRelativePath: RelativePath,
         fileExistsStrategy: FileExistsStrategy,
         createParents: Boolean = true,
-    ): ProjectFile?
+    ): ProjectFile
 
     suspend fun readFile(
         project: Project,
         relativePath: RelativePath,
-    ): ByteArray?
+    ): ByteArray
 
     suspend fun getProjectFilesList(
         project: Project,
@@ -89,5 +83,5 @@ interface ProjectRepository {
     suspend fun getProjectFile(
         project: Project,
         relativePath: RelativePath,
-    ): ProjectFile?
+    ): ProjectFile
 }

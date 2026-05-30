@@ -89,6 +89,7 @@ class EditorActions(
     }
 
     fun onCloseEditor() {
+        onSave()
         deps.scope.launch {
             deps.globalActions.onEvent(NavigationEvent.GoBack)
             deps.uiState.update {

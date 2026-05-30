@@ -17,7 +17,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -1390,6 +1389,7 @@ private fun LinkPreviewCarousel(previews: List<LinkPreview>) {
             itemWidth = Dp.Infinity,
             itemSpacing = 8.dp,
             flingBehavior = CarouselDefaults.singleAdvanceFlingBehavior(state),
+            userScrollEnabled = previews.size > 1,
             modifier = Modifier
                 .fillMaxWidth()
                 .wrapContentHeight(),
@@ -1400,8 +1400,8 @@ private fun LinkPreviewCarousel(previews: List<LinkPreview>) {
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
-                    .clickable { uriHandler.openUri(preview.url) },
+                    .clip(RoundedCornerShape(8.dp)),
+                onClick = { uriHandler.openUri(preview.url) },
                 color = MaterialTheme.colorScheme.surface,
                 tonalElevation = 4.dp,
             ) {

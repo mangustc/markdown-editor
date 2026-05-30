@@ -294,7 +294,7 @@ class EditorActions(
         deps.uiState.update { it.copy(isViewingMode = !it.isViewingMode) }
     }
 
-    fun onSave() {
+    private fun onSave() {
         deps.scope.launch {
             val project = deps.uiState.value.project ?: return@launch
             val note = deps.uiState.value.activeNote ?: return@launch

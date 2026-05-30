@@ -349,7 +349,6 @@ fun MessengerScreen(viewModel: AppViewModel) {
                         viewModel.messenger.onSendNote(
                             isEditedNote = true,
                             attachments = snapshot,
-                            afterUpdate = {},
                         )
                     } else {
                         viewModel.messenger.onSendNote(

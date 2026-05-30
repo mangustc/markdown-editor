@@ -53,25 +53,31 @@ class YandexSyncRepository(
 
     override suspend fun uploadFile(path: RelativePath, bytes: ByteArray) =
         withContext(Dispatchers.IO) {
-            runNetwork {
-                val encodedPath = encode("$appFolder/$path")
+            try {
+                tryUploadFile(path, bytes)
+            } catch (_: Exception) {
                 ensureDirectories(path)
-                val uploadUrl = getUploadUrl(encodedPath)
-
-                val requestBody = bytes.toRequestBody("application/octet-stream".toMediaType())
-                val request = Request.Builder()
-                    .url(uploadUrl)
-                    .put(requestBody)
-                    .build()
-
-                client.newCall(request).execute().use { response ->
-                    if (response.code != 201 && response.code != 202) {
-                        checkError(response)
-                        throw SyncServerException()
-                    }
-                }
+                tryUploadFile(path, bytes)
             }
         }
+
+    private fun tryUploadFile(path: RelativePath, bytes: ByteArray) = runNetwork {
+        val encodedPath = encode("$appFolder/$path")
+        val uploadUrl = getUploadUrl(encodedPath)
+
+        val requestBody = bytes.toRequestBody("application/octet-stream".toMediaType())
+        val request = Request.Builder()
+            .url(uploadUrl)
+            .put(requestBody)
+            .build()
+
+        client.newCall(request).execute().use { response ->
+            if (response.code != 201 && response.code != 202) {
+                checkError(response)
+                throw SyncServerException()
+            }
+        }
+    }
 
     override suspend fun deleteFile(path: RelativePath) = withContext(Dispatchers.IO) {
         runNetwork {

@@ -313,9 +313,10 @@ fun AppScaffold(
                         ) { note ->
                             NoteDrawerItem(
                                 name = note.name,
-                                supportingText = if (!note.tags.isNullOrEmpty()) note.tags.joinToString(
-                                    ", ",
-                                ) else null,
+                                supportingText = if (!note.tags.isNullOrEmpty()) note.tags.filter { it != PINNED_TAG }
+                                    .joinToString(
+                                        ", ",
+                                    ) else null,
                                 isPinned = note.tags?.contains(PINNED_TAG) == true,
                                 selected = note.projectFile.relativePath == uiState.activeNote?.projectFile?.relativePath,
                                 onClick = { appViewModel.drawer.onNoteSelected(note); focusManager.clearFocus() },

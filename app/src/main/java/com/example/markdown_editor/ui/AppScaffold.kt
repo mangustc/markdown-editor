@@ -205,7 +205,7 @@ fun AppScaffold(
             ModalDrawerSheet(
                 modifier = Modifier.imePadding(),
             ) {
-                val reverseLayout = false
+                val reverseLayout = uiState.settings?.reverseLayout ?: false
                 val projectComponent = @Composable {
                     Row(
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -252,7 +252,7 @@ fun AppScaffold(
                                         positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
                                             TooltipAnchorPosition.Below,
                                         ),
-                                        tooltip = { PlainTooltip { Text("Settings") } },
+                                        tooltip = { PlainTooltip { Text(stringResource(R.string.settings)) } },
                                         state = rememberTooltipState(),
                                     ) {
                                         SplitButtonDefaults.TonalTrailingButton(
@@ -264,7 +264,7 @@ fun AppScaffold(
                                             Icon(
                                                 Icons.Default.Settings,
                                                 modifier = Modifier.size(SplitButtonDefaults.TrailingIconSize),
-                                                contentDescription = "Settings",
+                                                contentDescription = stringResource(R.string.settings),
                                             )
                                         }
                                     }
@@ -275,7 +275,7 @@ fun AppScaffold(
                             positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
                                 TooltipAnchorPosition.Below,
                             ),
-                            tooltip = { PlainTooltip { Text("Sync") } },
+                            tooltip = { PlainTooltip { Text(stringResource(R.string.synchronization)) } },
                             state = rememberTooltipState(),
                         ) {
                             OutlinedIconButton(
@@ -296,7 +296,10 @@ fun AppScaffold(
                                 if (uiState.isSyncInProgress) {
                                     LoadingIndicator()
                                 } else {
-                                    Icon(Icons.Default.Sync, contentDescription = "Sync")
+                                    Icon(
+                                        Icons.Default.Sync,
+                                        contentDescription = stringResource(R.string.synchronization),
+                                    )
                                 }
                             }
                         }
@@ -507,6 +510,8 @@ fun AppScaffold(
         SettingsDialog(
             onDismissRequest = { appViewModel.settings.dismissSettings() },
             settings = uiState.settings!!,
+            openYandexLink = appViewModel.settings::openYandexLink,
+            onReverseLayoutChange = appViewModel.settings::setReverseLayout,
             onSyncProviderChange = appViewModel.settings::setSyncProvider,
             onOauthTokenChange = appViewModel.settings::setYandexOauthToken,
         )

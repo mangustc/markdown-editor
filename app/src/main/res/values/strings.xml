@@ -91,4 +91,13 @@
     <string name="failed_to_access_project_directory">Failed to access the project directory: %1$s</string>
     <string name="failed_to_fetch_link_information">Failed to fetch link information: %1$s</string>
     <string name="unknown_error">Unknown error: %1$s</string>
+    <string name="synchronization">Synchronization</string>
+    <string name="settings">Settings</string>
+    <string name="general">General</string>
+    <string name="reverse_drawer_layout">Reverse drawer layout</string>
+    <string name="provider">Provider</string>
+    <string name="get_oauth_token">Get Oauth Token</string>
+    <string name="open_link">Open link</string>
+    <string name="oauth_token">Oauth Token</string>
+    <string name="none_sync">None</string>
 </resources>

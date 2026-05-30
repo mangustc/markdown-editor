@@ -92,4 +92,13 @@
     <string name="failed_to_access_project_directory">Не удалось получить доступ к каталогу проекта: %1$s</string>
     <string name="failed_to_fetch_link_information">Не удалось получить информацию о ссылке: %1$s</string>
     <string name="unknown_error">Неизвесная ошибка: %1$s</string>
+    <string name="synchronization">Синхронизация</string>
+    <string name="settings">Параметры</string>
+    <string name="general">Основное</string>
+    <string name="reverse_drawer_layout">Обратное расположение элементов панели управления</string>
+    <string name="provider">Сервис</string>
+    <string name="get_oauth_token">Получить Oauth токен</string>
+    <string name="open_link">Открыть ссылку</string>
+    <string name="oauth_token">Oauth токен</string>
+    <string name="none_sync">Не выбран</string>
 </resources>

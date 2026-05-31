@@ -91,6 +91,8 @@ class SendNoteUseCase(
                     is Attachment.ProjectAttachment -> {
                         if (isEditedNote) append("\n$firstPart(<${attachment.relativePath.value}>)")
                     }
+
+                    is Attachment.InvalidProjectAttachment -> {}
                 }
             }
         }

@@ -31,17 +31,14 @@ class GetPinnedMessagesUseCase(
                 includeText = true,
                 includeFrontMatter = false,
             ).map { note ->
-                MessageBody.parse(
-                    note = note,
-                    getProjectFile = {
-                        getProjectFileUseCase(
-                            GetProjectFileInput(
-                                project = input.project,
-                                relativePath = it,
-                            ),
-                        )
-                    },
-                )
+                note.toMessageBody {
+                    getProjectFileUseCase(
+                        GetProjectFileInput(
+                            project = input.project,
+                            relativePath = it,
+                        ),
+                    )
+                }
             }
         }
 }

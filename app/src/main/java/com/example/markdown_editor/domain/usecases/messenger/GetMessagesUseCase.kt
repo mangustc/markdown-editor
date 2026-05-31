@@ -35,17 +35,14 @@ class GetMessagesUseCase(
 
         val mappedFlow: Flow<PagingData<MessageBody>> = notesFlow.map { pagingData ->
             pagingData.map { note ->
-                MessageBody.parse(
-                    note = note,
-                    getProjectFile = {
-                        getProjectFileUseCase(
-                            GetProjectFileInput(
-                                project = input.project,
-                                relativePath = it,
-                            ),
-                        )
-                    },
-                )
+                note.toMessageBody {
+                    getProjectFileUseCase(
+                        GetProjectFileInput(
+                            project = input.project,
+                            relativePath = it,
+                        ),
+                    )
+                }
             }
         }
 

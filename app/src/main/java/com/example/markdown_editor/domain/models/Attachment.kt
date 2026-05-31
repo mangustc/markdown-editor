@@ -19,4 +19,11 @@ sealed interface Attachment {
         override val displayName: String,
         val relativePath: RelativePath,
     ) : Attachment
+
+    data class InvalidProjectAttachment(
+        override val type: AttachmentType,
+        override val fileSystemPath: FileSystemPath,
+        override val displayName: String,
+        val relativePath: RelativePath,
+    ) : Attachment
 }

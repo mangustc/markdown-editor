@@ -54,6 +54,7 @@ import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.automirrored.outlined.OpenInNew
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.PushPin
@@ -761,6 +762,7 @@ private fun AttachmentIconButton(
     icon: ImageVector = Icons.Default.AttachFile,
     onClick: () -> Unit,
 ) {
+    val isInvalidAttachment = attachment is Attachment.InvalidProjectAttachment
     TooltipBox(
         positionProvider =
             TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
@@ -769,8 +771,11 @@ private fun AttachmentIconButton(
     ) {
         IconButton(
             onClick = onClick,
+            enabled = !isInvalidAttachment,
             colors = IconButtonDefaults.iconButtonColors(
                 containerColor = MaterialTheme.colorScheme.surface,
+                disabledContentColor = MaterialTheme.colorScheme.onErrorContainer,
+                disabledContainerColor = MaterialTheme.colorScheme.errorContainer,
             ),
             shapes = IconButtonDefaults.shapes(
                 shape = IconButtonDefaults.smallSquareShape,
@@ -792,15 +797,27 @@ private fun AttachmentIconButton(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center,
                 ) {
-                    Icon(
-                        icon,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurface,
-                    )
+                    if (isInvalidAttachment) {
+                        Icon(
+                            imageVector = Icons.Default.Error,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onErrorContainer,
+                        )
+                    } else {
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurface,
+                        )
+                    }
                     Text(
                         text = attachment.displayName,
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurface,
+                        color = if (isInvalidAttachment) {
+                            MaterialTheme.colorScheme.onErrorContainer
+                        } else {
+                            MaterialTheme.colorScheme.onSurface
+                        },
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                         textAlign = TextAlign.Center,

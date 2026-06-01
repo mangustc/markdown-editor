@@ -16,8 +16,6 @@ import com.example.markdown_editor.data.database.NoteDao
 import com.example.markdown_editor.data.database.NoteEntity
 import com.example.markdown_editor.data.database.ProjectDao
 import com.example.markdown_editor.data.database.ProjectEntity
-import com.example.markdown_editor.domain.DEFAULT_ASSETS_DIR_PATH
-import com.example.markdown_editor.domain.DEFAULT_NOTES_DIR_PATH
 import com.example.markdown_editor.domain.exceptions.FileNotFoundException
 import com.example.markdown_editor.domain.exceptions.FileNotReadableException
 import com.example.markdown_editor.domain.exceptions.FileNotWritableException
@@ -157,8 +155,8 @@ class AndroidProjectRepository(
         withContext(Dispatchers.IO) {
             val root = DocumentFile.fromTreeUri(context, projectPath.value.toUri())
                 ?: throw ProjectAccessException(projectPath.value)
-            val notesDirPath = DEFAULT_NOTES_DIR_PATH
-            val assetsDirPath = DEFAULT_ASSETS_DIR_PATH
+            val notesDirPath = Project.DefaultNotesRelativePath.value
+            val assetsDirPath = Project.DefaultAssetsRelativePath.value
             val name = root.name
                 ?: throw ProjectAccessException(projectPath.value)
             root.findFile(notesDirPath) ?: root.createDirectory(notesDirPath)
@@ -168,8 +166,8 @@ class AndroidProjectRepository(
             Project(
                 name = name,
                 rootFileSystemPath = FileSystemPath(projectPath.toString()),
-                notesRelativePath = RelativePath(notesDirPath),
-                assetsRelativePath = RelativePath(assetsDirPath),
+                notesRelativePath = Project.DefaultNotesRelativePath,
+                assetsRelativePath = Project.DefaultAssetsRelativePath,
             )
         }
 

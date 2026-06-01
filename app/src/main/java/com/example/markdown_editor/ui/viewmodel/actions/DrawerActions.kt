@@ -3,7 +3,7 @@ package com.example.markdown_editor.ui.viewmodel.actions
 import androidx.compose.runtime.snapshotFlow
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
-import com.example.markdown_editor.domain.PINNED_TAG
+import com.example.markdown_editor.domain.models.FrontMatter
 import com.example.markdown_editor.domain.models.Note
 import com.example.markdown_editor.domain.usecases.notes.CreateNoteInput
 import com.example.markdown_editor.domain.usecases.notes.CreateNoteUseCase
@@ -193,7 +193,7 @@ class DrawerActions(
                     ToggleNoteTagInput(
                         project = project,
                         note = note,
-                        tag = PINNED_TAG,
+                        tag = FrontMatter.PINNED_TAG,
                     ),
                 )
             }.getOrElse { return@launch }

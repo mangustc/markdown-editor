@@ -1,7 +1,6 @@
 package com.example.markdown_editor.domain.usecases.messenger
 
-import com.example.markdown_editor.domain.PINNED_TAG
-import com.example.markdown_editor.domain.QUICK_NOTE_TAG
+import com.example.markdown_editor.domain.models.FrontMatter
 import com.example.markdown_editor.domain.models.MessageBody
 import com.example.markdown_editor.domain.models.Project
 import com.example.markdown_editor.domain.models.SearchQuery
@@ -25,7 +24,7 @@ class GetPinnedMessagesUseCase(
             projectRepository.getNotes(
                 input.project,
                 SearchQuery(
-                    tagFilters = listOf(QUICK_NOTE_TAG, PINNED_TAG),
+                    tagFilters = listOf(FrontMatter.QUICK_NOTE_TAG, FrontMatter.PINNED_TAG),
                     sortBy = SearchQuery.SortBy.CREATED_AT,
                 ),
                 includeText = true,

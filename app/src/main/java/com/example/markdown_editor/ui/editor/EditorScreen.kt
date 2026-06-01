@@ -107,8 +107,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.compose.collectAsLazyPagingItems
 import coil3.compose.AsyncImage
 import com.example.markdown_editor.R
-import com.example.markdown_editor.domain.CREATED_AT_FIELD
-import com.example.markdown_editor.domain.TAGS_FIELD
 import com.example.markdown_editor.domain.markdown.MarkdownParser
 import com.example.markdown_editor.domain.models.FrontMatter
 import com.example.markdown_editor.domain.models.Project
@@ -479,7 +477,7 @@ fun FrontMatterProperties(
                         .weight(1f)
                         .onFocusChanged { focusState ->
                             if (!focusState.isFocused) {
-                                if (localKey.isBlank() && key != CREATED_AT_FIELD && key != TAGS_FIELD) {
+                                if (localKey.isBlank() && key != FrontMatter.CREATED_AT_FIELD && key != FrontMatter.TAGS_FIELD) {
                                     onRemoveProperty(key)
                                 } else if (localKey.isBlank()) {
                                     localKey = key
@@ -492,7 +490,7 @@ fun FrontMatterProperties(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontWeight = FontWeight.Bold,
                     ),
-                    readOnly = key == CREATED_AT_FIELD || key == TAGS_FIELD,
+                    readOnly = key == FrontMatter.CREATED_AT_FIELD || key == FrontMatter.TAGS_FIELD,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                     keyboardActions = KeyboardActions(
                         onDone = {
@@ -505,7 +503,7 @@ fun FrontMatterProperties(
                 Spacer(Modifier.width(8.dp))
 
                 Box(modifier = Modifier.weight(2f)) {
-                    if (key == TAGS_FIELD) {
+                    if (key == FrontMatter.TAGS_FIELD) {
                         TagEditor(
                             tags = frontMatter.tags,
                             allTags = allTags,

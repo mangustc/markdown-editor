@@ -1,7 +1,7 @@
 package com.example.markdown_editor.domain.usecases.messenger
 
-import com.example.markdown_editor.domain.QUICK_NOTE_TAG
 import com.example.markdown_editor.domain.models.Attachment
+import com.example.markdown_editor.domain.models.FrontMatter
 import com.example.markdown_editor.domain.models.Note
 import com.example.markdown_editor.domain.models.Project
 import com.example.markdown_editor.domain.repositories.ProjectRepository
@@ -39,7 +39,7 @@ class SendNoteUseCase(
                 .withZone(ZoneId.systemDefault())
                 .format(Instant.now())
             val name = "quick-note-$timestamp"
-            val tags = listOf(QUICK_NOTE_TAG)
+            val tags = listOf(FrontMatter.QUICK_NOTE_TAG)
             createNoteUseCase(
                 CreateNoteInput(
                     project = input.project,

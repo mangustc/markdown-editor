@@ -1,7 +1,5 @@
 package com.example.markdown_editor.domain.models
 
-import com.example.markdown_editor.domain.CREATED_AT_FIELD
-import com.example.markdown_editor.domain.TAGS_FIELD
 import java.time.Instant
 
 data class FrontMatter(
@@ -64,7 +62,27 @@ data class FrontMatter(
         return copy(fields = newFields)
     }
 
+    override fun toString(): String = buildString {
+        append("---\n")
+        fields.forEach { (key, value) ->
+            when (value) {
+                is FrontMatterValue.Scalar -> append("$key: ${value.value}\n")
+                is FrontMatterValue.StringList -> {
+                    append("$key:\n")
+                    value.values.forEach { item -> append("- $item\n") }
+                }
+            }
+        }
+        append("---")
+    }
+
     companion object {
+        const val PINNED_TAG = "pinned"
+        const val QUICK_NOTE_TAG = "quick-note"
+
+        const val TAGS_FIELD = "tags"
+        const val CREATED_AT_FIELD = "createdAt"
+
         val Empty = FrontMatter()
 
         fun parse(text: String): FrontMatter {
@@ -117,19 +135,5 @@ data class FrontMatter(
             }
             return frontMatter to body
         }
-    }
-
-    override fun toString(): String = buildString {
-        append("---\n")
-        fields.forEach { (key, value) ->
-            when (value) {
-                is FrontMatterValue.Scalar -> append("$key: ${value.value}\n")
-                is FrontMatterValue.StringList -> {
-                    append("$key:\n")
-                    value.values.forEach { item -> append("- $item\n") }
-                }
-            }
-        }
-        append("---")
     }
 }

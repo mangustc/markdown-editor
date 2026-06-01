@@ -92,8 +92,8 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import androidx.paging.compose.collectAsLazyPagingItems
 import com.example.markdown_editor.R
-import com.example.markdown_editor.domain.PINNED_TAG
 import com.example.markdown_editor.domain.models.FileSystemPath
+import com.example.markdown_editor.domain.models.FrontMatter
 import com.example.markdown_editor.domain.models.Note
 import com.example.markdown_editor.ui.components.NoteDrawerItem
 import com.example.markdown_editor.ui.components.NoteSearchBar
@@ -316,11 +316,11 @@ fun AppScaffold(
                         ) { note ->
                             NoteDrawerItem(
                                 name = note.name,
-                                supportingText = if (!note.tags.isNullOrEmpty()) note.tags.filter { it != PINNED_TAG }
+                                supportingText = if (!note.tags.isNullOrEmpty()) note.tags.filter { it != FrontMatter.PINNED_TAG }
                                     .joinToString(
                                         ", ",
                                     ) else null,
-                                isPinned = note.tags?.contains(PINNED_TAG) == true,
+                                isPinned = note.tags?.contains(FrontMatter.PINNED_TAG) == true,
                                 selected = note.projectFile.relativePath == uiState.activeNote?.projectFile?.relativePath,
                                 onClick = { appViewModel.drawer.onNoteSelected(note); focusManager.clearFocus() },
                                 onOpen = { appViewModel.drawer.onNoteSelected(note) },

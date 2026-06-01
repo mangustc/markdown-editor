@@ -1,7 +1,7 @@
 package com.example.markdown_editor.domain.usecases.project
 
 import androidx.paging.PagingData
-import com.example.markdown_editor.domain.QUICK_NOTE_TAG
+import com.example.markdown_editor.domain.models.FrontMatter
 import com.example.markdown_editor.domain.models.Note
 import com.example.markdown_editor.domain.models.Project
 import com.example.markdown_editor.domain.models.SearchQuery
@@ -20,7 +20,7 @@ class GetNotesUseCase(
     override fun invoke(input: GetNotesInput): Flow<PagingData<Note>> {
         val parsedInit = SearchQuery.parse(input.searchQueryString.trim())
         val parsed = parsedInit.copy(
-            negatedTagFilters = parsedInit.negatedTagFilters + QUICK_NOTE_TAG,
+            negatedTagFilters = parsedInit.negatedTagFilters + FrontMatter.QUICK_NOTE_TAG,
             pinnedFirst = true,
         )
         return projectRepository.getNotesPaged(input.project, parsed)

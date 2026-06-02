@@ -1,0 +1,3 @@
+#!/usr/bin/env sh
+
+while inotifywait -e close_write "$1"; do plantuml "$1"; done

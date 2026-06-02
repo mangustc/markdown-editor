@@ -1,0 +1,399 @@
+@startuml
+interface Attachment {
+    +type: AttachmentType
+    +fileSystemPath: FileSystemPath
+    +displayName: String
+}
+
+enum AttachmentType {
+    FILE
+    IMAGE
+}
+
+class PendingAttachment {
+}
+
+class ProjectAttachment {
+    +relativePath: RelativePath
+}
+
+class InvalidProjectAttachment {
+    +relativePath: RelativePath
+}
+
+class MessageBody {
+    +text: String
+    +attachments: List<Attachment>
+    +links: Sequence<MatchResult>
+    +note: Note
+}
+
+interface TextState {
+    +text: CharSequence
+    +selection: TextSelection
+    +undoState: TextUndoState
+    +edit(block: MutableTextState.() -> Unit)
+    +setTextAndPlaceCursorAtEnd(text: String)
+}
+
+class TextSelection {
+    +start: Int
+    +end: Int
+    +collapsed(): Boolean
+    +min(): Int
+    +max(): Int
+    +length(): Int
+}
+
+interface TextUndoState {
+    +canUndo: Boolean
+    +canRedo: Boolean
+    +undo()
+    +redo()
+    +clearHistory()
+}
+
+interface MutableTextState {
+    +originalText: CharSequence
+    +selection: TextSelection
+    +length: Int
+    +replace(start: Int, end: Int, text: String)
+    +insert(index: Int, text: String)
+    +append(text: String)
+    +placeCursorAfterCharAt(index: Int)
+}
+
+class FrontMatter {
+    +fields: Map<String, FrontMatterValue>
+    +createdAt(): String?
+    +tags(): List<String>
+    +get(key: String): FrontMatterValue?
+    +toTagString(): String
+    +toCreatedAtMillis(): Long?
+    +withField(key: String, value: FrontMatterValue): FrontMatter
+    +withRenamedKey(oldKey: String, newKey: String): FrontMatter
+    +withTag(tag: String): FrontMatter
+    +withoutTag(tag: String): FrontMatter
+    +withoutField(key: String): FrontMatter
+    +toString(): String
+}
+
+interface FrontMatterValue {
+}
+
+class Scalar {
+    +value: String
+}
+
+class StringList {
+    +values: List<String>
+}
+
+class RelativePath {
+    +value: String
+    +splitParts(): List<String>
+    +appendRelativePath(relativePath: RelativePath): RelativePath
+    +basename(): String
+    +dirRelativePath(): RelativePath
+}
+
+class Project {
+    +name: String
+    +rootFileSystemPath: FileSystemPath
+    +notesRelativePath: RelativePath
+    +assetsRelativePath: RelativePath
+}
+
+class ProjectFile {
+    +fileSystemPath: FileSystemPath
+    +relativePath: RelativePath
+}
+
+interface SpanInfo {
+    +range: TextRange
+}
+
+class TextRange {
+    +start: Int
+    +end: Int
+}
+
+class Heading {
+    +level: Int
+}
+
+class Bold {
+}
+
+class Italic {
+}
+
+class CodeInline {
+}
+
+class CodeBlock {
+}
+
+class Image {
+    +payload: String
+}
+
+class Link {
+    +payload: String
+    +label: String
+    +payloadRange: TextRange
+    +labelRange: TextRange
+    +linkType(): LinkType
+}
+
+enum LinkType {
+    FILE
+    NOTE
+    HTTP
+}
+
+class ListItem {
+}
+
+class Blockquote {
+}
+
+class Note {
+    +name: String
+    +projectFile: ProjectFile
+    +lastModified: Long
+    +createdAt: Long?
+    +tags: List<String>?
+    +body: String?
+}
+
+class Settings {
+    +reverseLayout: Boolean
+    +syncProvider: ValidSyncProvider
+    +yandexOauthToken: String
+}
+
+enum ValidSyncProvider {
+    NONE
+    YANDEX
+}
+
+class SearchQuery {
+    +bodyTerms: List<String>
+    +negatedBodyTerms: List<String>
+    +tagFilters: List<String>
+    +negatedTagFilters: List<String>
+    +propFilters: Map<String, String>
+    +nameFilter: String?
+    +negatedNameFilter: String?
+    +sortBy: SortBy
+    +pinnedFirst: Boolean
+    +isEmpty(): Boolean
+    +buildFtsMatchQuery(): String?
+    +positiveTagLikes(): List<String>
+    +negatedTagLikes(): List<String>
+}
+
+enum SortBy {
+    LAST_MODIFIED
+    CREATED_AT
+}
+
+class LinkPreview {
+    +url: String
+    +title: String?
+    +description: String?
+    +imageUrl: String?
+}
+
+class FileSystemPath {
+    +value: String
+}
+
+Attachment <|.. PendingAttachment
+Attachment <|.. ProjectAttachment
+Attachment <|.. InvalidProjectAttachment
+Attachment "1" *-- "1" FileSystemPath
+Attachment "1" *-l- "1" AttachmentType
+ProjectAttachment "1" *-- "1" RelativePath
+InvalidProjectAttachment "1" *-- "1" RelativePath
+
+MessageBody "1" o-l- "*" Attachment
+MessageBody "1" o-- "1" Note
+
+TextState "1" *-- "1" TextSelection
+TextState "1" *-- "1" TextUndoState
+TextState ..> MutableTextState
+MutableTextState "1" *-- "1" TextSelection
+
+FrontMatter "1" *-- "*" FrontMatterValue
+FrontMatterValue <|.r. Scalar
+FrontMatterValue <|.l. StringList
+
+Project "1" *-r- "1" FileSystemPath
+Project "1" *-- "1" RelativePath : notesRelativePath
+Project "1" *-- "1" RelativePath : assetsRelativePath
+
+ProjectFile "1" *-l- "1" FileSystemPath
+ProjectFile "1" *-- "1" RelativePath
+SpanInfo "1" *-- "1" TextRange
+SpanInfo <|.. Heading
+SpanInfo <|.. Bold
+SpanInfo <|.. Italic
+SpanInfo <|.u. CodeInline
+SpanInfo <|.u. CodeBlock
+SpanInfo <|.r. Image
+SpanInfo <|.u. ListItem
+SpanInfo <|.u. Blockquote
+SpanInfo <|.l. Link
+Link "1" *-- "1" TextRange : payloadRange
+Link "1" *-- "1" TextRange : labelRange
+Link "1" *-- "1" LinkType
+
+Note "1" *-- "1" ProjectFile
+
+Settings "1" *-- "1" ValidSyncProvider
+SearchQuery "1" *-- "1" SortBy
+
+interface ProjectRepository {
+    +getNotes(project: Project, query: SearchQuery, includeText: Boolean, includeFrontMatter: Boolean): List<Note>
+    +getNotesPaged(project: Project, query: SearchQuery, includeText: Boolean, includeFrontMatter: Boolean): Flow<PagingData<Note>>
+    +getNote(project: Project, relativePath: RelativePath, includeText: Boolean, includeFrontMatter: Boolean): Note
+    +buildProject(projectPath: FileSystemPath): Project
+    +syncDatabase(project: Project)
+    +copyFromFileSystem(project: Project, fromPath: FileSystemPath, toDirPath: RelativePath): ProjectFile
+    +getAllTags(project: Project): List<String>
+    +writeFile(project: Project, relativePath: RelativePath, byteArray: ByteArray, fileExistsStrategy: FileExistsStrategy, createParents: Boolean): ProjectFile
+    +deleteFile(project: Project, relativePath: RelativePath)
+    +copyFile(project: Project, relativePath: RelativePath, newRelativePath: RelativePath, fileExistsStrategy: FileExistsStrategy, createParents: Boolean): ProjectFile
+    +moveFile(project: Project, relativePath: RelativePath, newRelativePath: RelativePath, fileExistsStrategy: FileExistsStrategy, createParents: Boolean): ProjectFile
+    +readFile(project: Project, relativePath: RelativePath): ByteArray
+    +getProjectFilesList(project: Project): List<ProjectFile>
+    +getProjectFile(project: Project, relativePath: RelativePath): ProjectFile
+}
+
+class AndroidProjectRepository {
+    +projectDao: ProjectDao
+    +noteDao: NoteDao
+}
+
+interface SettingsRepository {
+    +setSettings(project: Project, settings: Settings): Settings
+    +getSettings(project: Project): Settings
+    +setProjectPath(path: FileSystemPath)
+    +getProjectPath(): FileSystemPath?
+}
+
+class AndroidSettingsRepository {
+}
+
+interface LinkPreviewRepository {
+    +getLinkPreview(url: String): LinkPreview?
+}
+
+class AndroidLinkPreviewRepository {
+    +linkPreviewDao: LinkPreviewDao
+}
+
+interface SyncRepository {
+    +downloadFile(path: RelativePath): ByteArray?
+    +uploadFile(path: RelativePath, bytes: ByteArray)
+    +deleteFile(path: RelativePath)
+}
+
+class YandexSyncRepository {
+    +oauthToken: String
+}
+
+class SyncRepositoryFactory {
+    +create(settings: Settings): SyncRepository?
+}
+
+abstract class NoteDb {
+    +projectDao(): ProjectDao
+    +noteDao(): NoteDao
+    +linkPreviewDao(): LinkPreviewDao
+}
+
+interface NoteDao {
+    +insertNote(note: NoteEntity): Long
+    +deleteByUri(uri: String)
+    +getNoteByUri(uri: String): NoteEntity?
+    +searchNotes(query: SupportSQLiteQuery): List<NoteEntity>
+    +searchNotesPaged(query: SupportSQLiteQuery): PagingSource<Int, NoteEntity>
+    +getAllTags(projectId: Long): List<String>
+}
+
+interface ProjectDao {
+    +insertProject(project: ProjectEntity): Long
+    +getProjectId(rootPath: String): Long?
+}
+
+interface LinkPreviewDao {
+    +getByUrl(url: String): LinkPreviewEntity?
+    +insert(entity: LinkPreviewEntity)
+}
+
+class NoteEntity {
+    +id: Long
+    +projectId: Long
+    +uri: String
+    +name: String
+    +lastModified: Long
+    +createdAt: Long?
+    +tags: String
+    +body: String
+}
+
+class NoteEntityFts {
+    +id: Long
+    +name: String
+    +body: String
+}
+
+class ProjectEntity {
+    +id: Long
+    +name: String
+    +rootPath: String
+}
+
+class LinkPreviewEntity {
+    +url: String
+    +title: String?
+    +description: String?
+    +imageUrl: String?
+    +fetchedAt: Long
+}
+
+AndroidProjectRepository .|> ProjectRepository
+AndroidSettingsRepository .|> SettingsRepository
+AndroidLinkPreviewRepository .|> LinkPreviewRepository
+YandexSyncRepository .|> SyncRepository
+
+NoteDb "1" *-- "1" NoteDao
+NoteDb "1" *-- "1" ProjectDao
+NoteDb "1" *-- "1" LinkPreviewDao
+
+AndroidProjectRepository "1" o-- "1" NoteDao
+AndroidProjectRepository "1" o-- "1" ProjectDao
+AndroidLinkPreviewRepository "1" o-- "1" LinkPreviewDao
+
+NoteDao ..> NoteEntity
+ProjectDao ..> ProjectEntity
+LinkPreviewDao ..> LinkPreviewEntity
+NoteEntityFts ..> NoteEntity
+
+SyncRepositoryFactory ..> SyncRepository
+
+LinkPreviewRepository ..> LinkPreview
+
+ProjectRepository ..> SearchQuery
+ProjectRepository ..> Project
+ProjectRepository ..> Note
+ProjectRepository ..> RelativePath
+ProjectRepository ..> ProjectFile
+ProjectRepository ..> FileSystemPath
+
+SettingsRepository ..> Settings
+
+@enduml

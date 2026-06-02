@@ -1,0 +1,56 @@
+@startuml
+left to right direction
+
+actor "Пользователь" as User
+
+rectangle "Android-приложение для ведения заметок" {
+    (Выбрать проект) as selectProject
+    (Выбрать директорию устройства) as storeProject
+
+    (Создать заметку) as createNote
+    (Редактировать заметку) as editNote
+    (Прикрепить вложение) as editNoteAttachment
+    (Прикрепить другую заметку) as editNoteAttachNote
+    (Удалить заметку) as deleteNote
+    (Переименовать заметку) as renameNote
+    (Закрепить заметку) as pinNote
+
+    (Просмотреть ленту кратких заметок) as viewQuickFeed
+    (Выбрать группу заметок) as bulkSelect
+    (Удалить выбранные заметки) as bulkActionDelete
+    (Скопировать выбранные заметки) as bulkActionCopy
+
+    (Искать заметки) as searchNotes
+    (Фильтровать по тегам) as searchTags
+    (Фильтровать по названию) as searchName
+    (Фильтровать по ключевым словам) as searchKeyword
+
+    (Синхронизировать данные) as syncData
+    (Синхронизировать с Yandex Disk) as yandexSync
+}
+
+User --> selectProject
+selectProject ..> storeProject : <<include>>
+
+User --> createNote
+User --> editNote
+User --> deleteNote
+User --> renameNote
+User --> pinNote
+
+editNote <.. editNoteAttachment : <<extend>>
+editNote <.. editNoteAttachNote : <<extend>>
+
+User --> viewQuickFeed
+viewQuickFeed <.. bulkSelect : <<extend>>
+bulkSelect <.. bulkActionDelete : <<extend>>
+bulkSelect <.. bulkActionCopy : <<extend>>
+
+User --> searchNotes
+searchNotes <.. searchTags : <<extend>>
+searchNotes <.. searchName : <<extend>>
+searchNotes <.. searchKeyword : <<extend>>
+
+User --> syncData
+syncData <|-- yandexSync
+@enduml

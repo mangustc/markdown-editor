@@ -137,7 +137,6 @@ import coil3.compose.AsyncImage
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import com.example.markdown_editor.R
 import com.example.markdown_editor.domain.markdown.MarkdownParser
-import com.example.markdown_editor.domain.messenger.LinkPreviewFetcher
 import com.example.markdown_editor.domain.models.Attachment
 import com.example.markdown_editor.domain.models.FileSystemPath
 import com.example.markdown_editor.domain.models.FrontMatter
@@ -857,7 +856,7 @@ private fun MessageBubble(
     val resources = LocalResources.current
 
     val urls =
-        remember(message.note.body) { LinkPreviewFetcher.extractAllUrls(message.note.body ?: "") }
+        remember(message.note.body) { message.links.map { it.value }.toList() }
     LaunchedEffect(urls) { urls.forEach { onEnsurePreview(it) } }
 
     val previews = remember(urls, linkPreviews) { urls.mapNotNull { linkPreviews[it] } }

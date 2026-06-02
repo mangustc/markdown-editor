@@ -1,76 +1,78 @@
 @startuml
+'left to right direction
+
 skinparam ClassBackgroundColor #FFFFFF
 
 !include class-diagram.puml
 
 'SpanInfo
-remove SpanInfo
-remove Heading
-remove Bold
-remove Italic
-remove Image
-remove Link
-remove LinkType
-remove TextRange
-remove CodeInline
-remove CodeBlock
-remove Blockquote
-remove ListItem
+'remove SpanInfo
+'remove Heading
+'remove Bold
+'remove Italic
+'remove Image
+'remove Link
+'remove LinkType
+'remove TextRange
+'remove CodeInline
+'remove CodeBlock
+'remove Blockquote
+'remove ListItem
 
 'FrontMatter
-remove FrontMatter
-remove FrontMatterValue
-remove Scalar
-remove StringList
+'remove FrontMatter
+'remove FrontMatterValue
+'remove Scalar
+'remove StringList
 
 'TextState
-remove TextState
-remove MutableTextState
-remove TextSelection
-remove TextUndoState
+'remove TextState
+'remove MutableTextState
+'remove TextSelection
+'remove TextUndoState
 
 'Settings
-'remove Settings
-'remove ValidSyncProvider
+remove Settings
+remove ValidSyncProvider
 
 'Project
-'remove Project
-'remove RelativePath
-'remove FileSystemPath
-'remove ProjectFile
+remove Project
+remove RelativePath
+remove FileSystemPath
+remove ProjectFile
 remove Attachment
 remove AttachmentType
 remove ProjectAttachment
 remove InvalidProjectAttachment
 remove PendingAttachment
 remove MessageBody
-'remove Note
+remove Note
 
 'SearchQuery
-'remove SearchQuery
-'remove SortBy
+remove SearchQuery
+remove SortBy
 
 'LinkPreview
-'remove LinkPreview
+remove LinkPreview
 
 'Repositories
-'remove ProjectRepository
-'remove AndroidProjectRepository
-'remove NoteDao
-'remove ProjectDao
-'remove LinkPreviewDao
-'remove NoteEntity
-'remove NoteEntityFts
-'remove ProjectEntity
-'remove LinkPreviewEntity
+remove ProjectRepository
+remove AndroidProjectRepository
+remove NoteDao
+remove ProjectDao
+remove LinkPreviewDao
+remove NoteEntity
+remove NoteEntityFts
+remove ProjectEntity
+remove LinkPreviewEntity
 remove NoteDb
-'remove LinkPreviewRepository
-'remove AndroidLinkPreviewRepository
-'remove SyncRepository
-'remove YandexSyncRepository
-'remove SyncRepositoryFactory
-'remove SettingsRepository
-'remove AndroidSettingsRepository
+remove LinkPreviewRepository
+remove AndroidLinkPreviewRepository
+remove SyncRepository
+remove YandexSyncRepository
+remove SyncRepositoryFactory
+remove SettingsRepository
+remove AndroidSettingsRepository
 
 'UseCases
 remove UseCase
@@ -122,6 +124,5 @@ remove GetProjectFileUseCase
 remove GetProjectFileInput
 
 'MarkdownParser
-remove MarkdownParser
-
+'remove MarkdownParser
 @enduml

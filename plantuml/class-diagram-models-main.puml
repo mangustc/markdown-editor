@@ -72,6 +72,58 @@ remove SyncRepositoryFactory
 remove SettingsRepository
 remove AndroidSettingsRepository
 
+'UseCases
+remove UseCase
+remove FlowUseCase
+remove GetMessagesUseCase
+remove CreateNoteUseCase
+remove CreateNoteInput
+remove ApplyEditorEventInput
+remove GetRealSpanInfoLinkTypeUseCase
+remove GetPinnedMessagesUseCase
+remove ToggleNoteTagUseCase
+remove SyncProjectUseCase
+remove ApplyEditorEventUseCase
+remove SendNoteInput
+remove DeleteNoteUseCase
+remove DeleteNoteInput
+remove GetNoteInput
+remove GetNoteUseCase
+remove RenameNoteUseCase
+remove CopyToAssetsUseCase
+remove SaveNoteTextUseCase
+remove GetAllTagsUseCase
+remove SelectProjectInput
+remove SyncDatabaseInput
+remove SendNoteUseCase
+remove SyncDatabaseUseCase
+remove LoadSavedProjectUseCase
+remove GetSettingsUseCase
+remove SelectProjectUseCase
+remove SetSettingsUseCase
+remove SetSettingsInput
+remove GetLinkPreviewUseCase
+remove GetLinkPreviewInput
+remove GetMessagesInput
+remove GetPinnedMessagesInput
+remove ToggleNoteTagInput
+remove RenameNoteInput
+remove SaveNoteTextInput
+remove GetRealSpanInfoLinkTypeInput
+remove SyncProjectInput
+remove GetSettingsInput
+remove GetAllTagsInput
+remove ApplySearchEventUseCase
+remove ApplySearchEventInput
+remove CopyToAssetsInput
+remove GetNotesUseCase
+remove GetNotesInput
+remove GetProjectFileUseCase
+remove GetProjectFileInput
+
+'MarkdownParser
+remove MarkdownParser
+
 SortBy -[hidden]- Settings
 SortBy -[hidden]- LinkPreview
 

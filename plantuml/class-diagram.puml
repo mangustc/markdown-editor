@@ -396,4 +396,336 @@ ProjectRepository ..> FileSystemPath
 
 SettingsRepository ..> Settings
 
+interface UseCase<Input, Output> {
+    +invoke(input: Input): Output
+}
+
+interface FlowUseCase<Input, Output> {
+    +invoke(input: Input): Flow<Output>
+}
+
+class SendNoteInput {
+    +project: Project
+    +body: String
+    +attachments: List<Attachment>
+    +editNote: Note?
+}
+
+class SendNoteUseCase<SendNoteInput, Unit> {
+    +projectRepository: ProjectRepository
+    +createNoteUseCase: CreateNoteUseCase
+    +copyToAssetsUseCase: CopyToAssetsUseCase
+    +saveNoteTextUseCase: SaveNoteTextUseCase
+}
+
+class GetMessagesInput {
+    +project: Project
+}
+
+class GetMessagesUseCase<GetMessagesInput, Flow<PagingData<MessageBody>>> {
+    +projectRepository: ProjectRepository
+    +getProjectFileUseCase: GetProjectFileUseCase
+}
+
+class GetNotesInput {
+    +project: Project
+    +searchQueryString: String
+}
+
+class GetNotesUseCase<GetNotesInput, Flow<PagingData<Note>>> {
+    +projectRepository: ProjectRepository
+}
+
+class GetPinnedMessagesInput {
+    +project: Project
+}
+
+class GetPinnedMessagesUseCase<GetPinnedMessagesInput, List<MessageBody>> {
+    +projectRepository: ProjectRepository
+    +getProjectFileUseCase: GetProjectFileUseCase
+}
+
+class CreateNoteInput {
+    +project: Project
+    +name: String
+    +tags: List<String>
+    +initialText: String
+    +includeText: Boolean
+    +includeFrontMatter: Boolean
+}
+
+class CreateNoteUseCase<CreateNoteInput, Note> {
+    +projectRepository: ProjectRepository
+    +getNoteUseCase: GetNoteUseCase
+}
+
+class ToggleNoteTagInput {
+    +project: Project
+    +note: Note
+    +tag: String
+}
+
+class ToggleNoteTagUseCase<ToggleNoteTagInput, FrontMatter> {
+    +projectRepository: ProjectRepository
+}
+
+class RenameNoteInput {
+    +project: Project
+    +note: Note
+    +newName: String
+    +includeText: Boolean
+    +includeFrontMatter: Boolean
+}
+
+class RenameNoteUseCase<RenameNoteInput, Note> {
+    +projectRepository: ProjectRepository
+    +getNoteUseCase: GetNoteUseCase
+}
+
+class GetNoteInput {
+    +project: Project
+    +relativePath: RelativePath
+    +includeText: Boolean
+    +includeFrontMatter: Boolean
+}
+
+class GetNoteUseCase<GetNoteInput, Note> {
+    +projectRepository: ProjectRepository
+}
+
+class SaveNoteTextInput {
+    +project: Project
+    +note: Note
+    +text: String
+}
+
+class SaveNoteTextUseCase<SaveNoteTextInput, Unit> {
+    +projectRepository: ProjectRepository
+}
+
+class DeleteNoteInput {
+    +project: Project
+    +note: Note
+}
+
+class DeleteNoteUseCase<DeleteNoteInput, Unit> {
+    +projectRepository: ProjectRepository
+}
+
+class GetRealSpanInfoLinkTypeInput {
+    +project: Project
+    +span: SpanInfo.Link
+}
+
+class GetRealSpanInfoLinkTypeUseCase<GetRealSpanInfoLinkTypeInput, SpanInfo.Link.LinkType> {
+    +getProjectFileUseCase: GetProjectFileUseCase
+}
+
+class ApplyEditorEventInput {
+    +project: Project
+    +state: TextState
+    +event: EditorEvent
+}
+
+class ApplyEditorEventUseCase<ApplyEditorEventInput, Unit> {
+    +copyToAssetsUseCase: CopyToAssetsUseCase
+}
+
+class SyncProjectInput {
+    +project: Project
+    +settings: Settings
+}
+
+class SyncProjectUseCase<SyncProjectInput, Unit> {
+    +projectRepository: ProjectRepository
+    +syncRepositoryFactory: SyncRepositoryFactory
+}
+
+class SelectProjectInput {
+    +projectPath: FileSystemPath
+}
+
+class SelectProjectUseCase<SelectProjectInput, Project> {
+    +projectRepository: ProjectRepository
+    +settingsRepository: SettingsRepository
+}
+
+class LoadSavedProjectUseCase<Unit, Project?> {
+    +projectRepository: ProjectRepository
+    +settingsRepository: SettingsRepository
+}
+
+class GetSettingsInput {
+    +project: Project
+}
+
+class GetSettingsUseCase<GetSettingsInput, Settings> {
+    +settingsRepository: SettingsRepository
+}
+
+class SetSettingsInput {
+    +project: Project
+    +newSettings: Settings
+}
+
+class SetSettingsUseCase<SetSettingsInput, Settings> {
+    +settingsRepository: SettingsRepository
+}
+
+class GetAllTagsInput {
+    +project: Project
+}
+
+class GetAllTagsUseCase<GetAllTagsInput, List<String>> {
+    +projectRepository: ProjectRepository
+}
+
+class SyncDatabaseInput {
+    +project: Project
+}
+
+class SyncDatabaseUseCase<SyncDatabaseInput, Unit> {
+    +projectRepository: ProjectRepository
+}
+
+class GetLinkPreviewInput {
+    +url: String
+}
+
+class GetLinkPreviewUseCase<GetLinkPreviewInput, LinkPreview?> {
+    +linkPreviewRepository: LinkPreviewRepository
+}
+
+class ApplySearchEventInput {
+    +state: TextState
+    +event: SearchEvent
+}
+
+class ApplySearchEventUseCase<ApplySearchEventInput, Unit> {
+}
+
+class CopyToAssetsInput {
+    +project: Project
+    +assetPath: FileSystemPath
+}
+
+class CopyToAssetsUseCase<CopyToAssetsInput, ProjectFile> {
+    +projectRepository: ProjectRepository
+}
+
+class GetProjectFileInput {
+    +project: Project
+    +relativePath: RelativePath
+}
+
+class GetProjectFileUseCase<GetProjectFileInput, ProjectFile> {
+    +projectRepository: ProjectRepository
+}
+
+FlowUseCase <|.. GetMessagesUseCase
+GetMessagesUseCase ..> GetMessagesInput
+GetMessagesUseCase "1" o-- "1" ProjectRepository
+GetMessagesUseCase "1" o-- "1" GetProjectFileUseCase
+
+FlowUseCase <|.. GetNotesUseCase
+GetNotesUseCase ..> GetNotesInput
+GetNotesUseCase "1" o-- "1" ProjectRepository
+
+UseCase <|.. SendNoteUseCase
+SendNoteUseCase ..> SendNoteInput
+SendNoteUseCase "1" o-- "1" ProjectRepository
+SendNoteUseCase "1" o-- "1" CreateNoteUseCase
+SendNoteUseCase "1" o-- "1" CopyToAssetsUseCase
+SendNoteUseCase "1" o-- "1" SaveNoteTextUseCase
+
+UseCase <|.. GetPinnedMessagesUseCase
+GetPinnedMessagesUseCase ..> GetPinnedMessagesInput
+GetPinnedMessagesUseCase "1" o-- "1" ProjectRepository
+GetPinnedMessagesUseCase "1" o-- "1" GetProjectFileUseCase
+
+UseCase <|.. CreateNoteUseCase
+CreateNoteUseCase ..> CreateNoteInput
+CreateNoteUseCase "1" o-- "1" ProjectRepository
+CreateNoteUseCase "1" o-- "1" GetNoteUseCase
+
+UseCase <|.u. ToggleNoteTagUseCase
+ToggleNoteTagUseCase .u.> ToggleNoteTagInput
+ToggleNoteTagUseCase "1" o-- "1" ProjectRepository
+
+UseCase <|.. RenameNoteUseCase
+RenameNoteUseCase ..> RenameNoteInput
+RenameNoteUseCase "1" o-- "1" ProjectRepository
+RenameNoteUseCase "1" o-- "1" GetNoteUseCase
+
+UseCase <|.. GetNoteUseCase
+GetNoteUseCase ..> GetNoteInput
+GetNoteUseCase "1" o-- "1" ProjectRepository
+
+UseCase <|.. SaveNoteTextUseCase
+SaveNoteTextUseCase ..> SaveNoteTextInput
+SaveNoteTextUseCase "1" o-- "1" ProjectRepository
+
+UseCase <|.u. DeleteNoteUseCase
+DeleteNoteUseCase .u.> DeleteNoteInput
+DeleteNoteUseCase "1" o-- "1" ProjectRepository
+
+UseCase <|.. GetRealSpanInfoLinkTypeUseCase
+GetRealSpanInfoLinkTypeUseCase ..> GetRealSpanInfoLinkTypeInput
+GetRealSpanInfoLinkTypeUseCase "1" o-- "1" GetProjectFileUseCase
+
+UseCase <|.. ApplyEditorEventUseCase
+ApplyEditorEventUseCase ..> ApplyEditorEventInput
+ApplyEditorEventUseCase "1" o-- "1" CopyToAssetsUseCase
+
+UseCase <|.u. SyncProjectUseCase
+SyncProjectUseCase .u.> SyncProjectInput
+SyncProjectUseCase "1" o-- "1" ProjectRepository
+SyncProjectUseCase "1" o-- "1" SyncRepositoryFactory
+
+UseCase <|.u. SelectProjectUseCase
+SelectProjectUseCase .u.> SelectProjectInput
+SelectProjectUseCase "1" o-- "1" ProjectRepository
+SelectProjectUseCase "1" o-- "1" SettingsRepository
+
+UseCase <|.u. LoadSavedProjectUseCase
+LoadSavedProjectUseCase "1" o-- "1" ProjectRepository
+LoadSavedProjectUseCase "1" o-- "1" SettingsRepository
+
+UseCase <|.u. GetSettingsUseCase
+GetSettingsUseCase .u.> GetSettingsInput
+GetSettingsUseCase "1" o-- "1" SettingsRepository
+
+UseCase <|.u. SetSettingsUseCase
+SetSettingsUseCase .u.> SetSettingsInput
+SetSettingsUseCase "1" o-- "1" SettingsRepository
+
+UseCase <|.u. GetAllTagsUseCase
+GetAllTagsUseCase .u.> GetAllTagsInput
+GetAllTagsUseCase "1" o-- "1" ProjectRepository
+
+UseCase <|.u. SyncDatabaseUseCase
+SyncDatabaseUseCase .u.> SyncDatabaseInput
+SyncDatabaseUseCase "1" o-- "1" ProjectRepository
+
+UseCase <|.. CopyToAssetsUseCase
+CopyToAssetsUseCase ..> CopyToAssetsInput
+CopyToAssetsUseCase "1" o-- "1" ProjectRepository
+
+UseCase <|.u. GetLinkPreviewUseCase
+GetLinkPreviewUseCase .u.> GetLinkPreviewInput
+GetLinkPreviewUseCase "1" o-- "1" LinkPreviewRepository
+
+UseCase <|.u. ApplySearchEventUseCase
+ApplySearchEventUseCase .u.> ApplySearchEventInput
+
+UseCase <|.. GetProjectFileUseCase
+GetProjectFileUseCase ..> GetProjectFileInput
+
+class MarkdownParser {
+    +parse(text: String): List<SpanInfo>
+    +stripAttachments(text: String, spans: List<SpanInfo>): String
+}
+
+MarkdownParser ..> SpanInfo
+
 @enduml

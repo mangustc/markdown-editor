@@ -125,4 +125,8 @@ remove GetProjectFileInput
 'MarkdownParser
 remove MarkdownParser
 
+RelativePath -[hidden]- Project
+FileSystemPath -[hidden]r- RelativePath
+Note -[hidden]r- ProjectFile
+
 @enduml

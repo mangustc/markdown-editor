@@ -126,6 +126,7 @@ remove GetProjectFileInput
 remove MarkdownParser
 
 SortBy -[hidden]- Settings
-SortBy -[hidden]- LinkPreview
+ProjectFile -[hidden]- LinkPreview
+LinkPreview -[hidden]r- ValidSyncProvider
 
 @enduml

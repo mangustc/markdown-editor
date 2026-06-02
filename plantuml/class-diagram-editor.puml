@@ -126,4 +126,9 @@ remove GetProjectFileInput
 
 'MarkdownParser
 'remove MarkdownParser
+
+MarkdownParser -[hidden]- TextState
+MutableTextState -[hidden]d- TextUndoState
+
+Bold -[hidden]- FrontMatter
 @enduml

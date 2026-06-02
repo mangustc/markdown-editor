@@ -272,6 +272,11 @@ interface ProjectRepository {
     +getProjectFile(project: Project, relativePath: RelativePath): ProjectFile
 }
 
+enum FileExistsStrategy {
+    OVERWRITE
+    AUTO_RENAME
+}
+
 class AndroidProjectRepository {
     +projectDao: ProjectDao
     +noteDao: NoteDao
@@ -387,6 +392,7 @@ SyncRepositoryFactory ..> SyncRepository
 
 LinkPreviewRepository ..> LinkPreview
 
+ProjectRepository ..> FileExistsStrategy
 ProjectRepository ..> SearchQuery
 ProjectRepository ..> Project
 ProjectRepository ..> Note

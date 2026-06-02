@@ -64,6 +64,7 @@ remove LinkPreviewDao
 remove NoteEntity
 remove NoteEntityFts
 remove ProjectEntity
+remove FileExistsStrategy
 remove LinkPreviewEntity
 remove NoteDb
 remove LinkPreviewRepository

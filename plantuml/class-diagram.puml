@@ -214,11 +214,11 @@ Attachment <|.. PendingAttachment
 Attachment <|.. ProjectAttachment
 Attachment <|.. InvalidProjectAttachment
 Attachment "1" *-- "1" FileSystemPath
-Attachment "1" *-l- "1" AttachmentType
+Attachment "1" *-- "1" AttachmentType
 ProjectAttachment "1" *-- "1" RelativePath
 InvalidProjectAttachment "1" *-- "1" RelativePath
 
-MessageBody "1" o-l- "*" Attachment
+MessageBody "1" o-- "*" Attachment
 MessageBody "1" o-- "1" Note
 
 TextState "1" *-- "1" TextSelection
@@ -227,25 +227,25 @@ TextState ..> MutableTextState
 MutableTextState "1" *-- "1" TextSelection
 
 FrontMatter "1" *-- "*" FrontMatterValue
-FrontMatterValue <|.r. Scalar
-FrontMatterValue <|.l. StringList
+FrontMatterValue <|.. Scalar
+FrontMatterValue <|.. StringList
 
-Project "1" *-r- "1" FileSystemPath
+Project "1" *-- "1" FileSystemPath
 Project "1" *-- "1" RelativePath : notesRelativePath
 Project "1" *-- "1" RelativePath : assetsRelativePath
 
-ProjectFile "1" *-l- "1" FileSystemPath
+ProjectFile "1" *-- "1" FileSystemPath
 ProjectFile "1" *-- "1" RelativePath
 SpanInfo "1" *-- "1" TextRange
 SpanInfo <|.. Heading
 SpanInfo <|.. Bold
 SpanInfo <|.. Italic
-SpanInfo <|.u. CodeInline
-SpanInfo <|.u. CodeBlock
-SpanInfo <|.r. Image
-SpanInfo <|.u. ListItem
-SpanInfo <|.u. Blockquote
-SpanInfo <|.l. Link
+SpanInfo <|.. CodeInline
+SpanInfo <|.. CodeBlock
+SpanInfo <|.. Image
+SpanInfo <|.. ListItem
+SpanInfo <|.. Blockquote
+SpanInfo <|.. Link
 Link "1" *-- "1" TextRange : payloadRange
 Link "1" *-- "1" TextRange : labelRange
 Link "1" *-- "1" LinkType
@@ -365,10 +365,10 @@ class LinkPreviewEntity {
     +fetchedAt: Long
 }
 
-AndroidProjectRepository .|> ProjectRepository
-AndroidSettingsRepository .|> SettingsRepository
-AndroidLinkPreviewRepository .|> LinkPreviewRepository
-YandexSyncRepository .|> SyncRepository
+AndroidProjectRepository ..|> ProjectRepository
+AndroidSettingsRepository ..|> SettingsRepository
+AndroidLinkPreviewRepository ..|> LinkPreviewRepository
+YandexSyncRepository ..|> SyncRepository
 
 NoteDb "1" *-- "1" NoteDao
 NoteDb "1" *-- "1" ProjectDao
@@ -648,8 +648,8 @@ CreateNoteUseCase ..> CreateNoteInput
 CreateNoteUseCase "1" o-- "1" ProjectRepository
 CreateNoteUseCase "1" o-- "1" GetNoteUseCase
 
-UseCase <|.u. ToggleNoteTagUseCase
-ToggleNoteTagUseCase .u.> ToggleNoteTagInput
+UseCase <|.. ToggleNoteTagUseCase
+ToggleNoteTagUseCase ..> ToggleNoteTagInput
 ToggleNoteTagUseCase "1" o-- "1" ProjectRepository
 
 UseCase <|.. RenameNoteUseCase
@@ -665,8 +665,8 @@ UseCase <|.. SaveNoteTextUseCase
 SaveNoteTextUseCase ..> SaveNoteTextInput
 SaveNoteTextUseCase "1" o-- "1" ProjectRepository
 
-UseCase <|.u. DeleteNoteUseCase
-DeleteNoteUseCase .u.> DeleteNoteInput
+UseCase <|.. DeleteNoteUseCase
+DeleteNoteUseCase ..> DeleteNoteInput
 DeleteNoteUseCase "1" o-- "1" ProjectRepository
 
 UseCase <|.. GetRealSpanInfoLinkTypeUseCase
@@ -677,46 +677,46 @@ UseCase <|.. ApplyEditorEventUseCase
 ApplyEditorEventUseCase ..> ApplyEditorEventInput
 ApplyEditorEventUseCase "1" o-- "1" CopyToAssetsUseCase
 
-UseCase <|.u. SyncProjectUseCase
-SyncProjectUseCase .u.> SyncProjectInput
+UseCase <|.. SyncProjectUseCase
+SyncProjectUseCase ..> SyncProjectInput
 SyncProjectUseCase "1" o-- "1" ProjectRepository
 SyncProjectUseCase "1" o-- "1" SyncRepositoryFactory
 
-UseCase <|.u. SelectProjectUseCase
-SelectProjectUseCase .u.> SelectProjectInput
+UseCase <|.. SelectProjectUseCase
+SelectProjectUseCase ..> SelectProjectInput
 SelectProjectUseCase "1" o-- "1" ProjectRepository
 SelectProjectUseCase "1" o-- "1" SettingsRepository
 
-UseCase <|.u. LoadSavedProjectUseCase
+UseCase <|.. LoadSavedProjectUseCase
 LoadSavedProjectUseCase "1" o-- "1" ProjectRepository
 LoadSavedProjectUseCase "1" o-- "1" SettingsRepository
 
-UseCase <|.u. GetSettingsUseCase
-GetSettingsUseCase .u.> GetSettingsInput
+UseCase <|.. GetSettingsUseCase
+GetSettingsUseCase ..> GetSettingsInput
 GetSettingsUseCase "1" o-- "1" SettingsRepository
 
-UseCase <|.u. SetSettingsUseCase
-SetSettingsUseCase .u.> SetSettingsInput
+UseCase <|.. SetSettingsUseCase
+SetSettingsUseCase ..> SetSettingsInput
 SetSettingsUseCase "1" o-- "1" SettingsRepository
 
-UseCase <|.u. GetAllTagsUseCase
-GetAllTagsUseCase .u.> GetAllTagsInput
+UseCase <|.. GetAllTagsUseCase
+GetAllTagsUseCase ..> GetAllTagsInput
 GetAllTagsUseCase "1" o-- "1" ProjectRepository
 
-UseCase <|.u. SyncDatabaseUseCase
-SyncDatabaseUseCase .u.> SyncDatabaseInput
+UseCase <|.. SyncDatabaseUseCase
+SyncDatabaseUseCase ..> SyncDatabaseInput
 SyncDatabaseUseCase "1" o-- "1" ProjectRepository
 
 UseCase <|.. CopyToAssetsUseCase
 CopyToAssetsUseCase ..> CopyToAssetsInput
 CopyToAssetsUseCase "1" o-- "1" ProjectRepository
 
-UseCase <|.u. GetLinkPreviewUseCase
-GetLinkPreviewUseCase .u.> GetLinkPreviewInput
+UseCase <|.. GetLinkPreviewUseCase
+GetLinkPreviewUseCase ..> GetLinkPreviewInput
 GetLinkPreviewUseCase "1" o-- "1" LinkPreviewRepository
 
-UseCase <|.u. ApplySearchEventUseCase
-ApplySearchEventUseCase .u.> ApplySearchEventInput
+UseCase <|.. ApplySearchEventUseCase
+ApplySearchEventUseCase ..> ApplySearchEventInput
 
 UseCase <|.. GetProjectFileUseCase
 GetProjectFileUseCase ..> GetProjectFileInput

@@ -1,0 +1,58 @@
+@startuml
+skinparam style strictuml
+skinparam sequenceMessageAlign center
+
+actor "Пользователь" as User
+participant "AppScaffold:\nUI" as UI
+participant "Android Проводник:\nПроводник" as FilePicker
+participant "ProjectActions:\nActions" as Actions
+participant "SelectProjectUseCase:\nUseCase" as SelectUseCase
+participant "AndroidSettingsRepository:\nSettingsRepository" as SettingsRepo
+participant "AndroidProjectRepository:\nProjectRepository" as ProjectRepo
+participant "GetSettingsUseCase:\nUseCase" as SettingsUseCase
+
+User -> UI : Нажатие "Выбрать\nпапку проекта"
+activate UI
+
+UI -> FilePicker :  launch(\nOpenDocumentTree)
+activate FilePicker
+FilePicker -> User : Отображение выбора папки
+User -> FilePicker : Выбор папки и подтверждение
+FilePicker --> UI :  Uri
+deactivate FilePicker
+
+UI -> Actions :  onProjectSelected(projectPath)
+activate Actions
+
+Actions -> SelectUseCase :  invoke(projectPath)
+activate SelectUseCase
+
+SelectUseCase -> SettingsRepo :  setProjectPath(path)
+activate SettingsRepo
+SettingsRepo --> SelectUseCase : Success
+deactivate SettingsRepo
+
+SelectUseCase -> ProjectRepo :  buildProject(path)
+activate ProjectRepo
+ProjectRepo -> ProjectRepo : Проверка и создание\nпапок notes и assets
+ProjectRepo --> SelectUseCase :  Project
+deactivate ProjectRepo
+
+SelectUseCase --> Actions :  Project
+deactivate SelectUseCase
+
+Actions -> SettingsUseCase :  invoke(project)
+activate SettingsUseCase
+SettingsUseCase -> SettingsRepo :  getSettings(project)
+activate SettingsRepo
+SettingsRepo --> SettingsUseCase :  Settings
+deactivate SettingsRepo
+SettingsUseCase --> Actions :  Settings
+deactivate SettingsUseCase
+
+Actions -> Actions : uiState.update(\nproject, settings)
+Actions -> Actions :  updateNoteLists()
+Actions --> UI :  Success
+deactivate Actions
+
+@enduml

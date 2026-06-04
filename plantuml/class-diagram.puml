@@ -401,6 +401,9 @@ ProjectRepository ..> ProjectFile
 ProjectRepository ..> FileSystemPath
 
 SettingsRepository ..> Settings
+SettingsRepository ..> Project
+
+SyncRepository ..> RelativePath
 
 interface UseCase<Input, Output> {
     +invoke(input: Input): Output

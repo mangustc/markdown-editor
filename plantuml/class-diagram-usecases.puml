@@ -73,56 +73,60 @@ remove YandexSyncRepository
 remove SyncRepositoryFactory
 remove SettingsRepository
 remove AndroidSettingsRepository
+remove FileExistsStrategy
 
 'UseCases
 'remove UseCase
-'remove FlowUseCase
-'remove GetMessagesUseCase
+remove FlowUseCase
+remove GetMessagesUseCase
+remove GetMessagesInput
+remove GetNotesUseCase
+remove GetNotesInput
 'remove CreateNoteUseCase
 'remove CreateNoteInput
 'remove ApplyEditorEventInput
-'remove GetRealSpanInfoLinkTypeUseCase
-'remove GetPinnedMessagesUseCase
-'remove ToggleNoteTagUseCase
-'remove SyncProjectUseCase
 'remove ApplyEditorEventUseCase
+'remove GetRealSpanInfoLinkTypeUseCase
+'remove GetRealSpanInfoLinkTypeInput
+'remove GetPinnedMessagesUseCase
+'remove GetPinnedMessagesInput
+'remove ToggleNoteTagUseCase
+'remove ToggleNoteTagInput
+remove SyncProjectUseCase
+remove SyncProjectInput
 'remove SendNoteInput
+'remove SendNoteUseCase
 'remove DeleteNoteUseCase
 'remove DeleteNoteInput
 'remove GetNoteInput
 'remove GetNoteUseCase
 'remove RenameNoteUseCase
-'remove CopyToAssetsUseCase
-'remove SaveNoteTextUseCase
-'remove GetAllTagsUseCase
-'remove SelectProjectInput
-'remove SyncDatabaseInput
-'remove SendNoteUseCase
-'remove SyncDatabaseUseCase
-'remove LoadSavedProjectUseCase
-'remove GetSettingsUseCase
-'remove SelectProjectUseCase
-'remove SetSettingsUseCase
-'remove SetSettingsInput
-'remove GetLinkPreviewUseCase
-'remove GetLinkPreviewInput
-'remove GetMessagesInput
-'remove GetPinnedMessagesInput
-'remove ToggleNoteTagInput
 'remove RenameNoteInput
+'remove SaveNoteTextUseCase
 'remove SaveNoteTextInput
-'remove GetRealSpanInfoLinkTypeInput
-'remove SyncProjectInput
-'remove GetSettingsInput
-'remove GetAllTagsInput
-'remove ApplySearchEventUseCase
-'remove ApplySearchEventInput
+remove SelectProjectInput
+remove SelectProjectUseCase
+remove SyncDatabaseInput
+remove SyncDatabaseUseCase
+remove LoadSavedProjectUseCase
+remove SetSettingsUseCase
+remove SetSettingsInput
+remove GetLinkPreviewUseCase
+remove GetLinkPreviewInput
+remove GetSettingsUseCase
+remove GetSettingsInput
+remove GetAllTagsUseCase
+remove GetAllTagsInput
+remove ApplySearchEventUseCase
+remove ApplySearchEventInput
+'remove CopyToAssetsUseCase
 'remove CopyToAssetsInput
-'remove GetNotesUseCase
-'remove GetNotesInput
 'remove GetProjectFileUseCase
 'remove GetProjectFileInput
 
 'MarkdownParser
 remove MarkdownParser
+
+GetProjectFileUseCase -[hidden]l- GetMessagesUseCase
+GetNoteUseCase -[hidden]l- GetNoteInput
 @enduml

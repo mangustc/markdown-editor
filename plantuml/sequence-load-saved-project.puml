@@ -1,0 +1,63 @@
+@startuml
+skinparam style strictuml
+skinparam sequenceMessageAlign center
+
+actor "Пользователь" as User
+participant "AppViewModel:\nViewModel" as VM
+participant "ProjectActions:\nActions" as Actions
+participant "LoadSavedProjectUseCase:\nUseCase" as LoadUseCase
+participant "AndroidSettingsRepository:\nSettingsRepository" as SettingsRepo
+participant "AndroidProjectRepository:\nProjectRepository" as ProjectRepo
+participant "GetSettingsUseCase:\nUseCase" as SettingsUseCase
+
+User -> VM : Запуск приложения
+activate VM
+
+VM -> Actions :  loadSavedProject()
+activate Actions
+
+Actions -> LoadUseCase :  invoke()
+activate LoadUseCase
+
+LoadUseCase -> SettingsRepo :  getProjectPath()
+activate SettingsRepo
+SettingsRepo --> LoadUseCase :  FileSystemPath
+deactivate SettingsRepo
+
+alt Путь к проекту найден (FileSystemPath != null)
+    LoadUseCase -> ProjectRepo :  buildProject(path)
+    activate ProjectRepo
+
+    ProjectRepo -> ProjectRepo : Проверка и создание\nпапок notes и assets
+
+    ProjectRepo --> LoadUseCase :  Project
+    deactivate ProjectRepo
+
+    LoadUseCase --> Actions :  Project
+else Путь не найден
+    LoadUseCase --> Actions :  null
+end
+deactivate LoadUseCase
+
+alt Проект успешно загружен (Project != null)
+    Actions -> SettingsUseCase :  invoke(project)
+    activate SettingsUseCase
+    SettingsUseCase -> SettingsRepo :  getSettings(project)
+    activate SettingsRepo
+    SettingsRepo --> SettingsUseCase :  Settings
+    deactivate SettingsRepo
+    SettingsUseCase --> Actions :  Settings
+    deactivate SettingsUseCase
+
+    Actions -> Actions :  uiState.update(project, settings)
+    Actions -> Actions :  updateNoteLists()
+    Actions --> VM :  Success
+else Проект не найден
+    Actions -> Actions :  uiState.update(\nmessengerIsLoading = false)
+    Actions --> VM :  Failure
+end
+
+deactivate Actions
+deactivate VM
+
+@enduml

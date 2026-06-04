@@ -81,6 +81,7 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
@@ -271,35 +272,37 @@ fun AppScaffold(
                                 }
                             },
                         )
-                        TooltipBox(
-                            positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
-                                TooltipAnchorPosition.Below,
-                            ),
-                            tooltip = { PlainTooltip { Text(stringResource(R.string.synchronization)) } },
-                            state = rememberTooltipState(),
-                        ) {
-                            OutlinedIconButton(
-                                onClick = {
-                                    appViewModel.project.syncNow()
-                                },
-                                border = BorderStroke(
-                                    width = IconButtonDefaults.outlinedIconButtonBorder(true).width,
-                                    color = MaterialTheme.colorScheme.outlineVariant,
+                        if (uiState.project != null) {
+                            TooltipBox(
+                                positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
+                                    TooltipAnchorPosition.Below,
                                 ),
-                                shapes = IconButtonDefaults.shapes(
-                                    shape = IconButtonDefaults.mediumSquareShape,
-                                ),
-                                modifier = Modifier.size(
-                                    IconButtonDefaults.mediumContainerSize(),
-                                ),
+                                tooltip = { PlainTooltip { Text(stringResource(R.string.synchronization)) } },
+                                state = rememberTooltipState(),
                             ) {
-                                if (uiState.isSyncInProgress) {
-                                    LoadingIndicator()
-                                } else {
-                                    Icon(
-                                        Icons.Default.Sync,
-                                        contentDescription = stringResource(R.string.synchronization),
-                                    )
+                                OutlinedIconButton(
+                                    onClick = {
+                                        appViewModel.project.syncNow()
+                                    },
+                                    border = BorderStroke(
+                                        width = IconButtonDefaults.outlinedIconButtonBorder(true).width,
+                                        color = MaterialTheme.colorScheme.outlineVariant,
+                                    ),
+                                    shapes = IconButtonDefaults.shapes(
+                                        shape = IconButtonDefaults.mediumSquareShape,
+                                    ),
+                                    modifier = Modifier.size(
+                                        IconButtonDefaults.mediumContainerSize(),
+                                    ),
+                                ) {
+                                    if (uiState.isSyncInProgress) {
+                                        LoadingIndicator()
+                                    } else {
+                                        Icon(
+                                            Icons.Default.Sync,
+                                            contentDescription = stringResource(R.string.synchronization),
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -334,22 +337,26 @@ fun AppScaffold(
                         Text(
                             stringResource(R.string.open_a_project_folder_to_see_notes),
                             style = MaterialTheme.typography.bodyMedium,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth().padding(16.dp)
                         )
                     }
                 }
                 val createNoteComponent = @Composable {
-                    FilledTonalButton(
-                        onClick = { appViewModel.drawer.showCreateNoteDialog() },
-                        modifier = Modifier
-                            .padding(horizontal = 16.dp)
-                            .fillMaxWidth(),
-                    ) {
-                        Icon(
-                            Icons.Default.Create,
-                            contentDescription = stringResource(R.string.create_new_note),
-                        )
-                        Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
-                        Text(text = stringResource(R.string.create_new_note))
+                    if (uiState.project != null) {
+                        FilledTonalButton(
+                            onClick = { appViewModel.drawer.showCreateNoteDialog() },
+                            modifier = Modifier
+                                .padding(horizontal = 16.dp)
+                                .fillMaxWidth(),
+                        ) {
+                            Icon(
+                                Icons.Default.Create,
+                                contentDescription = stringResource(R.string.create_new_note),
+                            )
+                            Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
+                            Text(text = stringResource(R.string.create_new_note))
+                        }
                     }
                 }
 

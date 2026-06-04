@@ -4,9 +4,9 @@ skinparam sequenceMessageAlign center
 
 actor "Пользователь" as User
 participant "NoteSearchBar:\nUI" as UI
-participant "DrawerActions:\nActions" as Actions
+participant "DrawerActions:\nDrawerActions" as Actions
 participant "ApplySearchEventUseCase:\nUseCase" as SearchUseCase
-participant "ComposeTextState:\nState" as TextState
+participant "ComposeTextState:\nTextState" as TextState
 
 User -> UI : Нажатие кнопки "tag:"
 activate UI
@@ -17,25 +17,25 @@ activate Actions
 Actions -> SearchUseCase : invoke(\nsearchState, searchEvent)
 activate SearchUseCase
 
-SearchUseCase -> TextState : text\n(получение текущего текста)
+SearchUseCase -> TextState : text\n(получение текста)
 activate TextState
 TextState --> SearchUseCase : CharSequence
 deactivate TextState
 
-SearchUseCase -> SearchUseCase : Расчет префикса\n(добавление пробела, если нужно)
+SearchUseCase -> SearchUseCase : Добавление пробела в\nпрефикс (если нужно)
 
 SearchUseCase -> TextState : edit { ... }
 activate TextState
 
 TextState -> TextState : append(prefix + "tag:\"\"")
-TextState -> TextState : placeCursorAfterCharAt(length - 2)
+TextState -> TextState : placeCursorAfterCharAt(\nlength - 2)
 TextState --> SearchUseCase : Success
 deactivate TextState
 
 SearchUseCase --> Actions : Success
 deactivate SearchUseCase
 
-Actions --> UI : Обновление текста в TextField
+Actions --> UI : Обновление текста\nв TextField
 deactivate Actions
 deactivate UI
 

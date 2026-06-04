@@ -4,7 +4,7 @@ skinparam sequenceMessageAlign center
 
 actor "Пользователь" as User
 participant "AppViewModel:\nViewModel" as VM
-participant "ProjectActions:\nActions" as Actions
+participant "ProjectActions:\nProjectActions" as Actions
 participant "LoadSavedProjectUseCase:\nUseCase" as LoadUseCase
 participant "AndroidSettingsRepository:\nSettingsRepository" as SettingsRepo
 participant "AndroidProjectRepository:\nProjectRepository" as ProjectRepo

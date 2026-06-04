@@ -3,46 +3,62 @@ skinparam style strictuml
 skinparam sequenceMessageAlign center
 
 actor "Пользователь" as User
-participant "BasicTextField:\nUI" as TextField
-participant "MarkdownParser:\nParser" as Parser
-participant "MarkdownOutputTransformation:\nTransformation" as Transform
-participant "TextFieldBuffer:\nBuffer" as Buffer
-participant "MarkdownImageOverlay:\nUI Overlay" as Overlay
+participant "EditorScreen:\nUI" as EditorScreen
+participant "MarkdownParser:\nMarkdownParser" as Parser
+participant "MarkdownOutputTransformation:\nOutputTransformation" as Transform
+participant "TextFieldBuffer:\nTextFieldBuffer" as Buffer
+participant "MarkdownImageOverlay:\nUI" as Overlay
 
-User -> TextField : Изменение текста (ввод символа)
-activate TextField
+User -> EditorScreen : Взаимодействие\nс текстом
+activate EditorScreen
 
-TextField -> Parser : parse(text)
+EditorScreen -> Parser : parse(text)
 activate Parser
-Parser -> Parser : Поиск паттернов\n(заголовки, жирный, ссылки, фото)
-Parser --> TextField : List<SpanInfo>
+Parser -> Parser : Анализ текста и\nпоиск токенов
+Parser --> EditorScreen : List<SpanInfo>
 deactivate Parser
 
-TextField -> Transform : transformOutput(buffer)
+EditorScreen -> Transform : transformOutput(buffer)
 activate Transform
+activate Buffer
 
 loop Для каждого SpanInfo в списке
-    Transform -> Transform : Определение типа спана\n(Heading, Bold, Image и т.д.)
+    Transform -> Transform : Определение типа токена
 
-    Transform -> Buffer : addStyle(SpanStyle/ParagraphStyle, start, end)
-    activate Buffer
-    Buffer -> Buffer : Применение цвета, шрифта,\nразмера или высоты строки
-    Buffer --> Transform : Success
-    deactivate Buffer
+    alt SpanInfo.Image
+        alt Текст выделен И режим редактирования\n(isSelected && !isViewing)
+            Transform -> Buffer : addStyle(Bold + Italic, start, end)
+            note right: Отображаем сырой текст\nразметки для редактирования
+        else Текст не выделен ИЛИ режим просмотра
+            Transform -> Transform : Расчет высоты строки\n(width / aspectRatio)
+            Transform -> Buffer : addStyle(ParagraphStyle(lineHeight), start, end)
+            Transform -> Buffer : addStyle(Color.Transparent, start, end)
+            note right: Резервируем место под\nкартинку и скрываем текст
+        end
+    else Другие типы (Heading, Bold, Link и т.д.)
+        Transform -> Buffer : addStyle(SpanStyle, start, end)
+    end
 end
 
-Transform --> TextField : Трансформированный вывод
+alt Режим просмотра включен\n(isViewing == true)
+    loop Для каждого типа разметки
+        Transform -> Buffer : addStyle(HIDDEN_STYLE, markerStart, markerEnd)
+        note right: Делаем маркеры (#, **, [) \nпрозрачными и размер 0.1sp
+    end
+end
+    deactivate Buffer
+
+Transform --> EditorScreen : Трансформированный вывод
 deactivate Transform
 
-TextField -> TextField : Вычисление TextLayoutResult\n(координаты каждой буквы/строки)
+EditorScreen -> EditorScreen : Вычисление\nTextLayoutResult\n(координаты разметки)
 
-TextField -> Overlay : Отрисовка поверх текста
+EditorScreen -> Overlay : Отображение AsyncImage в на координатах разметки SpanInfo.Image
 activate Overlay
-Overlay -> Overlay : Расчет позиции на основе\nTextLayoutResult + SpanInfo.Image
-Overlay -> Overlay : Отображение AsyncImage
+Overlay --> EditorScreen : Success
 deactivate Overlay
+EditorScreen --> User : Визуальный результат\nна экране
 
-TextField --> User : Визуальный результат на экране
-deactivate TextField
+deactivate EditorScreen
 
 @enduml

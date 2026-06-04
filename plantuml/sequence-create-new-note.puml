@@ -4,9 +4,9 @@ skinparam sequenceMessageAlign center
 
 actor "Пользователь" as User
 participant "AppScaffold:\nUI" as UI
-participant "DrawerActions:\nActions" as Actions
+participant "DrawerActions:\nDrawerActions" as Actions
 participant "CreateNoteUseCase:\nUseCase" as CreateUseCase
-participant "AndroidProjectRepository:\nRepository" as Repo
+participant "AndroidProjectRepository:\nProjectRepository" as Repo
 database "Android OS:\nFile System" as OS
 
 User -> UI : Нажатие "Создать заметку"

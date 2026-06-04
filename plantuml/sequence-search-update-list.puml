@@ -4,16 +4,16 @@ skinparam sequenceMessageAlign center
 
 actor "Пользователь" as User
 participant "NoteSearchBar:\nUI" as UI
-participant "ComposeTextState:\nState" as State
-participant "DrawerActions:\nActions" as Actions
+participant "searchState:\nComposeTextState" as State
+participant "DrawerActions:\nDrawerActions" as Actions
 participant "GetNotesUseCase:\nUseCase" as GetNotesUseCase
-participant "AndroidProjectRepository:\nRepository" as Repo
-participant "NoteDao:\nRoom DB" as DB
+participant "AndroidProjectRepository:\nProjectRepository" as Repo
+database "NoteDao" as DB
 
-User -> UI : Ввод символа в поле поиска
+User -> UI : Ввод символа\nв поле поиска
 activate UI
 
-UI -> State : Обновление TextFieldState
+UI -> State : Обновление\nTextFieldState
 activate State
 State --> UI : Обновление TextField
 deactivate State
@@ -42,9 +42,9 @@ deactivate Repo
 GetNotesUseCase --> Actions : Flow<PagingData<Note>>
 deactivate GetNotesUseCase
 
-Actions --> UI : Эмиссия новых данных\n(collectAsLazyPagingItems)
+Actions --> UI : Flow<PagingData<Note>>
 deactivate Actions
 
-UI -> UI : Обновление списка в LazyColumn
+UI -> UI : Обновление списка\nв LazyColumn
 
 @enduml

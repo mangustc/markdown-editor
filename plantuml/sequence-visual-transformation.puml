@@ -1,0 +1,48 @@
+@startuml
+skinparam style strictuml
+skinparam sequenceMessageAlign center
+
+actor "Пользователь" as User
+participant "BasicTextField:\nUI" as TextField
+participant "MarkdownParser:\nParser" as Parser
+participant "MarkdownOutputTransformation:\nTransformation" as Transform
+participant "TextFieldBuffer:\nBuffer" as Buffer
+participant "MarkdownImageOverlay:\nUI Overlay" as Overlay
+
+User -> TextField : Изменение текста (ввод символа)
+activate TextField
+
+TextField -> Parser : parse(text)
+activate Parser
+Parser -> Parser : Поиск паттернов\n(заголовки, жирный, ссылки, фото)
+Parser --> TextField : List<SpanInfo>
+deactivate Parser
+
+TextField -> Transform : transformOutput(buffer)
+activate Transform
+
+loop Для каждого SpanInfo в списке
+    Transform -> Transform : Определение типа спана\n(Heading, Bold, Image и т.д.)
+
+    Transform -> Buffer : addStyle(SpanStyle/ParagraphStyle, start, end)
+    activate Buffer
+    Buffer -> Buffer : Применение цвета, шрифта,\nразмера или высоты строки
+    Buffer --> Transform : Success
+    deactivate Buffer
+end
+
+Transform --> TextField : Трансформированный вывод
+deactivate Transform
+
+TextField -> TextField : Вычисление TextLayoutResult\n(координаты каждой буквы/строки)
+
+TextField -> Overlay : Отрисовка поверх текста
+activate Overlay
+Overlay -> Overlay : Расчет позиции на основе\nTextLayoutResult + SpanInfo.Image
+Overlay -> Overlay : Отображение AsyncImage
+deactivate Overlay
+
+TextField --> User : Визуальный результат на экране
+deactivate TextField
+
+@enduml

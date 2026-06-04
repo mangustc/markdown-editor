@@ -1,0 +1,63 @@
+@startuml
+skinparam style strictuml
+skinparam sequenceMessageAlign center
+
+actor "Пользователь" as User
+participant "AppScaffold:\nUI" as UI
+participant "DrawerActions:\nActions" as DrawerActions
+participant "EditorScreen:\nUI" as EditorUI
+participant "EditorActions:\nActions" as EditorActions
+participant "GetNoteUseCase:\nUseCase" as GetNoteUseCase
+participant "AndroidProjectRepository:\nProjectRepository" as Repo
+participant "FrontMatter:\nDomain" as FM
+participant "ComposeTextState:\nTextState" as TextState
+
+User -> UI : Нажатие на\nзаметку в списке
+activate UI
+
+UI -> DrawerActions : onNoteSelected(\nnote)
+activate DrawerActions
+DrawerActions -> DrawerActions : onEvent(\nNavigationEvent\n.GoToEditor(note))
+DrawerActions --> UI : Success
+deactivate DrawerActions
+
+UI -> UI : navController\n.navigate(\nEditorDestination)
+UI -> EditorUI : Сопоставление маршрута
+activate EditorUI
+
+EditorUI -> EditorActions : onNoteOpened(\nnotePath)
+activate EditorActions
+
+EditorActions -> GetNoteUseCase : invoke(\nproject, notePath)
+activate GetNoteUseCase
+GetNoteUseCase -> Repo : getNote(\nproject, notePath)
+activate Repo
+Repo -> Repo : чтение файла\nс диска
+Repo --> GetNoteUseCase : Note\n(с полным текстом)
+deactivate Repo
+GetNoteUseCase --> EditorActions : Note
+deactivate GetNoteUseCase
+
+EditorActions -> FM : splitFromContent(fullText)
+activate FM
+FM --> EditorActions : Pair(FrontMatter, bodyText)
+deactivate FM
+
+EditorActions -> EditorActions : uiState.update(\nactiveNote,\neditorFrontMatter)
+
+EditorActions -> TextState : edit { replace(0, length, bodyText) }
+activate TextState
+TextState --> EditorActions : Success
+deactivate TextState
+
+EditorActions -> TextState : undoState.clearHistory()
+activate TextState
+TextState --> EditorActions : Success
+deactivate TextState
+
+EditorActions --> EditorUI : Success
+deactivate EditorActions
+
+EditorUI -> EditorUI : Отрисовка текста\nи свойств FM
+
+@enduml

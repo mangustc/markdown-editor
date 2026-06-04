@@ -368,6 +368,7 @@ fun AppScaffold(
                 ) {
                     if (reverseLayout) {
                         projectComponent()
+                        createNoteComponent()
                         HorizontalDivider()
                         Spacer(Modifier.weight(1f))
                         searchComponent()

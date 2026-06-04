@@ -323,7 +323,7 @@ fun AppScaffold(
                                 supportingText = note.tags?.filter { it != FrontMatter.PINNED_TAG }?.let {
                                     if (it.isEmpty()) return@let null
                                     it.joinToString(", ")
-                                } ?: null,
+                                },
                                 isPinned = note.tags?.contains(FrontMatter.PINNED_TAG) == true,
                                 selected = note.projectFile.relativePath == uiState.activeNote?.projectFile?.relativePath,
                                 onClick = { appViewModel.drawer.onNoteSelected(note); focusManager.clearFocus() },

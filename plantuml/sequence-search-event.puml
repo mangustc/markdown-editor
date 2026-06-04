@@ -1,0 +1,42 @@
+@startuml
+skinparam style strictuml
+skinparam sequenceMessageAlign center
+
+actor "Пользователь" as User
+participant "NoteSearchBar:\nUI" as UI
+participant "DrawerActions:\nActions" as Actions
+participant "ApplySearchEventUseCase:\nUseCase" as SearchUseCase
+participant "ComposeTextState:\nState" as TextState
+
+User -> UI : Нажатие кнопки "tag:"
+activate UI
+
+UI -> Actions : onSearchEvent(\nSearchEvent.AppendTag)
+activate Actions
+
+Actions -> SearchUseCase : invoke(\nsearchState, searchEvent)
+activate SearchUseCase
+
+SearchUseCase -> TextState : text\n(получение текущего текста)
+activate TextState
+TextState --> SearchUseCase : CharSequence
+deactivate TextState
+
+SearchUseCase -> SearchUseCase : Расчет префикса\n(добавление пробела, если нужно)
+
+SearchUseCase -> TextState : edit { ... }
+activate TextState
+
+TextState -> TextState : append(prefix + "tag:\"\"")
+TextState -> TextState : placeCursorAfterCharAt(length - 2)
+TextState --> SearchUseCase : Success
+deactivate TextState
+
+SearchUseCase --> Actions : Success
+deactivate SearchUseCase
+
+Actions --> UI : Обновление текста в TextField
+deactivate Actions
+deactivate UI
+
+@enduml

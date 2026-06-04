@@ -1,0 +1,50 @@
+@startuml
+skinparam style strictuml
+skinparam sequenceMessageAlign center
+
+actor "Пользователь" as User
+participant "NoteSearchBar:\nUI" as UI
+participant "ComposeTextState:\nState" as State
+participant "DrawerActions:\nActions" as Actions
+participant "GetNotesUseCase:\nUseCase" as GetNotesUseCase
+participant "AndroidProjectRepository:\nRepository" as Repo
+participant "NoteDao:\nRoom DB" as DB
+
+User -> UI : Ввод символа в поле поиска
+activate UI
+
+UI -> State : Обновление TextFieldState
+activate State
+State --> UI : Обновление TextField
+deactivate State
+
+note over Actions : snapshotFlow обнаруживает\nизменение searchState.text
+
+Actions -> GetNotesUseCase : invoke(project, queryStr)
+activate Actions
+activate GetNotesUseCase
+
+GetNotesUseCase -> GetNotesUseCase : SearchQuery.parse(queryStr)\n(разбор тегов, имен, текста)
+
+GetNotesUseCase -> Repo : getNotesPaged(project, parsedQuery)
+activate Repo
+
+Repo -> Repo : buildSQLiteQuery()\n(генерация SQL с FTS/LIKE)
+
+Repo -> DB : searchNotesPaged(sqlQuery)
+activate DB
+DB --> Repo : Flow<PagingData<NoteEntity>>
+deactivate DB
+
+Repo --> GetNotesUseCase : Flow<PagingData<Note>>
+deactivate Repo
+
+GetNotesUseCase --> Actions : Flow<PagingData<Note>>
+deactivate GetNotesUseCase
+
+Actions --> UI : Эмиссия новых данных\n(collectAsLazyPagingItems)
+deactivate Actions
+
+UI -> UI : Обновление списка в LazyColumn
+
+@enduml

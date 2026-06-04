@@ -1,0 +1,55 @@
+@startuml
+skinparam style strictuml
+skinparam sequenceMessageAlign center
+
+actor "Пользователь" as User
+participant "AppScaffold:\nUI" as UI
+participant "DrawerActions:\nActions" as Actions
+participant "CreateNoteUseCase:\nUseCase" as CreateUseCase
+participant "AndroidProjectRepository:\nRepository" as Repo
+database "Android OS:\nFile System" as OS
+
+User -> UI : Нажатие "Создать заметку"
+activate UI
+UI -> Actions : showCreateNoteDialog()
+activate Actions
+Actions -> Actions : uiState.update(\nisCreateNoteDialogVisible =\ntrue)
+Actions --> UI : Показть диалог\nсоздания заметки
+deactivate Actions
+
+User -> UI : Ввод имени заметки
+UI -> Actions : updateNewNoteName(\nname)
+activate Actions
+Actions -> Actions : uiState.update(\nnewNoteNameInput = name)
+Actions --> UI : Обновление TextField
+deactivate Actions
+
+User -> UI : Нажатие "Создать"
+UI -> Actions : onCreateNote()
+activate Actions
+
+Actions -> CreateUseCase : invoke(project, name, ...)
+activate CreateUseCase
+
+CreateUseCase -> CreateUseCase : Генерация Front Matter\n(createdAt, tags)
+
+CreateUseCase -> Repo : writeFile(project,\npath, bytes, ...)
+activate Repo
+Repo -> OS : Запись в файл
+activate OS
+OS --> Repo : Success
+deactivate OS
+Repo --> CreateUseCase : ProjectFile
+deactivate Repo
+
+CreateUseCase --> Actions : Note
+deactivate CreateUseCase
+
+Actions -> Actions : updateNoteLists()
+Actions -> Actions : onEvent(NavigationEvent.\nGoToEditor(note))
+
+Actions --> UI : Закрытие диалога и\nпереход в редактор
+deactivate Actions
+deactivate UI
+
+@enduml

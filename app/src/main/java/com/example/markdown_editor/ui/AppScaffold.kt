@@ -321,10 +321,11 @@ fun AppScaffold(
                         ) { note ->
                             NoteDrawerItem(
                                 name = note.name,
-                                supportingText = note.tags?.filter { it != FrontMatter.PINNED_TAG }?.let {
-                                    if (it.isEmpty()) return@let null
-                                    it.joinToString(", ")
-                                },
+                                supportingText = note.tags?.filter { it != FrontMatter.PINNED_TAG }
+                                    ?.let {
+                                        if (it.isEmpty()) return@let null
+                                        it.joinToString(", ")
+                                    },
                                 isPinned = note.tags?.contains(FrontMatter.PINNED_TAG) == true,
                                 selected = note.projectFile.relativePath == uiState.activeNote?.projectFile?.relativePath,
                                 onClick = { appViewModel.drawer.onNoteSelected(note); focusManager.clearFocus() },
@@ -338,13 +339,15 @@ fun AppScaffold(
                     } else {
                         Column(
                             verticalArrangement = Arrangement.Center,
-                            modifier = Modifier.fillMaxSize()
+                            modifier = Modifier.fillMaxSize(),
                         ) {
                             Text(
                                 stringResource(R.string.open_a_project_folder_to_see_notes),
                                 style = MaterialTheme.typography.bodyMedium,
                                 textAlign = TextAlign.Center,
-                                modifier = Modifier.fillMaxWidth().padding(16.dp)
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
                             )
                         }
                     }

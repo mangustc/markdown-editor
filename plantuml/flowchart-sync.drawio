@@ -1,0 +1,111 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="Page-1" id="tIMeqtGgK_5knXDMKZOw">
+    <mxGraphModel dx="1246" dy="876" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="Hah66xqBOe5-QVtYjheY-21" edge="1" parent="1" source="Hah66xqBOe5-QVtYjheY-1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="Hah66xqBOe5-QVtYjheY-4" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Hah66xqBOe5-QVtYjheY-1" parent="1" style="strokeWidth=2;html=1;shape=mxgraph.flowchart.start_1;whiteSpace=wrap;" value="Начало" vertex="1">
+          <mxGeometry height="60" width="100" x="70" y="100" as="geometry" />
+        </mxCell>
+        <mxCell id="Hah66xqBOe5-QVtYjheY-22" edge="1" parent="1" source="Hah66xqBOe5-QVtYjheY-4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="Hah66xqBOe5-QVtYjheY-5" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Hah66xqBOe5-QVtYjheY-4" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="Определение корневой папки в облаке" vertex="1">
+          <mxGeometry height="80" width="160" x="40" y="200" as="geometry" />
+        </mxCell>
+        <mxCell id="Hah66xqBOe5-QVtYjheY-23" edge="1" parent="1" source="Hah66xqBOe5-QVtYjheY-5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="Hah66xqBOe5-QVtYjheY-6" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Hah66xqBOe5-QVtYjheY-5" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="Создание локального манифеста: расчет MD5 всех файлов проекта" vertex="1">
+          <mxGeometry height="80" width="160" x="240" y="200" as="geometry" />
+        </mxCell>
+        <mxCell id="Hah66xqBOe5-QVtYjheY-24" edge="1" parent="1" source="Hah66xqBOe5-QVtYjheY-6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="Hah66xqBOe5-QVtYjheY-7" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Hah66xqBOe5-QVtYjheY-6" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="Чтение манифеста последней синхронизации&lt;br&gt;.sync_manifest.json" vertex="1">
+          <mxGeometry height="80" width="160" x="440" y="200" as="geometry" />
+        </mxCell>
+        <mxCell id="Hah66xqBOe5-QVtYjheY-25" edge="1" parent="1" source="Hah66xqBOe5-QVtYjheY-7" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="Hah66xqBOe5-QVtYjheY-8" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Hah66xqBOe5-QVtYjheY-7" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="Загрузка удаленного манифеста из облака" vertex="1">
+          <mxGeometry height="80" width="160" x="640" y="200" as="geometry" />
+        </mxCell>
+        <mxCell id="Hah66xqBOe5-QVtYjheY-26" edge="1" parent="1" source="Hah66xqBOe5-QVtYjheY-8" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="Hah66xqBOe5-QVtYjheY-9" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Hah66xqBOe5-QVtYjheY-27" connectable="0" parent="Hah66xqBOe5-QVtYjheY-26" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" value="Да" vertex="1">
+          <mxGeometry relative="1" x="0.05" y="-1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Hah66xqBOe5-QVtYjheY-8" parent="1" style="strokeWidth=2;html=1;shape=mxgraph.flowchart.decision;whiteSpace=wrap;" value="Есть ли различия?&lt;div&gt;Local == Base == Remote&lt;/div&gt;" vertex="1">
+          <mxGeometry height="160" width="160" x="640" y="360" as="geometry" />
+        </mxCell>
+        <mxCell id="Hah66xqBOe5-QVtYjheY-28" edge="1" parent="1" source="Hah66xqBOe5-QVtYjheY-9" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="Hah66xqBOe5-QVtYjheY-11" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Hah66xqBOe5-QVtYjheY-9" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="Сбор всех уникальных путей файлов из Local, Remote и Base манифестов" vertex="1">
+          <mxGeometry height="80" width="160" x="430" y="400" as="geometry" />
+        </mxCell>
+        <mxCell id="Hah66xqBOe5-QVtYjheY-10" parent="1" style="strokeWidth=2;html=1;shape=mxgraph.flowchart.terminator;whiteSpace=wrap;" value="Конец" vertex="1">
+          <mxGeometry height="60" width="100" x="270" y="920" as="geometry" />
+        </mxCell>
+        <mxCell id="Hah66xqBOe5-QVtYjheY-37" edge="1" parent="1" source="Hah66xqBOe5-QVtYjheY-11" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="Hah66xqBOe5-QVtYjheY-12" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Hah66xqBOe5-QVtYjheY-38" connectable="0" parent="Hah66xqBOe5-QVtYjheY-37" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" value="Нет" vertex="1">
+          <mxGeometry relative="1" x="-0.35" y="-2" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Hah66xqBOe5-QVtYjheY-39" edge="1" parent="1" source="Hah66xqBOe5-QVtYjheY-11" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="Hah66xqBOe5-QVtYjheY-13" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Hah66xqBOe5-QVtYjheY-40" connectable="0" parent="Hah66xqBOe5-QVtYjheY-39" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" value="Да" vertex="1">
+          <mxGeometry relative="1" x="-0.1" y="-4" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Hah66xqBOe5-QVtYjheY-11" parent="1" style="strokeWidth=2;html=1;shape=mxgraph.flowchart.decision;whiteSpace=wrap;" value="Достигло конца списка путей?" vertex="1">
+          <mxGeometry height="160" width="160" x="240" y="360" as="geometry" />
+        </mxCell>
+        <mxCell id="Hah66xqBOe5-QVtYjheY-12" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="Исполнить действие по матрице принятия решений" vertex="1">
+          <mxGeometry height="80" width="160" x="40" y="400" as="geometry" />
+        </mxCell>
+        <mxCell id="Hah66xqBOe5-QVtYjheY-18" edge="1" parent="1" source="Hah66xqBOe5-QVtYjheY-13" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="Hah66xqBOe5-QVtYjheY-14" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Hah66xqBOe5-QVtYjheY-13" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="Создание итогового манифеста файлов проекта" vertex="1">
+          <mxGeometry height="80" width="160" x="240" y="560" as="geometry" />
+        </mxCell>
+        <mxCell id="Hah66xqBOe5-QVtYjheY-19" edge="1" parent="1" source="Hah66xqBOe5-QVtYjheY-14" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="Hah66xqBOe5-QVtYjheY-15" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Hah66xqBOe5-QVtYjheY-14" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="Обновление локального манифеста" vertex="1">
+          <mxGeometry height="80" width="160" x="240" y="680" as="geometry" />
+        </mxCell>
+        <mxCell id="Hah66xqBOe5-QVtYjheY-20" edge="1" parent="1" source="Hah66xqBOe5-QVtYjheY-15" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="Hah66xqBOe5-QVtYjheY-10" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Hah66xqBOe5-QVtYjheY-15" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="Загрузка нового манифеста в облако" vertex="1">
+          <mxGeometry height="80" width="160" x="240" y="800" as="geometry" />
+        </mxCell>
+        <mxCell id="Hah66xqBOe5-QVtYjheY-36" edge="1" parent="1" source="Hah66xqBOe5-QVtYjheY-12" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;exitX=0.5;exitY=0;exitDx=0;exitDy=0;" target="Hah66xqBOe5-QVtYjheY-11">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Hah66xqBOe5-QVtYjheY-41" edge="1" parent="1" source="Hah66xqBOe5-QVtYjheY-8" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=1;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;" target="Hah66xqBOe5-QVtYjheY-10">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Hah66xqBOe5-QVtYjheY-43" connectable="0" parent="Hah66xqBOe5-QVtYjheY-41" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" value="Нет" vertex="1">
+          <mxGeometry relative="1" x="-0.8872" y="4" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

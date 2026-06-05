@@ -71,10 +71,10 @@ class SyncProjectUseCase(
         }
 
         actions.forEach { action ->
-            val remotePath = remoteRoot.appendRelativePath(actionPath(action))
+            val remotePath = remoteRoot.appendRelativePath(action.relativePath)
             when (action) {
                 is SyncFileAction.Upload, is SyncFileAction.ConflictUpload -> {
-                    val bytes = projectRepository.readFile(project, actionPath(action))
+                    val bytes = projectRepository.readFile(project, action.relativePath)
                     syncRepository.uploadFile(remotePath, bytes)
                 }
 
@@ -83,7 +83,7 @@ class SyncProjectUseCase(
                         ?: throw SyncStateException()
                     projectRepository.writeFile(
                         project = project,
-                        relativePath = actionPath(action),
+                        relativePath = action.relativePath,
                         byteArray = bytes,
                         fileExistsStrategy = ProjectRepository.FileExistsStrategy.OVERWRITE,
                     )
@@ -91,7 +91,7 @@ class SyncProjectUseCase(
 
                 is SyncFileAction.DeleteLocal -> projectRepository.deleteFile(
                     project = project,
-                    relativePath = actionPath(action),
+                    relativePath = action.relativePath,
                 )
 
                 is SyncFileAction.DeleteRemote -> syncRepository.deleteFile(remotePath)
@@ -151,14 +151,5 @@ class SyncProjectUseCase(
     private fun md5(bytes: ByteArray): String {
         val digest = MessageDigest.getInstance("MD5").digest(bytes)
         return digest.joinToString("") { "%02x".format(it) }
-    }
-
-    private fun actionPath(action: SyncFileAction): RelativePath = when (action) {
-        is SyncFileAction.Upload -> action.relativePath
-        is SyncFileAction.Download -> action.relativePath
-        is SyncFileAction.DeleteLocal -> action.relativePath
-        is SyncFileAction.DeleteRemote -> action.relativePath
-        is SyncFileAction.ConflictUpload -> action.relativePath
-        is SyncFileAction.NoOp -> action.relativePath
     }
 }

@@ -2,11 +2,13 @@ package com.example.markdown_editor.domain.usecases.sync
 
 import com.example.markdown_editor.domain.models.RelativePath
 
-sealed class SyncFileAction {
-    data class Upload(val relativePath: RelativePath) : SyncFileAction()
-    data class Download(val relativePath: RelativePath) : SyncFileAction()
-    data class DeleteLocal(val relativePath: RelativePath) : SyncFileAction()
-    data class DeleteRemote(val relativePath: RelativePath) : SyncFileAction()
-    data class ConflictUpload(val relativePath: RelativePath) : SyncFileAction()
-    data class NoOp(val relativePath: RelativePath) : SyncFileAction()
+sealed interface SyncFileAction {
+    val relativePath: RelativePath
+
+    data class Upload(override val relativePath: RelativePath) : SyncFileAction
+    data class Download(override val relativePath: RelativePath) : SyncFileAction
+    data class DeleteLocal(override val relativePath: RelativePath) : SyncFileAction
+    data class DeleteRemote(override val relativePath: RelativePath) : SyncFileAction
+    data class ConflictUpload(override val relativePath: RelativePath) : SyncFileAction
+    data class NoOp(override val relativePath: RelativePath) : SyncFileAction
 }

@@ -1,0 +1,78 @@
+@startuml
+skinparam style strictuml
+skinparam sequenceMessageAlign center
+
+actor "Пользователь" as User
+participant "EditorScreen:\nUI" as UI
+participant "EditorActions:\nEditorActions" as Actions
+participant "ApplyEditorEventUseCase:\nUseCase" as ApplyUseCase
+participant "CopyToAssetsUseCase:\nUseCase" as AssetUseCase
+participant "AndroidProjectRepository:\nProjectRepository" as Repo
+participant "ComposeTextState:\nTextState" as State
+database "Android OS:\nFile System" as OS
+
+User -> UI : Активация\nинструмента
+activate UI
+
+UI -> Actions : onEvent(EditorEvent)
+activate Actions
+
+Actions -> ApplyUseCase : invoke(\nproject, state, event)
+activate ApplyUseCase
+
+alt Событие форматирования (Bold, Italic, Code)
+    ApplyUseCase -> State : edit { ... }
+    activate State
+    State -> State : Вставка маркеров\nразметки\n(напр. ****)
+    State --> ApplyUseCase : Success
+    deactivate State
+
+else Событие прикрепления файла (AttachPhoto, AttachFile)
+    ApplyUseCase -> AssetUseCase : invoke(project, assetPath)
+    activate AssetUseCase
+
+    AssetUseCase -> Repo : copyFromFileSystem(\nproject, fromPath, toDir)
+    activate Repo
+    Repo -> OS : Копирование файла в\nпапку assets проекта
+    activate OS
+    OS --> Repo : Success
+    deactivate OS
+    Repo --> AssetUseCase : ProjectFile (relativePath)
+    deactivate Repo
+
+    AssetUseCase --> ApplyUseCase : ProjectFile
+    deactivate AssetUseCase
+
+    ApplyUseCase -> State : insertLink(label, payload, ...)
+    activate State
+    State -> State : Вставка ссылки в текст\n(напр. [file](<path>))
+    State --> ApplyUseCase : Success
+    deactivate State
+
+else Событие прикрепления заметки (AttachNoteLink)
+
+    ApplyUseCase -> State : insertLink(label, payload, ...)
+    activate State
+    State -> State : Вставка ссылки в текст\n(напр. [file](<path>))
+    State --> ApplyUseCase : Success
+    deactivate State
+
+
+else Событие истории (Undo, Redo)
+    ApplyUseCase -> State : undoState.undo() / redo()
+    activate State
+    State -> State : Отмена/повтор\nизменения
+    State --> ApplyUseCase : Success
+    deactivate State
+end
+
+ApplyUseCase --> Actions : Success
+deactivate ApplyUseCase
+
+Actions --> UI : Обновление\nсостояния
+deactivate Actions
+
+UI --> User : Изменение\nтекста
+deactivate UI
+
+@enduml

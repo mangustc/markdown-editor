@@ -95,7 +95,7 @@
     <string name="synchronization">Синхронизация</string>
     <string name="settings">Параметры</string>
     <string name="general">Основное</string>
-    <string name="reverse_drawer_layout">Обратное расположение элементов панели управления</string>
+    <string name="reverse_drawer_layout">Расположение поиска снизу</string>
     <string name="provider">Сервис</string>
     <string name="get_oauth_token">Получить OAuth токен</string>
     <string name="open_link">Открыть ссылку</string>

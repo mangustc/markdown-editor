@@ -97,8 +97,8 @@
     <string name="general">Основное</string>
     <string name="reverse_drawer_layout">Обратное расположение элементов панели управления</string>
     <string name="provider">Сервис</string>
-    <string name="get_oauth_token">Получить Oauth токен</string>
+    <string name="get_oauth_token">Получить OAuth токен</string>
     <string name="open_link">Открыть ссылку</string>
-    <string name="oauth_token">Oauth токен</string>
+    <string name="oauth_token">OAuth токен</string>
     <string name="none_sync">Не выбран</string>
 </resources>

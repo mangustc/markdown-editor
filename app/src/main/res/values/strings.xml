@@ -96,8 +96,8 @@
     <string name="general">General</string>
     <string name="reverse_drawer_layout">Reverse drawer layout</string>
     <string name="provider">Provider</string>
-    <string name="get_oauth_token">Get Oauth Token</string>
+    <string name="get_oauth_token">Get OAuth Token</string>
     <string name="open_link">Open link</string>
-    <string name="oauth_token">Oauth Token</string>
+    <string name="oauth_token">OAuth Token</string>
     <string name="none_sync">None</string>
 </resources>

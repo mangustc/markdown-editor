@@ -17,12 +17,14 @@ data class GetNotesInput(
 class GetNotesUseCase(
     private val projectRepository: ProjectRepository,
 ) : FlowUseCase<GetNotesInput, PagingData<Note>> {
-    override fun invoke(input: GetNotesInput): Flow<PagingData<Note>> {
-        val parsedInit = SearchQuery.parse(input.searchQueryString.trim())
-        val parsed = parsedInit.copy(
-            negatedTagFilters = parsedInit.negatedTagFilters + FrontMatter.QUICK_NOTE_TAG,
-            pinnedFirst = true,
+    override fun invoke(input: GetNotesInput): Flow<PagingData<Note>> =
+        projectRepository.getNotesPaged(
+            project = input.project,
+            query = SearchQuery.parse(input.searchQueryString.trim()).let {
+                it.copy(
+                    negatedTagFilters = it.negatedTagFilters + FrontMatter.QUICK_NOTE_TAG,
+                    pinnedFirst = true,
+                )
+            },
         )
-        return projectRepository.getNotesPaged(input.project, parsed)
-    }
 }

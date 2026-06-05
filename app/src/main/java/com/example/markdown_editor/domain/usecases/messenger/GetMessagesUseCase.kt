@@ -4,7 +4,6 @@ import androidx.paging.PagingData
 import androidx.paging.map
 import com.example.markdown_editor.domain.models.FrontMatter
 import com.example.markdown_editor.domain.models.MessageBody
-import com.example.markdown_editor.domain.models.Note
 import com.example.markdown_editor.domain.models.Project
 import com.example.markdown_editor.domain.models.SearchQuery
 import com.example.markdown_editor.domain.repositories.ProjectRepository
@@ -22,8 +21,8 @@ class GetMessagesUseCase(
     private val projectRepository: ProjectRepository,
     private val getProjectFileUseCase: GetProjectFileUseCase,
 ) : FlowUseCase<GetMessagesInput, PagingData<MessageBody>> {
-    override fun invoke(input: GetMessagesInput): Flow<PagingData<MessageBody>> {
-        val notesFlow: Flow<PagingData<Note>> = projectRepository.getNotesPaged(
+    override fun invoke(input: GetMessagesInput): Flow<PagingData<MessageBody>> =
+        projectRepository.getNotesPaged(
             input.project,
             SearchQuery(
                 tagFilters = listOf(FrontMatter.QUICK_NOTE_TAG),
@@ -31,9 +30,7 @@ class GetMessagesUseCase(
             ),
             includeText = true,
             includeFrontMatter = false,
-        )
-
-        val mappedFlow: Flow<PagingData<MessageBody>> = notesFlow.map { pagingData ->
+        ).map { pagingData ->
             pagingData.map { note ->
                 note.toMessageBody {
                     getProjectFileUseCase(
@@ -45,7 +42,4 @@ class GetMessagesUseCase(
                 }
             }
         }
-
-        return mappedFlow
-    }
 }

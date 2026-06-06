@@ -1,6 +1,6 @@
 package com.example.markdown_editor.domain.models
 
-import java.time.Instant
+import kotlin.time.Instant
 
 data class FrontMatter(
     val fields: Map<String, FrontMatterValue> = emptyMap(),
@@ -20,7 +20,7 @@ data class FrontMatter(
 
     fun toCreatedAtMillis(): Long? = createdAt?.let { value ->
         try {
-            Instant.parse(value).toEpochMilli()
+            Instant.parse(value).epochSeconds
         } catch (e: Exception) {
             null
         }

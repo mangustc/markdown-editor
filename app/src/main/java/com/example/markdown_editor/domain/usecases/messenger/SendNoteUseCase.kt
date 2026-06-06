@@ -12,9 +12,12 @@ import com.example.markdown_editor.domain.usecases.notes.SaveNoteTextInput
 import com.example.markdown_editor.domain.usecases.notes.SaveNoteTextUseCase
 import com.example.markdown_editor.domain.usecases.project.CopyToAssetsInput
 import com.example.markdown_editor.domain.usecases.project.CopyToAssetsUseCase
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.format.Padding
+import kotlinx.datetime.format.char
+import kotlinx.datetime.toLocalDateTime
+import kotlin.time.Clock
 
 data class SendNoteInput(
     val project: Project,
@@ -34,10 +37,17 @@ class SendNoteUseCase(
         val targetNote = if (isEditedNote) {
             input.editNote
         } else {
-            val timestamp = DateTimeFormatter
-                .ofPattern("yyyyMMdd_HHmmss")
-                .withZone(ZoneId.systemDefault())
-                .format(Instant.now())
+            val localDateTime = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
+            val customFormat = LocalDateTime.Format {
+                year()
+                monthNumber(Padding.ZERO)
+                day(padding = Padding.ZERO)
+                char('_')
+                hour(Padding.ZERO)
+                minute(Padding.ZERO)
+                second(Padding.ZERO)
+            }
+            val timestamp = customFormat.format(localDateTime)
             val name = "fleeting-$timestamp"
             val tags = listOf(FrontMatter.QUICK_NOTE_TAG)
             createNoteUseCase(

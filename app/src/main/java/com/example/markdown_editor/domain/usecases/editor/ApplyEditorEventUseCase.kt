@@ -26,7 +26,7 @@ class ApplyEditorEventUseCase(
                     copyToAssetsUseCase(
                         CopyToAssetsInput(
                             project = project,
-                            assetPath = FileSystemPath(event.uri.toString()),
+                            assetPath = event.path,
                         ),
                     )
                 state.insertLink(
@@ -41,7 +41,7 @@ class ApplyEditorEventUseCase(
                     copyToAssetsUseCase(
                         CopyToAssetsInput(
                             project = project,
-                            assetPath = FileSystemPath(event.uri.toString()),
+                            assetPath = event.path,
                         ),
                     )
                 state.insertLink(

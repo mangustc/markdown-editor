@@ -1,12 +1,12 @@
 package com.example.markdown_editor.domain.usecases.editor
 
-import android.net.Uri
+import com.example.markdown_editor.domain.models.FileSystemPath
 import com.example.markdown_editor.domain.models.Note
 
 sealed interface EditorEvent {
-    data class AttachPhoto(val uri: Uri) : EditorEvent
+    data class AttachPhoto(val path: FileSystemPath) : EditorEvent
     data class AttachFile(
-        val uri: Uri,
+        val path: FileSystemPath,
         val displayName: String? = null,
     ) : EditorEvent
 

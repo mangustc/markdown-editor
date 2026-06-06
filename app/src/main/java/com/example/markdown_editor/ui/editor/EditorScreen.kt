@@ -108,6 +108,7 @@ import androidx.paging.compose.collectAsLazyPagingItems
 import coil3.compose.AsyncImage
 import com.example.markdown_editor.R
 import com.example.markdown_editor.domain.markdown.MarkdownParser
+import com.example.markdown_editor.domain.models.FileSystemPath
 import com.example.markdown_editor.domain.models.FrontMatter
 import com.example.markdown_editor.domain.models.Project
 import com.example.markdown_editor.domain.models.RelativePath
@@ -182,7 +183,7 @@ fun EditorScreen(
         contract = ActivityResultContracts.PickVisualMedia(),
     ) { uri ->
         if (uri != null) {
-            viewModel.editor.onEvent(EditorEvent.AttachPhoto(uri = uri))
+            viewModel.editor.onEvent(EditorEvent.AttachPhoto(path = FileSystemPath(uri.toString())))
         }
     }
 
@@ -190,7 +191,7 @@ fun EditorScreen(
         contract = ActivityResultContracts.OpenDocument(),
     ) { uri ->
         if (uri != null) {
-            viewModel.editor.onEvent(EditorEvent.AttachFile(uri = uri))
+            viewModel.editor.onEvent(EditorEvent.AttachFile(path = FileSystemPath(uri.toString())))
         }
     }
 

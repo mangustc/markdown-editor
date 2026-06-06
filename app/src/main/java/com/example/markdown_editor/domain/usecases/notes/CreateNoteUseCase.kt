@@ -42,7 +42,7 @@ class CreateNoteUseCase(
                 includeText = input.includeText,
                 includeFrontMatter = input.includeFrontMatter,
             ),
-        ) ?: throw Exception("could not get created file")
+        )
 
         return note
     }

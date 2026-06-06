@@ -78,7 +78,7 @@ data class FrontMatter(
 
     companion object {
         const val PINNED_TAG = "pinned"
-        const val QUICK_NOTE_TAG = "quick-note"
+        const val QUICK_NOTE_TAG = "fleeting"
 
         const val TAGS_FIELD = "tags"
         const val CREATED_AT_FIELD = "createdAt"

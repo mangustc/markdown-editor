@@ -38,7 +38,7 @@ class SendNoteUseCase(
                 .ofPattern("yyyyMMdd_HHmmss")
                 .withZone(ZoneId.systemDefault())
                 .format(Instant.now())
-            val name = "quick-note-$timestamp"
+            val name = "fleeting-$timestamp"
             val tags = listOf(FrontMatter.QUICK_NOTE_TAG)
             createNoteUseCase(
                 CreateNoteInput(

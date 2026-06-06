@@ -21,7 +21,7 @@ rectangle "Android-приложение для ведения заметок" {
     (Скопировать выбранные заметки) as bulkActionCopy
 
     (Искать заметки) as searchNotes
-    (Фильтровать по тегам) as searchTags
+    (Фильтровать по меткам) as searchTags
     (Фильтровать по названию) as searchName
     (Фильтровать по ключевым словам) as searchKeyword
 

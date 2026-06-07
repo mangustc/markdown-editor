@@ -133,6 +133,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
 import coil3.ImageLoader
+import coil3.annotation.ExperimentalCoilApi
 import coil3.compose.AsyncImage
 import coil3.network.ktor3.KtorNetworkFetcherFactory
 import com.example.markdown_editor.R
@@ -1395,7 +1396,7 @@ private fun ZoomableImage(uri: Uri, onTap: () -> Unit) {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalCoilApi::class)
 @Composable
 private fun LinkPreviewCarousel(previews: List<LinkPreview>) {
     val state = rememberCarouselState { previews.size }

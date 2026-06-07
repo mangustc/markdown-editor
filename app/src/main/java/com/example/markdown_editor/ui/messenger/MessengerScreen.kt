@@ -134,7 +134,7 @@ import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
 import coil3.ImageLoader
 import coil3.compose.AsyncImage
-import coil3.network.okhttp.OkHttpNetworkFetcherFactory
+import coil3.network.ktor3.KtorNetworkFetcherFactory
 import com.example.markdown_editor.R
 import com.example.markdown_editor.domain.markdown.MarkdownParser
 import com.example.markdown_editor.domain.models.Attachment
@@ -149,9 +149,10 @@ import com.example.markdown_editor.ui.components.TooltipIconButton
 import com.example.markdown_editor.ui.util.scrollbar
 import com.example.markdown_editor.ui.viewmodel.AppViewModel
 import com.example.markdown_editor.ui.viewmodel.events.NotificationEvent
+import io.ktor.client.HttpClient
+import io.ktor.client.plugins.defaultRequest
+import io.ktor.client.request.header
 import kotlinx.coroutines.launch
-import okhttp3.Interceptor
-import okhttp3.OkHttpClient
 import java.net.URL
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -1424,35 +1425,27 @@ private fun LinkPreviewCarousel(previews: List<LinkPreview>) {
                 Column {
                     if (!preview.imageUrl.isNullOrBlank()) {
                         val context = LocalContext.current
-                        val browserImageLoader = remember {
+                        val browserImageLoader = remember(preview.url) {
                             ImageLoader.Builder(context)
                                 .components {
                                     add(
-                                        OkHttpNetworkFetcherFactory(
-                                            callFactory = {
-                                                OkHttpClient.Builder()
-                                                    .addInterceptor(
-                                                        Interceptor { chain ->
-                                                            chain.proceed(
-                                                                chain.request().newBuilder()
-                                                                    .header(
-                                                                        "User-Agent",
-                                                                        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-                                                                    )
-                                                                    .header(
-                                                                        "Accept",
-                                                                        "image/webp,image/apng,image/*,*/*;q=0.8",
-                                                                    )
-                                                                    .header(
-                                                                        "Accept-Language",
-                                                                        "en-US,en;q=0.9",
-                                                                    )
-                                                                    .header("Referer", preview.url)
-                                                                    .build(),
-                                                            )
-                                                        },
+                                        KtorNetworkFetcherFactory(
+                                            httpClient = HttpClient {
+                                                defaultRequest {
+                                                    header(
+                                                        "User-Agent",
+                                                        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
                                                     )
-                                                    .build()
+                                                    header(
+                                                        "Accept",
+                                                        "image/webp,image/apng,image/*,*/*;q=0.8",
+                                                    )
+                                                    header(
+                                                        "Accept-Language",
+                                                        "en-US,en;q=0.9",
+                                                    )
+                                                    header("Referer", preview.url)
+                                                }
                                             },
                                         ),
                                     )

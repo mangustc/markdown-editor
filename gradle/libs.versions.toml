@@ -22,7 +22,6 @@ uiText = "1.11.2"
 jetbrainsSerialization = "2.3.21"
 kotlinxSerializationJson = "1.11.0"
 commonmark = "0.28.0"
-okhttp = "5.3.2"
 koin = "4.2.1"
 koin-plugin = "1.0.0"
 kotlinxDatetime = "0.8.0"
@@ -56,13 +55,12 @@ androidx-room-compiler = { group = "androidx.room", name = "room-compiler", vers
 androidx-paging-runtime = { group = "androidx.paging", name = "paging-runtime", version.ref = "paging" }
 androidx-paging-compose = { group = "androidx.paging", name = "paging-compose", version.ref = "paging" }
 coil-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coilCompose" }
-coil-network-okhttp = { group = "io.coil-kt.coil3", name = "coil-network-okhttp", version.ref = "coilCompose" }
+coil-network-ktor3 = { group = "io.coil-kt.coil3", name = "coil-network-ktor3", version.ref = "coilCompose" }
 androidx-compose-ui-unit = { group = "androidx.compose.ui", name = "ui-unit", version.ref = "uiUnit" }
 androidx-material3 = { group = "androidx.compose.material3", name = "material3", version.ref = "material3" }
 androidx-compose-ui-text = { group = "androidx.compose.ui", name = "ui-text", version.ref = "uiText" }
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerializationJson" }
 commonmark = { group = "org.commonmark", name = "commonmark", version.ref = "commonmark" }
-okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
 koin-core = { module = "io.insert-koin:koin-core", version.ref = "koin" }
 koin-annotations = { module = "io.insert-koin:koin-annotations", version.ref = "koin" }
 koin-android = { module = "io.insert-koin:koin-android", version.ref = "koin" }

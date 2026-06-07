@@ -88,4 +88,6 @@ dependencies {
     implementation(libs.ktor.client.content.negotiation)
     implementation(libs.ktor.serialization.kotlinx.json)
     implementation(libs.multiplatform.settings)
+    implementation(libs.cryptography.core)
+    implementation(libs.cryptography.provider.optimal)
 }

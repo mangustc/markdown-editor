@@ -8,10 +8,12 @@ import com.example.markdown_editor.domain.models.Settings
 import com.example.markdown_editor.domain.repositories.ProjectRepository
 import com.example.markdown_editor.domain.repositories.SyncRepository
 import com.example.markdown_editor.domain.usecases.UseCase
+import dev.whyoleg.cryptography.CryptographyProvider
+import dev.whyoleg.cryptography.DelicateCryptographyApi
+import dev.whyoleg.cryptography.algorithms.MD5
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
-import java.security.MessageDigest
 
 data class SyncProjectInput(
     val project: Project,
@@ -22,6 +24,8 @@ class SyncProjectUseCase(
     private val projectRepository: ProjectRepository,
     private val syncRepositoryFactory: SyncRepositoryFactory,
 ) : UseCase<SyncProjectInput, Unit> {
+    @OptIn(DelicateCryptographyApi::class)
+    private val md5Provider = CryptographyProvider.Default.get(MD5).hasher()
     private val json = Json { ignoreUnknownKeys = true; prettyPrint = true }
 
     override suspend fun invoke(input: SyncProjectInput) {
@@ -148,8 +152,7 @@ class SyncProjectUseCase(
         }.toMap()
     }
 
-    private fun md5(bytes: ByteArray): String {
-        val digest = MessageDigest.getInstance("MD5").digest(bytes)
-        return digest.joinToString("") { "%02x".format(it) }
+    private suspend fun md5(bytes: ByteArray): String {
+        return md5Provider.hash(bytes).joinToString("") { "%02x".format(it) }
     }
 }

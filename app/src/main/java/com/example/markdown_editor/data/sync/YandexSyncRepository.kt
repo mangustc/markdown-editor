@@ -6,21 +6,29 @@ import com.example.markdown_editor.domain.exceptions.SyncQuotaException
 import com.example.markdown_editor.domain.exceptions.SyncServerException
 import com.example.markdown_editor.domain.models.RelativePath
 import com.example.markdown_editor.domain.repositories.SyncRepository
+import io.ktor.client.HttpClient
+import io.ktor.client.request.delete
+import io.ktor.client.request.get
+import io.ktor.client.request.header
+import io.ktor.client.request.put
+import io.ktor.client.request.setBody
+import io.ktor.client.statement.HttpResponse
+import io.ktor.client.statement.bodyAsText
+import io.ktor.client.statement.readRawBytes
+import io.ktor.client.utils.EmptyContent
+import io.ktor.http.ContentType
+import io.ktor.http.contentType
+import io.ktor.http.isSuccess
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.RequestBody
-import okhttp3.RequestBody.Companion.toRequestBody
-import okhttp3.Response
 import java.io.IOException
 import java.net.URLEncoder
 
 class YandexSyncRepository(
     private val oauthToken: String,
+    private val client: HttpClient,
 ) : SyncRepository {
 
     override val name: String = "Yandex Disk"
@@ -29,25 +37,19 @@ class YandexSyncRepository(
     private val baseApi = "https://cloud-api.yandex.net/v1/disk"
     private val appFolder = "app:"
 
-    private val client = OkHttpClient()
-
     override suspend fun downloadFile(path: RelativePath): ByteArray? =
         withContext(Dispatchers.IO) {
             runNetwork {
                 val encodedPath = encode("$appFolder/$path")
                 val downloadUrl = getDownloadUrl(encodedPath) ?: return@runNetwork null
 
-                val request = Request.Builder()
-                    .url(downloadUrl)
-                    .header("Authorization", "OAuth $oauthToken")
-                    .get()
-                    .build()
-
-                client.newCall(request).execute().use { response ->
-                    if (response.code == 404) return@runNetwork null
-                    checkError(response)
-                    response.body.bytes()
+                val response = client.get(downloadUrl) {
+                    header("Authorization", "OAuth $oauthToken")
                 }
+
+                if (response.status.value == 404) return@runNetwork null
+                checkError(response)
+                response.readRawBytes()
             }
         }
 
@@ -61,94 +63,77 @@ class YandexSyncRepository(
             }
         }
 
-    private fun tryUploadFile(path: RelativePath, bytes: ByteArray) = runNetwork {
+    private suspend fun tryUploadFile(path: RelativePath, bytes: ByteArray) = runNetwork {
         val encodedPath = encode("$appFolder/$path")
         val uploadUrl = getUploadUrl(encodedPath)
 
-        val requestBody = bytes.toRequestBody("application/octet-stream".toMediaType())
-        val request = Request.Builder()
-            .url(uploadUrl)
-            .put(requestBody)
-            .build()
+        val response = client.put(uploadUrl) {
+            contentType(ContentType.Application.OctetStream)
+            setBody(bytes)
+        }
 
-        client.newCall(request).execute().use { response ->
-            if (response.code != 201 && response.code != 202) {
-                checkError(response)
-                throw SyncServerException()
-            }
+        if (response.status.value != 201 && response.status.value != 202) {
+            checkError(response)
+            throw SyncServerException()
         }
     }
 
     override suspend fun deleteFile(path: RelativePath) = withContext(Dispatchers.IO) {
         runNetwork {
             val encodedPath = encode("$appFolder/$path")
-            val request = Request.Builder()
-                .url("$baseApi/resources?path=$encodedPath&permanently=true")
-                .header("Authorization", "OAuth $oauthToken")
-                .delete()
-                .build()
+            val response = client.delete("$baseApi/resources?path=$encodedPath&permanently=true") {
+                header("Authorization", "OAuth $oauthToken")
+            }
 
-            client.newCall(request).execute().use { response ->
-                if (!response.isSuccessful && response.code != 404) {
-                    checkError(response)
-                }
+            if (!response.status.isSuccess() && response.status.value != 404) {
+                checkError(response)
             }
         }
     }
 
-    private fun getDownloadUrl(encodedPath: String): String? {
-        val request = Request.Builder()
-            .url("$baseApi/resources/download?path=$encodedPath")
-            .header("Authorization", "OAuth $oauthToken")
-            .get()
-            .build()
-
-        client.newCall(request).execute().use { response ->
-            if (response.code == 404) return null
-            checkError(response)
-            val body = response.body.string()
-            return json.decodeFromString<YaDiskHref>(body).href
+    private suspend fun getDownloadUrl(encodedPath: String): String? {
+        val response = client.get("$baseApi/resources/download?path=$encodedPath") {
+            header("Authorization", "OAuth $oauthToken")
         }
+
+        if (response.status.value == 404) return null
+        checkError(response)
+        val body = response.bodyAsText()
+        return json.decodeFromString<YaDiskHref>(body).href
     }
 
-    private fun getUploadUrl(encodedPath: String): String {
-        val request = Request.Builder()
-            .url("$baseApi/resources/upload?path=$encodedPath&overwrite=true")
-            .header("Authorization", "OAuth $oauthToken")
-            .get()
-            .build()
-
-        client.newCall(request).execute().use { response ->
-            checkError(response)
-            val body = response.body.string()
-            return json.decodeFromString<YaDiskHref>(body).href
+    private suspend fun getUploadUrl(encodedPath: String): String {
+        val response = client.get("$baseApi/resources/upload?path=$encodedPath&overwrite=true") {
+            header("Authorization", "OAuth $oauthToken")
         }
+
+        checkError(response)
+        val body = response.bodyAsText()
+        return json.decodeFromString<YaDiskHref>(body).href
     }
 
-    private fun ensureDirectories(relativePath: RelativePath) {
+    private suspend fun ensureDirectories(relativePath: RelativePath) {
         val parts = relativePath.dirRelativePath.splitParts()
         var current = appFolder
         parts.forEach { segment ->
             current += "/$segment"
             val encoded = encode(current)
-            val request = Request.Builder()
-                .url("$baseApi/resources?path=$encoded")
-                .header("Authorization", "OAuth $oauthToken")
-                .put(RequestBody.EMPTY)
-                .build()
 
-            client.newCall(request).execute().use { response ->
-                if (response.code !in listOf(201, 409)) {
-                    checkError(response)
-                    throw SyncServerException()
-                }
+            val response = client.put("$baseApi/resources?path=$encoded") {
+                header("Authorization", "OAuth $oauthToken")
+                setBody(EmptyContent)
+            }
+
+            if (response.status.value !in listOf(201, 409)) {
+                checkError(response)
+                throw SyncServerException()
             }
         }
     }
 
     private fun encode(s: String) = URLEncoder.encode(s, "UTF-8")
 
-    private inline fun <T> runNetwork(block: () -> T): T {
+    private suspend inline fun <T> runNetwork(crossinline block: suspend () -> T): T {
         return try {
             block()
         } catch (_: IOException) {
@@ -156,9 +141,9 @@ class YandexSyncRepository(
         }
     }
 
-    private fun checkError(response: Response) {
-        if (response.isSuccessful) return
-        when (response.code) {
+    private fun checkError(response: HttpResponse) {
+        if (response.status.isSuccess()) return
+        when (response.status.value) {
             401, 403 -> throw SyncAuthException()
             413, 507 -> throw SyncQuotaException()
             in 500..599 -> throw SyncServerException()

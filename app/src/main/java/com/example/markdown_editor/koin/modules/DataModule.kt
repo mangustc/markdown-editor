@@ -13,6 +13,11 @@ import com.example.markdown_editor.data.sync.SyncRepositoryFactory
 import com.example.markdown_editor.domain.repositories.LinkPreviewRepository
 import com.example.markdown_editor.domain.repositories.ProjectRepository
 import com.example.markdown_editor.domain.repositories.SettingsRepository
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.android.Android
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.serialization.kotlinx.json.json
+import kotlinx.serialization.json.Json
 import org.koin.dsl.bind
 import org.koin.dsl.module
 import org.koin.plugin.module.dsl.create
@@ -33,11 +38,23 @@ fun provideNoteDao(db: NoteDb): NoteDao = db.noteDao()
 
 fun provideLinkPreviewDao(db: NoteDb): LinkPreviewDao = db.linkPreviewDao()
 
+fun provideHttpClient(): HttpClient = HttpClient(Android) {
+    install(ContentNegotiation) {
+        json(
+            Json {
+                ignoreUnknownKeys = true
+                prettyPrint = false
+            },
+        )
+    }
+}
+
 val dataModule = module {
     single { create(::provideNoteDb) }
     single { create(::provideProjectDao) }
     single { create(::provideNoteDao) }
     single { create(::provideLinkPreviewDao) }
+    single { create(::provideHttpClient) }
 
     single<AndroidProjectRepository>() bind ProjectRepository::class
     single<AndroidSettingsRepository>() bind SettingsRepository::class

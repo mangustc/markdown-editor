@@ -1,7 +1,6 @@
 package com.example.markdown_editor.ui.viewmodel
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.markdown_editor.domain.models.Attachment
 import com.example.markdown_editor.domain.usecases.project.GetAllTagsInput
@@ -29,10 +28,9 @@ import kotlinx.coroutines.flow.update
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class AppViewModel(
-    application: Application,
     private val syncDatabaseUseCase: SyncDatabaseUseCase,
     private val getAllTagsUseCase: GetAllTagsUseCase,
-) : AndroidViewModel(application), AppGlobalActions {
+) : ViewModel(), AppGlobalActions {
     private val _uiState = MutableStateFlow(AppUiState())
     val uiState: StateFlow<AppUiState> = _uiState.asStateFlow()
 

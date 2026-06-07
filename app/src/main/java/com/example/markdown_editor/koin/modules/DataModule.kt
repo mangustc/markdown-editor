@@ -7,12 +7,16 @@ import com.example.markdown_editor.data.database.NoteDao
 import com.example.markdown_editor.data.database.NoteDb
 import com.example.markdown_editor.data.database.ProjectDao
 import com.example.markdown_editor.data.linkPreview.CommonLinkPreviewRepository
+import com.example.markdown_editor.data.project.AndroidPlatformPathHandler
 import com.example.markdown_editor.data.project.AndroidProjectRepository
-import com.example.markdown_editor.data.project.AndroidSettingsRepository
+import com.example.markdown_editor.data.project.CommonSettingsRepository
 import com.example.markdown_editor.data.sync.SyncRepositoryFactory
 import com.example.markdown_editor.domain.repositories.LinkPreviewRepository
+import com.example.markdown_editor.domain.repositories.PlatformPathHandler
 import com.example.markdown_editor.domain.repositories.ProjectRepository
 import com.example.markdown_editor.domain.repositories.SettingsRepository
+import com.russhwolf.settings.Settings
+import com.russhwolf.settings.SharedPreferencesSettings
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.android.Android
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
@@ -49,15 +53,22 @@ fun provideHttpClient(): HttpClient = HttpClient(Android) {
     }
 }
 
+fun provideFactory(context: Context): Settings.Factory = SharedPreferencesSettings.Factory(context)
+
+fun providePlatformPathHandler(context: Context): PlatformPathHandler =
+    AndroidPlatformPathHandler(context)
+
 val dataModule = module {
     single { create(::provideNoteDb) }
     single { create(::provideProjectDao) }
     single { create(::provideNoteDao) }
     single { create(::provideLinkPreviewDao) }
     single { create(::provideHttpClient) }
+    single { create(::provideFactory) }
+    single { create(::providePlatformPathHandler) }
 
     single<AndroidProjectRepository>() bind ProjectRepository::class
-    single<AndroidSettingsRepository>() bind SettingsRepository::class
+    single<CommonSettingsRepository>() bind SettingsRepository::class
     single<CommonLinkPreviewRepository>() bind LinkPreviewRepository::class
     single<SyncRepositoryFactory>()
 }

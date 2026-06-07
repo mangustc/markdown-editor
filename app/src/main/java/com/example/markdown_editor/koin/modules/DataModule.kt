@@ -28,10 +28,13 @@ import org.koin.plugin.module.dsl.create
 import org.koin.plugin.module.dsl.single
 
 fun provideNoteDb(context: Context): NoteDb {
-    return Room.databaseBuilder(
-        context,
-        NoteDb::class.java, "database-notes",
+    val appContext = context.applicationContext
+    val dbFile = appContext.getDatabasePath("database-notes")
+    val databaseBuilder = Room.databaseBuilder<NoteDb>(
+        context = appContext,
+        name = dbFile.absolutePath,
     )
+    return databaseBuilder
         .fallbackToDestructiveMigration(true)
         .build()
 }

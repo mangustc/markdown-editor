@@ -1,6 +1,7 @@
 package com.example.markdown_editor.data.sync
 
 import com.example.markdown_editor.domain.exceptions.SyncAuthException
+import com.example.markdown_editor.domain.exceptions.SyncException
 import com.example.markdown_editor.domain.exceptions.SyncNetworkException
 import com.example.markdown_editor.domain.exceptions.SyncQuotaException
 import com.example.markdown_editor.domain.exceptions.SyncServerException
@@ -135,7 +136,8 @@ class YandexSyncRepository(
     private suspend inline fun <T> runNetwork(crossinline block: suspend () -> T): T {
         return try {
             block()
-        } catch (_: RuntimeException) {
+        } catch (e: Exception) {
+            if (e is SyncException) throw e
             throw SyncNetworkException()
         }
     }

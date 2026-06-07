@@ -6,7 +6,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.RawQuery
-import androidx.sqlite.db.SupportSQLiteQuery
+import androidx.room.RoomRawQuery
 
 @Dao
 interface NoteDao {
@@ -20,10 +20,10 @@ interface NoteDao {
     suspend fun getNoteByUri(uri: String): NoteEntity?
 
     @RawQuery
-    suspend fun searchNotes(query: SupportSQLiteQuery): List<NoteEntity>
+    suspend fun searchNotes(query: RoomRawQuery): List<NoteEntity>
 
     @RawQuery(observedEntities = [NoteEntity::class, NoteEntityFts::class])
-    fun searchNotesPaged(query: SupportSQLiteQuery): PagingSource<Int, NoteEntity>
+    fun searchNotesPaged(query: RoomRawQuery): PagingSource<Int, NoteEntity>
 
     @Query("SELECT tags FROM notes WHERE projectId = :projectId")
     suspend fun getAllTags(projectId: Long): List<String>

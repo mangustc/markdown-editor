@@ -10,8 +10,7 @@ import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import androidx.paging.map
-import androidx.sqlite.db.SimpleSQLiteQuery
-import androidx.sqlite.db.SupportSQLiteQuery
+import androidx.room.RoomRawQuery
 import com.example.markdown_editor.data.database.NoteDao
 import com.example.markdown_editor.data.database.NoteEntity
 import com.example.markdown_editor.data.database.ProjectDao
@@ -503,7 +502,7 @@ class AndroidProjectRepository(
             throw FileNotFoundException(uri.toString(), e)
         } ?: throw FileNotFoundException(uri.toString())
 
-    private fun buildSQLiteQuery(project: Project, query: SearchQuery): SupportSQLiteQuery {
+    private fun buildSQLiteQuery(project: Project, query: SearchQuery): RoomRawQuery {
         val args = mutableListOf<Any>()
         val sb = StringBuilder()
         val hasFts = query.bodyTerms.isNotEmpty()
@@ -554,6 +553,20 @@ class AndroidProjectRepository(
         }
         sb.append("\nORDER BY $pinnedClause$sortClause")
 
-        return SimpleSQLiteQuery(sb.toString(), args.toTypedArray())
+        return RoomRawQuery(
+            sql = sb.toString(),
+            onBindStatement = { statement ->
+                args.forEachIndexed { index, arg ->
+                    when (arg) {
+                        is String -> statement.bindText(index + 1, arg)
+                        is Long -> statement.bindLong(index + 1, arg)
+                        is Int -> statement.bindLong(index + 1, arg.toLong())
+                        is Double -> statement.bindDouble(index + 1, arg)
+                        is Boolean -> statement.bindBoolean(index + 1, arg)
+                        else -> throw IllegalArgumentException("Unknown argument type")
+                    }
+                }
+            },
+        )
     }
 }

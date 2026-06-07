@@ -12,7 +12,7 @@ import io.ktor.client.statement.bodyAsText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-class AndroidLinkPreviewRepository(
+class CommonLinkPreviewRepository(
     private val linkPreviewDao: LinkPreviewDao,
     private val client: HttpClient,
 ) : LinkPreviewRepository {

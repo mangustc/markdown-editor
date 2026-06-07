@@ -6,7 +6,7 @@ import com.example.markdown_editor.data.database.LinkPreviewDao
 import com.example.markdown_editor.data.database.NoteDao
 import com.example.markdown_editor.data.database.NoteDb
 import com.example.markdown_editor.data.database.ProjectDao
-import com.example.markdown_editor.data.linkPreview.AndroidLinkPreviewRepository
+import com.example.markdown_editor.data.linkPreview.CommonLinkPreviewRepository
 import com.example.markdown_editor.data.project.AndroidProjectRepository
 import com.example.markdown_editor.data.project.AndroidSettingsRepository
 import com.example.markdown_editor.data.sync.SyncRepositoryFactory
@@ -58,6 +58,6 @@ val dataModule = module {
 
     single<AndroidProjectRepository>() bind ProjectRepository::class
     single<AndroidSettingsRepository>() bind SettingsRepository::class
-    single<AndroidLinkPreviewRepository>() bind LinkPreviewRepository::class
+    single<CommonLinkPreviewRepository>() bind LinkPreviewRepository::class
     single<SyncRepositoryFactory>()
 }

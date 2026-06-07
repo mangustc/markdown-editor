@@ -153,11 +153,14 @@ import com.example.markdown_editor.ui.viewmodel.events.NotificationEvent
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.defaultRequest
 import io.ktor.client.request.header
+import io.ktor.http.Url
 import kotlinx.coroutines.launch
-import java.net.URL
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlin.time.Instant
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -1217,8 +1220,10 @@ private fun PinnedMessageBanner(
 }
 
 private fun isSameDay(t1: Long, t2: Long): Boolean {
-    val fmt = SimpleDateFormat("yyyyMMdd", Locale.getDefault())
-    return fmt.format(Date(t1)) == fmt.format(Date(t2))
+    val tz = TimeZone.currentSystemDefault()
+    val d1 = Instant.fromEpochMilliseconds(t1).toLocalDateTime(tz).date
+    val d2 = Instant.fromEpochMilliseconds(t2).toLocalDateTime(tz).date
+    return d1 == d2
 }
 
 @Composable
@@ -1469,7 +1474,7 @@ private fun LinkPreviewCarousel(previews: List<LinkPreview>) {
                     Column(modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) {
                         Text(
                             text = remember(preview.url) {
-                                runCatching { URL(preview.url).host.removePrefix("www.") }
+                                runCatching { Url(preview.url).host.removePrefix("www.") }
                                     .getOrDefault(preview.url)
                             },
                             style = MaterialTheme.typography.labelSmall,

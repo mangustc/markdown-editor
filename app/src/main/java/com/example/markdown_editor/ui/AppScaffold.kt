@@ -2,7 +2,6 @@ package com.example.markdown_editor.ui
 
 import android.content.ClipData
 import android.content.Intent
-import android.text.format.DateUtils
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -106,12 +105,14 @@ import com.example.markdown_editor.ui.messenger.MessengerScreen
 import com.example.markdown_editor.ui.navigation.EditorDestination
 import com.example.markdown_editor.ui.navigation.MessengerDestination
 import com.example.markdown_editor.ui.settings.SettingsDialog
+import com.example.markdown_editor.ui.util.DateFormatter
 import com.example.markdown_editor.ui.util.onNotificationToast
 import com.example.markdown_editor.ui.viewmodel.AppViewModel
 import com.example.markdown_editor.ui.viewmodel.events.ClipboardEvent
 import com.example.markdown_editor.ui.viewmodel.events.FocusEvent
 import com.example.markdown_editor.ui.viewmodel.events.NavigationEvent
 import kotlinx.coroutines.launch
+import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -654,6 +655,8 @@ fun ShowInfoDialog(
     onDismissRequest: () -> Unit,
     note: Note,
 ) {
+    val dateFormatter = koinInject<DateFormatter>()
+
     AlertDialog(
         onDismissRequest = onDismissRequest,
         title = { Text(stringResource(R.string.note_details)) },
@@ -669,15 +672,11 @@ fun ShowInfoDialog(
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                     headlineContent = { Text(stringResource(R.string.last_modified)) },
                     supportingContent = {
-                        val timeString = DateUtils.getRelativeTimeSpanString(
+                        val timeString = dateFormatter.formatRelativeTime(
                             note.lastModified,
-                            System.currentTimeMillis(),
-                            DateUtils.SECOND_IN_MILLIS,
-                            DateUtils.FORMAT_ABBREV_RELATIVE,
+                            DateFormatter.HOUR_MILLIS,
                         )
-                        val result =
-                            if (!timeString.isNullOrBlank()) timeString else stringResource(R.string.n_a)
-                        Text(result.toString())
+                        Text(if (!timeString.isNullOrBlank()) timeString else stringResource(R.string.n_a))
                     },
                     leadingContent = { Icon(Icons.Default.History, contentDescription = null) },
                 )
@@ -686,17 +685,11 @@ fun ShowInfoDialog(
                     headlineContent = { Text(stringResource(R.string.created_at)) },
                     supportingContent = {
                         val timeString =
-                            if (note.createdAt != null) DateUtils.getRelativeTimeSpanString(
+                            if (note.createdAt != null) dateFormatter.formatRelativeTime(
                                 note.createdAt,
-                                System.currentTimeMillis(),
-                                DateUtils.SECOND_IN_MILLIS,
-                                DateUtils.FORMAT_ABBREV_RELATIVE,
+                                DateFormatter.HOUR_MILLIS,
                             ) else null
-                        val result =
-                            if (!timeString.isNullOrBlank()) timeString else stringResource(
-                                R.string.n_a,
-                            )
-                        Text(result.toString())
+                        Text(if (!timeString.isNullOrBlank()) timeString else stringResource(R.string.n_a))
                     },
                     leadingContent = {
                         Icon(

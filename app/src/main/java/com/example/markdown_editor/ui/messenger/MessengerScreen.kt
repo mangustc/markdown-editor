@@ -5,7 +5,6 @@ import android.content.ContentValues
 import android.content.Intent
 import android.net.Uri
 import android.provider.MediaStore
-import android.text.format.DateFormat
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -147,6 +146,7 @@ import com.example.markdown_editor.ui.components.MenuPopup
 import com.example.markdown_editor.ui.components.MenuPopupGroup
 import com.example.markdown_editor.ui.components.MenuPopupItem
 import com.example.markdown_editor.ui.components.TooltipIconButton
+import com.example.markdown_editor.ui.util.DateFormatter
 import com.example.markdown_editor.ui.util.scrollbar
 import com.example.markdown_editor.ui.viewmodel.AppViewModel
 import com.example.markdown_editor.ui.viewmodel.events.NotificationEvent
@@ -155,16 +155,13 @@ import io.ktor.client.plugins.defaultRequest
 import io.ktor.client.request.header
 import io.ktor.http.Url
 import kotlinx.coroutines.launch
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.toLocalDateTime
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
-import kotlin.time.Instant
+import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun MessengerScreen(viewModel: AppViewModel) {
+    val dateFormatter = koinInject<DateFormatter>()
+
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     val attachments = remember { mutableStateListOf<Attachment>() }
@@ -459,12 +456,34 @@ fun MessengerScreen(viewModel: AppViewModel) {
                                     verticalArrangement = Arrangement.spacedBy(8.dp),
                                     modifier = Modifier.padding(top = 2.dp),
                                 ) {
-                                    if (prevTimestamp == null || !isSameDay(
+                                    if (prevTimestamp == null || !dateFormatter.isSameDay(
                                             currentTimestamp,
                                             prevTimestamp,
                                         )
                                     ) {
-                                        DateHeader(currentTimestamp)
+                                        val dateStr = remember(currentTimestamp) {
+                                            dateFormatter.formatDateOnly(currentTimestamp, "MMMMd")
+                                        }
+                                        Box(
+                                            contentAlignment = Alignment.Center,
+                                            modifier = Modifier
+                                                .fillMaxWidth(),
+                                        ) {
+                                            Surface(
+                                                color = MaterialTheme.colorScheme.secondaryContainer,
+                                                shape = CircleShape,
+                                            ) {
+                                                Text(
+                                                    text = dateStr,
+                                                    style = MaterialTheme.typography.labelMedium,
+                                                    modifier = Modifier.padding(
+                                                        horizontal = 12.dp,
+                                                        vertical = 4.dp,
+                                                    ),
+                                                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                                )
+                                            }
+                                        }
                                     }
                                     MessageBubble(
                                         message = note,
@@ -495,6 +514,7 @@ fun MessengerScreen(viewModel: AppViewModel) {
                                         onLinkCopied = {
                                             viewModel.onEvent(NotificationEvent.LinkCopied)
                                         },
+                                        dateFormatter = dateFormatter,
                                     )
                                 }
                             }
@@ -851,6 +871,7 @@ private fun MessageBubble(
     onToggleSelect: (MessageBody) -> Unit,
     onLinkCopied: () -> Unit,
     onNoAppFound: () -> Unit,
+    dateFormatter: DateFormatter,
 ) {
     val context = LocalContext.current
     val density = LocalDensity.current
@@ -939,24 +960,19 @@ private fun MessageBubble(
                         message.note.createdAt != null && (message.note.lastModified - message.note.createdAt) > 500
                     val editString = remember(isEdited, message.note.lastModified) {
                         if (isEdited) {
-                            val pattern =
-                                DateFormat.getBestDateTimePattern(Locale.getDefault(), "MMMdHHmm")
                             resources.getString(
                                 R.string.edited_date,
-                                SimpleDateFormat(pattern, Locale.getDefault()).format(
-                                    Date(
-                                        message.note.lastModified,
-                                    ),
+                                dateFormatter.formatRelativeTime(
+                                    message.note.lastModified,
+                                    DateFormatter.HOUR_MILLIS,
                                 ),
                             )
                         } else null
                     }
+
                     val timeString = remember(message.note.createdAt, message.note.lastModified) {
-                        val pattern =
-                            DateFormat.getBestDateTimePattern(Locale.getDefault(), "MMMdHHmm")
-                        SimpleDateFormat(pattern, Locale.getDefault()).format(
-                            Date(message.note.createdAt ?: message.note.lastModified),
-                        )
+                        val time = message.note.createdAt ?: message.note.lastModified
+                        dateFormatter.formatRelativeTime(time, DateFormatter.HOUR_MILLIS)
                     }
 
                     Column(
@@ -1215,38 +1231,6 @@ private fun PinnedMessageBanner(
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-        }
-    }
-}
-
-private fun isSameDay(t1: Long, t2: Long): Boolean {
-    val tz = TimeZone.currentSystemDefault()
-    val d1 = Instant.fromEpochMilliseconds(t1).toLocalDateTime(tz).date
-    val d2 = Instant.fromEpochMilliseconds(t2).toLocalDateTime(tz).date
-    return d1 == d2
-}
-
-@Composable
-private fun DateHeader(timestamp: Long) {
-    val dateStr = remember(timestamp) {
-        val pattern = DateFormat.getBestDateTimePattern(Locale.getDefault(), "MMMMd")
-        SimpleDateFormat(pattern, Locale.getDefault()).format(Date(timestamp))
-    }
-    Box(
-        contentAlignment = Alignment.Center,
-        modifier = Modifier
-            .fillMaxWidth(),
-    ) {
-        Surface(
-            color = MaterialTheme.colorScheme.secondaryContainer,
-            shape = CircleShape,
-        ) {
-            Text(
-                text = dateStr,
-                style = MaterialTheme.typography.labelMedium,
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-                color = MaterialTheme.colorScheme.onSecondaryContainer,
-            )
         }
     }
 }

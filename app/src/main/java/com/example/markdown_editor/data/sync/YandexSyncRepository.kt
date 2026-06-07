@@ -18,13 +18,13 @@ import io.ktor.client.statement.readRawBytes
 import io.ktor.client.utils.EmptyContent
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
+import io.ktor.http.encodeURLQueryComponent
 import io.ktor.http.isSuccess
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import java.io.IOException
-import java.net.URLEncoder
 
 class YandexSyncRepository(
     private val oauthToken: String,
@@ -131,7 +131,7 @@ class YandexSyncRepository(
         }
     }
 
-    private fun encode(s: String) = URLEncoder.encode(s, "UTF-8")
+    private fun encode(s: String) = s.encodeURLQueryComponent()
 
     private suspend inline fun <T> runNetwork(crossinline block: suspend () -> T): T {
         return try {

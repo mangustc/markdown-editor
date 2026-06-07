@@ -14,6 +14,7 @@ import dev.whyoleg.cryptography.algorithms.MD5
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import kotlin.time.Clock
 
 data class SyncProjectInput(
     val project: Project,
@@ -40,7 +41,7 @@ class SyncProjectUseCase(
         val remoteRoot = RelativePath(project.name)
 
         val localManifest = SyncManifest(
-            lastSyncTimestamp = System.currentTimeMillis() / 1000,
+            lastSyncTimestamp = Clock.System.now().epochSeconds,
             files = snapshotLocal(project),
         )
 

@@ -10,7 +10,6 @@ import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import androidx.paging.map
-import androidx.room.RoomRawQuery
 import com.example.markdown_editor.data.database.NoteDao
 import com.example.markdown_editor.data.database.NoteEntity
 import com.example.markdown_editor.data.database.ProjectDao
@@ -45,10 +44,10 @@ class AndroidProjectRepository(
         includeText: Boolean,
         includeFrontMatter: Boolean,
     ): List<Note> = withContext(Dispatchers.IO) {
-        val sqlQuery = buildSQLiteQuery(project, query)
+        val sqlQuery = query.buildRoomRawQuery(project)
         val entities = noteDao.searchNotes(sqlQuery)
 
-        entities.map { entity -> getNoteFromEntity(project, includeText, entity) }
+        entities.map { entity -> entity.toNote(project, includeText) }
     }
 
     override fun getNotesPaged(
@@ -57,7 +56,7 @@ class AndroidProjectRepository(
         includeText: Boolean,
         includeFrontMatter: Boolean,
     ): Flow<PagingData<Note>> {
-        val sqlQuery = buildSQLiteQuery(project, query)
+        val sqlQuery = query.buildRoomRawQuery(project)
         return Pager(
             config = PagingConfig(
                 pageSize = 50,
@@ -67,7 +66,7 @@ class AndroidProjectRepository(
         ) {
             noteDao.searchNotesPaged(sqlQuery)
         }.flow.map { pagingData ->
-            pagingData.map { entity -> getNoteFromEntity(project, includeText, entity) }
+            pagingData.map { entity -> entity.toNote(project, includeText) }
         }
     }
 
@@ -116,7 +115,7 @@ class AndroidProjectRepository(
         val files =
             notesDir.listFiles().filter { it.name?.endsWith(".md") == true }
 
-        val existingNotes = noteDao.searchNotes(buildSQLiteQuery(project, SearchQuery()))
+        val existingNotes = noteDao.searchNotes(SearchQuery().buildRoomRawQuery(project))
         val existingUris = existingNotes.associateBy { it.uri }
 
         files.forEach { file ->
@@ -400,26 +399,6 @@ class AndroidProjectRepository(
         return projectDao.getProjectId(rootPath)
     }
 
-    private fun getNoteFromEntity(
-        project: Project,
-        includeText: Boolean,
-        entity: NoteEntity,
-    ): Note {
-        return Note(
-            name = entity.name,
-            projectFile = ProjectFile(
-                fileSystemPath = FileSystemPath(entity.uri),
-                relativePath = project.notesRelativePath.appendRelativePath(
-                    RelativePath("${entity.name}.md"),
-                ),
-            ),
-            lastModified = entity.lastModified,
-            createdAt = entity.createdAt,
-            body = if (includeText) entity.body else null,
-            tags = if (entity.tags.isNotEmpty()) entity.tags.split(" ") else emptyList(),
-        )
-    }
-
     private fun getUri(
         rootUri: Uri,
         relativePath: RelativePath,
@@ -502,71 +481,4 @@ class AndroidProjectRepository(
             throw FileNotFoundException(uri.toString(), e)
         } ?: throw FileNotFoundException(uri.toString())
 
-    private fun buildSQLiteQuery(project: Project, query: SearchQuery): RoomRawQuery {
-        val args = mutableListOf<Any>()
-        val sb = StringBuilder()
-        val hasFts = query.bodyTerms.isNotEmpty()
-        val ftsMatchExpr = query.buildFtsMatchQuery()
-
-        sb.append("SELECT notes.* FROM notes")
-        if (hasFts && ftsMatchExpr != null) {
-            sb.append("\nJOIN notesFts ON notes.rowid = notesFts.rowid")
-            sb.append("\n  AND notesFts MATCH ?")
-            args.add(ftsMatchExpr)
-        }
-
-        val conditions = mutableListOf<String>()
-        conditions.add("notes.projectId = (SELECT id FROM projects WHERE rootPath = ? LIMIT 1)")
-        args.add(project.rootFileSystemPath.value)
-        for (term in query.negatedBodyTerms) {
-            conditions.add("notes.body NOT LIKE ?")
-            args.add("%$term%")
-        }
-        for (tag in query.positiveTagLikes()) {
-            conditions.add("notes.tags LIKE ?")
-            args.add("%$tag%")
-        }
-        for (tag in query.negatedTagLikes()) {
-            conditions.add("notes.tags NOT LIKE ?")
-            args.add("%$tag%")
-        }
-        query.nameFilter?.let {
-            conditions.add("notes.name LIKE ?")
-            args.add("%$it%")
-        }
-        query.negatedNameFilter?.let {
-            conditions.add("notes.name NOT LIKE ?")
-            args.add("%$it%")
-        }
-        if (conditions.isNotEmpty()) {
-            sb.append("\nWHERE ")
-            sb.append(conditions.joinToString("\n  AND "))
-        }
-
-        val pinnedClause = if (query.pinnedFirst)
-            "CASE WHEN notes.tags LIKE '%pinned%' THEN 0 ELSE 1 END ASC,\n  "
-        else ""
-        val sortClause = when (query.sortBy) {
-            SearchQuery.SortBy.LAST_MODIFIED -> "notes.lastModified DESC"
-            SearchQuery.SortBy.CREATED_AT ->
-                "notes.createdAt DESC, notes.lastModified DESC"
-        }
-        sb.append("\nORDER BY $pinnedClause$sortClause")
-
-        return RoomRawQuery(
-            sql = sb.toString(),
-            onBindStatement = { statement ->
-                args.forEachIndexed { index, arg ->
-                    when (arg) {
-                        is String -> statement.bindText(index + 1, arg)
-                        is Long -> statement.bindLong(index + 1, arg)
-                        is Int -> statement.bindLong(index + 1, arg.toLong())
-                        is Double -> statement.bindDouble(index + 1, arg)
-                        is Boolean -> statement.bindBoolean(index + 1, arg)
-                        else -> throw IllegalArgumentException("Unknown argument type")
-                    }
-                }
-            },
-        )
-    }
 }

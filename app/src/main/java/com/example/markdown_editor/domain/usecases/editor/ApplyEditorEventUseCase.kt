@@ -1,6 +1,5 @@
 package com.example.markdown_editor.domain.usecases.editor
 
-import com.example.markdown_editor.domain.models.FileSystemPath
 import com.example.markdown_editor.domain.models.Project
 import com.example.markdown_editor.domain.models.TextState
 import com.example.markdown_editor.domain.usecases.UseCase

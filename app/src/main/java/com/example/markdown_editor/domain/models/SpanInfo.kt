@@ -1,6 +1,6 @@
 package com.example.markdown_editor.domain.models
 
-import java.net.URI
+import io.ktor.http.Url
 
 sealed interface SpanInfo {
     data class TextRange(
@@ -29,7 +29,7 @@ sealed interface SpanInfo {
             get() {
                 val isHttp = (payload.startsWith("http://", ignoreCase = true) ||
                         payload.startsWith("https://", ignoreCase = true)) &&
-                        runCatching { URI(payload) }.isSuccess
+                        runCatching { Url(payload) }.isSuccess
                 if (isHttp) return LinkType.HTTP
                 if (payload.endsWith(".md", ignoreCase = true)) return LinkType.NOTE
                 return LinkType.FILE

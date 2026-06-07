@@ -1,27 +1,12 @@
 package com.example.markdown_editor.domain.markdown
 
 import com.example.markdown_editor.domain.models.SpanInfo
-import org.commonmark.node.AbstractVisitor
-import org.commonmark.node.BlockQuote
-import org.commonmark.node.Code
-import org.commonmark.node.Emphasis
-import org.commonmark.node.FencedCodeBlock
-import org.commonmark.node.Heading
-import org.commonmark.node.Image
-import org.commonmark.node.IndentedCodeBlock
-import org.commonmark.node.Link
-import org.commonmark.node.ListItem
-import org.commonmark.node.Node
-import org.commonmark.node.StrongEmphasis
-import org.commonmark.node.Text
-import org.commonmark.parser.IncludeSourceSpans
-import org.commonmark.parser.Parser
+import org.intellij.markdown.MarkdownElementTypes
+import org.intellij.markdown.ast.ASTNode
+import org.intellij.markdown.flavours.commonmark.CommonMarkFlavourDescriptor
+import org.intellij.markdown.parser.MarkdownParser as JBParser
 
 object MarkdownParser {
-    private val parser: Parser = Parser.builder()
-        .includeSourceSpans(IncludeSourceSpans.BLOCKS_AND_INLINES)
-        .build()
-
     fun parse(text: String): List<SpanInfo> {
         if (text.isEmpty()) return emptyList()
 
@@ -36,159 +21,106 @@ object MarkdownParser {
             }
         }
 
-        val lineOffsets = buildLineOffsets(text)
-        val document = parser.parse(text)
+        val flavour = CommonMarkFlavourDescriptor()
+        val parsedTree = JBParser(flavour).buildMarkdownTreeFromString(text)
+
         val spans = mutableListOf<SpanInfo>()
+        visitNode(parsedTree, text, spans)
 
-        document.accept(
-            object : AbstractVisitor() {
-                override fun visit(heading: Heading) {
-                    heading.bounds(lineOffsets)
-                        ?.let { spans.add(SpanInfo.Heading(it, heading.level)) }
-                    visitChildren(heading)
-                }
-
-                override fun visit(strongEmphasis: StrongEmphasis) {
-                    strongEmphasis.bounds(lineOffsets)
-                        ?.let { spans.add(SpanInfo.Bold(it)) }
-                    visitChildren(strongEmphasis)
-                }
-
-                override fun visit(emphasis: Emphasis) {
-                    emphasis.bounds(lineOffsets)?.let { spans.add(SpanInfo.Italic(it)) }
-                    visitChildren(emphasis)
-                }
-
-                override fun visit(code: Code) {
-                    code.bounds(lineOffsets)?.let { spans.add(SpanInfo.CodeInline(it)) }
-                }
-
-                override fun visit(fencedCodeBlock: FencedCodeBlock) {
-                    fencedCodeBlock.bounds(lineOffsets)
-                        ?.let { spans.add(SpanInfo.CodeBlock(it)) }
-                }
-
-                override fun visit(indentedCodeBlock: IndentedCodeBlock) {
-                    indentedCodeBlock.bounds(lineOffsets)
-                        ?.let { spans.add(SpanInfo.CodeBlock(it)) }
-                }
-
-                override fun visit(image: Image) {
-                    image.bounds(lineOffsets)
-                        ?.let { spans.add(SpanInfo.Image(it, image.destination)) }
-                }
-
-                override fun visit(link: Link) {
-                    val label = (link.firstChild as? Text)?.literal ?: link.destination
-                    link.bounds(lineOffsets)?.let {
-                        val rawText = text.substring(it.start, it.end)
-
-                        var child = link.firstChild
-                        var firstChildStart: Int? = null
-                        var lastChildEnd: Int? = null
-                        while (child != null) {
-                            val childBounds = child.bounds(lineOffsets)
-                            if (childBounds != null) {
-                                if (firstChildStart == null) firstChildStart = childBounds.start
-                                lastChildEnd = childBounds.end
-                            }
-                            child = child.next
-                        }
-
-                        val rightBracketIndex = rawText.indexOf(']')
-                        val labelRange = if (firstChildStart != null && lastChildEnd != null) {
-                            SpanInfo.TextRange(firstChildStart, lastChildEnd)
-                        } else if (rightBracketIndex != -1) {
-                            SpanInfo.TextRange(it.start + 1, it.start + rightBracketIndex)
-                        } else {
-                            it
-                        }
-
-                        val leftParenIndex =
-                            rawText.indexOf('(', rightBracketIndex.coerceAtLeast(0))
-                        val rightParenIndex = rawText.lastIndexOf(')')
-                        val payloadRange =
-                            if (leftParenIndex != -1 && rightParenIndex > leftParenIndex) {
-                                var pStart = it.start + leftParenIndex + 1
-                                var pEnd = it.start + rightParenIndex
-
-                                while (pStart < pEnd && text[pStart].isWhitespace()) {
-                                    pStart++
-                                }
-                                while (pEnd > pStart && text[pEnd - 1].isWhitespace()) {
-                                    pEnd--
-                                }
-
-                                if (pStart < pEnd && text[pStart] == '<' && text[pEnd - 1] == '>') {
-                                    pStart++
-                                    pEnd--
-                                }
-
-                                if (!link.title.isNullOrEmpty()) {
-                                    var titleEnd = pEnd
-                                    while (titleEnd > pStart && text[titleEnd - 1].isWhitespace()) {
-                                        titleEnd--
-                                    }
-                                    if (titleEnd > pStart) {
-                                        val lastChar = text[titleEnd - 1]
-                                        if (lastChar == '"' || lastChar == '\'' || lastChar == ')') {
-                                            val openChar = if (lastChar == ')') '(' else lastChar
-                                            var titleStart = titleEnd - 2
-                                            while (titleStart > pStart) {
-                                                if (text[titleStart] == openChar) {
-                                                    var backslashes = 0
-                                                    var temp = titleStart - 1
-                                                    while (temp >= pStart && text[temp] == '\\') {
-                                                        backslashes++
-                                                        temp--
-                                                    }
-                                                    if (backslashes % 2 == 0) {
-                                                        break
-                                                    }
-                                                }
-                                                titleStart--
-                                            }
-                                            if (titleStart > pStart) {
-                                                pEnd = titleStart
-                                                while (pEnd > pStart && text[pEnd - 1].isWhitespace()) {
-                                                    pEnd--
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                                SpanInfo.TextRange(pStart, pEnd)
-                            } else {
-                                SpanInfo.TextRange(it.end, it.end)
-                            }
-
-                        spans.add(
-                            SpanInfo.Link(
-                                range = it,
-                                payload = link.destination,
-                                label = label,
-                                payloadRange = payloadRange,
-                                labelRange = labelRange,
-                            ),
-                        )
-                    }
-                    visitChildren(link)
-                }
-
-                override fun visit(listItem: ListItem) {
-                    listItem.bounds(lineOffsets)
-                        ?.let { spans.add(SpanInfo.ListItem(it)) }
-                    visitChildren(listItem)
-                }
-
-                override fun visit(blockQuote: BlockQuote) {
-                    blockQuote.bounds(lineOffsets)
-                        ?.let { spans.add(SpanInfo.Blockquote(it)) }
-                    visitChildren(blockQuote)
-                }
-            },
-        )
         return spans.filter { it.range.start >= frontMatterEnd }
+    }
+
+    private fun visitNode(
+        node: ASTNode,
+        text: String,
+        spans: MutableList<SpanInfo>,
+        suppressInlineLink: Boolean = false,
+    ) {
+        val range = SpanInfo.TextRange(node.startOffset, node.endOffset)
+
+        when (node.type) {
+            MarkdownElementTypes.ATX_1 -> spans.add(SpanInfo.Heading(range, 1))
+            MarkdownElementTypes.ATX_2 -> spans.add(SpanInfo.Heading(range, 2))
+            MarkdownElementTypes.ATX_3 -> spans.add(SpanInfo.Heading(range, 3))
+            MarkdownElementTypes.ATX_4 -> spans.add(SpanInfo.Heading(range, 4))
+            MarkdownElementTypes.ATX_5 -> spans.add(SpanInfo.Heading(range, 5))
+            MarkdownElementTypes.ATX_6 -> spans.add(SpanInfo.Heading(range, 6))
+            MarkdownElementTypes.STRONG -> spans.add(SpanInfo.Bold(range))
+            MarkdownElementTypes.EMPH -> spans.add(SpanInfo.Italic(range))
+            MarkdownElementTypes.CODE_SPAN -> spans.add(SpanInfo.CodeInline(range))
+            MarkdownElementTypes.CODE_BLOCK, MarkdownElementTypes.CODE_FENCE -> spans.add(
+                SpanInfo.CodeBlock(
+                    range,
+                ),
+            )
+
+            MarkdownElementTypes.BLOCK_QUOTE -> spans.add(SpanInfo.Blockquote(range))
+            MarkdownElementTypes.LIST_ITEM -> spans.add(SpanInfo.ListItem(range))
+
+            MarkdownElementTypes.IMAGE -> {
+                val inlineLinkNode =
+                    node.children.find { it.type == MarkdownElementTypes.INLINE_LINK }
+                val destParent = inlineLinkNode ?: node
+                val linkDestNode =
+                    destParent.children.find { it.type == MarkdownElementTypes.LINK_DESTINATION }
+
+                val payload = if (linkDestNode != null) {
+                    var s = linkDestNode.startOffset
+                    var e = linkDestNode.endOffset
+                    if (s < e && text[s] == '<' && text[e - 1] == '>') {
+                        s++
+                        e--
+                    }
+                    if (s < e) text.substring(s, e) else ""
+                } else ""
+
+                spans.add(SpanInfo.Image(range, payload))
+            }
+
+            MarkdownElementTypes.INLINE_LINK -> {
+                if (!suppressInlineLink) {
+                    val linkTextNode =
+                        node.children.find { it.type == MarkdownElementTypes.LINK_TEXT }
+                    val linkDestNode =
+                        node.children.find { it.type == MarkdownElementTypes.LINK_DESTINATION }
+
+                    val labelRange = if (linkTextNode != null) {
+                        var s = linkTextNode.startOffset
+                        var e = linkTextNode.endOffset
+                        if (s < e && text[s] == '[' && text[e - 1] == ']') {
+                            s++
+                            e--
+                        }
+                        SpanInfo.TextRange(s, e)
+                    } else range
+
+                    val payloadRange = if (linkDestNode != null) {
+                        var s = linkDestNode.startOffset
+                        var e = linkDestNode.endOffset
+                        if (s < e && text[s] == '<' && text[e - 1] == '>') {
+                            s++
+                            e--
+                        }
+                        SpanInfo.TextRange(s, e)
+                    } else range
+
+                    val label = if (labelRange.start < labelRange.end) {
+                        text.substring(labelRange.start, labelRange.end)
+                    } else ""
+
+                    val payload = if (payloadRange.start < payloadRange.end) {
+                        text.substring(payloadRange.start, payloadRange.end)
+                    } else ""
+
+                    spans.add(SpanInfo.Link(range, payload, label, payloadRange, labelRange))
+                }
+            }
+        }
+
+        val passSuppress = node.type == MarkdownElementTypes.IMAGE
+        for (child in node.children) {
+            visitNode(child, text, spans, passSuppress)
+        }
     }
 
     fun stripAttachments(text: String, spans: List<SpanInfo>): String {
@@ -203,24 +135,5 @@ object MarkdownParser {
             }
         }
         return res.trim()
-    }
-
-    private fun buildLineOffsets(text: String): IntArray {
-        val offsets = ArrayList<Int>(text.count { it == '\n' } + 1)
-        offsets.add(0)
-        text.forEachIndexed { i, c -> if (c == '\n') offsets.add(i + 1) }
-        return offsets.toIntArray()
-    }
-
-    private fun Node.bounds(lineOffsets: IntArray): SpanInfo.TextRange? {
-        val srcSpans = sourceSpans
-        if (srcSpans.isEmpty()) return null
-        val first = srcSpans.first()
-        val last = srcSpans.last()
-        val start = lineOffsets.getOrNull(first.lineIndex)?.plus(first.columnIndex) ?: return null
-        val end = lineOffsets.getOrNull(last.lineIndex)?.plus(last.columnIndex + last.length)
-            ?: return null
-        if (start >= end) return null
-        return SpanInfo.TextRange(start, end)
     }
 }

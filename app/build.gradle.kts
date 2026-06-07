@@ -58,7 +58,6 @@ dependencies {
     implementation(libs.androidx.compose.ui.unit)
     implementation(libs.androidx.material3)
     implementation(libs.androidx.compose.ui.text)
-    implementation(libs.commonmark)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.koin.core)
     implementation(libs.koin.annotations)
@@ -90,4 +89,5 @@ dependencies {
     implementation(libs.multiplatform.settings)
     implementation(libs.cryptography.core)
     implementation(libs.cryptography.provider.optimal)
+    implementation(libs.jetbrains.markdown)
 }

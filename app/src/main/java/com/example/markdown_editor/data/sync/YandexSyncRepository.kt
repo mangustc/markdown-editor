@@ -24,7 +24,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
-import java.io.IOException
 
 class YandexSyncRepository(
     private val oauthToken: String,
@@ -136,7 +135,7 @@ class YandexSyncRepository(
     private suspend inline fun <T> runNetwork(crossinline block: suspend () -> T): T {
         return try {
             block()
-        } catch (_: IOException) {
+        } catch (_: RuntimeException) {
             throw SyncNetworkException()
         }
     }

@@ -20,7 +20,7 @@ data class FrontMatter(
 
     fun toCreatedAtMillis(): Long? = createdAt?.let { value ->
         try {
-            Instant.parse(value).epochSeconds
+            Instant.parse(value).toEpochMilliseconds()
         } catch (e: Exception) {
             null
         }

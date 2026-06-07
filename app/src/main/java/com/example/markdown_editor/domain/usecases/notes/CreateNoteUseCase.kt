@@ -5,7 +5,7 @@ import com.example.markdown_editor.domain.models.Project
 import com.example.markdown_editor.domain.models.RelativePath
 import com.example.markdown_editor.domain.repositories.ProjectRepository
 import com.example.markdown_editor.domain.usecases.UseCase
-import java.time.Instant
+import kotlin.time.Clock
 
 data class CreateNoteInput(
     val project: Project,
@@ -21,7 +21,7 @@ class CreateNoteUseCase(
     private val getNoteUseCase: GetNoteUseCase,
 ) : UseCase<CreateNoteInput, Note> {
     override suspend fun invoke(input: CreateNoteInput): Note {
-        val isoDate = Instant.now().toString()
+        val isoDate = Clock.System.now().toString()
         var frontMatterBuilder = "---\ncreatedAt: $isoDate"
         frontMatterBuilder += "\ntags:"
         if (input.tags.isNotEmpty()) {

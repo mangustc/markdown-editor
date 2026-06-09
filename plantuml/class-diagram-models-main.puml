@@ -30,8 +30,8 @@ remove TextSelection
 remove TextUndoState
 
 ''Settings
-'remove Settings
-'remove ValidSyncProvider
+remove Settings
+remove ValidSyncProvider
 '
 ''Project
 'remove Project
@@ -47,11 +47,11 @@ remove TextUndoState
 'remove Note
 '
 ''SearchQuery
-'remove SearchQuery
-'remove SortBy
+remove SearchQuery
+remove SortBy
 '
 ''LinkPreview
-'remove LinkPreview
+remove LinkPreview
 
 'Repositories
 remove ProjectRepository
@@ -125,8 +125,21 @@ remove GetProjectFileInput
 'MarkdownParser
 remove MarkdownParser
 
-SortBy -[hidden]- Settings
-ProjectFile -[hidden]- LinkPreview
-LinkPreview -[hidden]r- ValidSyncProvider
+Attachment -[hidden]l- AttachmentType
+
+AttachmentType -[hidden]- PendingAttachment
+AttachmentType -[hidden]- ProjectAttachment
+
+RelativePath -[hidden]u- ProjectAttachment
+RelativePath -[hidden]u- InvalidProjectAttachment
+RelativePath -[hidden]u- Project
+
+FileSystemPath -[hidden]u- ProjectFile
+
+ProjectFile -[hidden]u- Note
+
+Note -[hidden]u- MessageBody
+
+Project -[hidden]u- ProjectAttachment
 
 @enduml

@@ -1,6 +1,4 @@
 @startuml
-'left to right direction
-
 skinparam ClassBackgroundColor #FFFFFF
 
 !include class-diagram.puml
@@ -53,7 +51,7 @@ remove SearchQuery
 remove SortBy
 
 'LinkPreview
-remove LinkPreview
+'remove LinkPreview
 
 'Repositories
 remove ProjectRepository
@@ -64,81 +62,87 @@ remove LinkPreviewDao
 remove NoteEntity
 remove NoteEntityFts
 remove ProjectEntity
+remove FileExistsStrategy
 remove LinkPreviewEntity
 remove NoteDb
-remove LinkPreviewRepository
+'remove LinkPreviewRepository
 remove AndroidLinkPreviewRepository
-'remove SyncRepository
-'remove YandexSyncRepository
-'remove SyncRepositoryFactory
-'remove SettingsRepository
-'remove AndroidSettingsRepository
-remove FileExistsStrategy
+remove SyncRepository
+remove YandexSyncRepository
+remove SyncRepositoryFactory
+remove SettingsRepository
+remove AndroidSettingsRepository
 
 'UseCases
 remove UseCase
 remove FlowUseCase
 remove GetMessagesUseCase
-remove GetMessagesInput
-remove GetNotesUseCase
-remove GetNotesInput
 remove CreateNoteUseCase
 remove CreateNoteInput
 remove ApplyEditorEventInput
-remove ApplyEditorEventUseCase
 remove GetRealSpanInfoLinkTypeUseCase
-remove GetRealSpanInfoLinkTypeInput
 remove GetPinnedMessagesUseCase
-remove GetPinnedMessagesInput
 remove ToggleNoteTagUseCase
-remove ToggleNoteTagInput
 remove SyncProjectUseCase
-remove SyncProjectInput
+remove ApplyEditorEventUseCase
 remove SendNoteInput
-remove SendNoteUseCase
 remove DeleteNoteUseCase
 remove DeleteNoteInput
 remove GetNoteInput
 remove GetNoteUseCase
 remove RenameNoteUseCase
-remove RenameNoteInput
+remove CopyToAssetsUseCase
 remove SaveNoteTextUseCase
-remove SaveNoteTextInput
+remove GetAllTagsUseCase
 remove SelectProjectInput
-remove SelectProjectUseCase
 remove SyncDatabaseInput
+remove SendNoteUseCase
 remove SyncDatabaseUseCase
 remove LoadSavedProjectUseCase
+remove GetSettingsUseCase
+remove SelectProjectUseCase
 remove SetSettingsUseCase
 remove SetSettingsInput
 remove GetLinkPreviewUseCase
 remove GetLinkPreviewInput
-remove GetSettingsUseCase
+remove GetMessagesInput
+remove GetPinnedMessagesInput
+remove ToggleNoteTagInput
+remove RenameNoteInput
+remove SaveNoteTextInput
+remove GetRealSpanInfoLinkTypeInput
+remove SyncProjectInput
 remove GetSettingsInput
-remove GetAllTagsUseCase
 remove GetAllTagsInput
 remove ApplySearchEventUseCase
 remove ApplySearchEventInput
-remove CopyToAssetsUseCase
 remove CopyToAssetsInput
+remove GetNotesUseCase
+remove GetNotesInput
 remove GetProjectFileUseCase
 remove GetProjectFileInput
 
 'MarkdownParser
 remove MarkdownParser
 
-'hide SettingsRepository members
-'hide SyncRepository members
+ProjectRepository -[hidden]- Note
+ProjectRepository -[hidden]- FileSystemPath
+ProjectRepository -[hidden]- RelativePath
+ProjectRepository -[hidden]- ProjectFile
+ProjectRepository -[hidden]- Project
+ProjectRepository -[hidden]- SearchQuery
+ProjectRepository -[hidden]- FileExistsStrategy
 
-'ProjectRepository -[hidden]- AndroidProjectRepository
-'ProjectRepository -[hidden]- NoteDb
-'ProjectRepository -[hidden]- LinkPreviewRepository
-'NoteEntity -[hidden]- NoteEntityFts
-'ProjectEntity -[hidden]r- NoteEntityFts
-'LinkPreviewEntity -[hidden]- NoteEntity
+ProjectFile -[hidden]- RelativePath
+ProjectFile -[hidden]l- Note
+RelativePath -[hidden]l- FileSystemPath
+Note -[hidden]- FileSystemPath
+FileSystemPath -[hidden]- Project
+RelativePath -[hidden]- Project
+ProjectFile -[hidden]- SearchQuery
+FileExistsStrategy -[hidden]l- Note
 
-'NoteDb -[hidden]- AndroidProjectRepository
-
-'AndroidLinkPreviewRepository -[hidden]u- LinkPreviewRepository
+SearchQuery -[hidden]- SortBy
+SearchQuery -[hidden]l- RelativePath
 
 @enduml

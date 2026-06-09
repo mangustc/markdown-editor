@@ -28,39 +28,39 @@ entity "<b>$name</b>" as $slug << (V, Aquamarine) view >>
 {field} <color:#White><&media-record></color> $name
 !endprocedure
 
-$table("ProjectEntity", "t_project") {
+$table("Проект", "t_project") {
   $pk("id"): INTEGER NOT NULL
-  $column("name"): TEXT NOT NULL
-  $column("rootPath"): TEXT NOT NULL UNIQUE
+  $column("название"): TEXT NOT NULL
+  $column("корневойПуть"): TEXT NOT NULL UNIQUE
 }
 
-$table("NoteEntity", "t_note") {
+$table("Заметка", "t_note") {
   $pk("id"): INTEGER NOT NULL
-  $fk("projectId"): INTEGER NOT NULL
+  $fk("проектId"): INTEGER NOT NULL
   $column("uri"): TEXT NOT NULL UNIQUE
-  $column("name"): TEXT NOT NULL
-  $column("lastModified"): INTEGER NOT NULL
-  $column("createdAt"): INTEGER
-  $column("tags"): TEXT NOT NULL
-  $column("body"): TEXT NOT NULL
+  $column("название"): TEXT NOT NULL
+  $column("последнееИзменение"): INTEGER NOT NULL
+  $column("созданоВ"): INTEGER
+  $column("метки"): TEXT NOT NULL
+  $column("тело"): TEXT NOT NULL
 }
 
-$table("NoteEntityFts", "t_note_fts") {
+$table("ЗаметкаFts", "t_note_fts") {
   $fk("rowid"): INTEGER NOT NULL
-  $column("name"): TEXT
-  $column("body"): TEXT
+  $column("название"): TEXT
+  $column("тело"): TEXT
 }
 
-$table("LinkPreviewEntity", "t_link_preview") {
+$table("СсылкаИнфо", "t_link_preview") {
   $pk("url"): TEXT NOT NULL
-  $column("title"): TEXT
-  $column("description"): TEXT
-  $column("imageUrl"): TEXT
-  $column("fetchedAt"): INTEGER NOT NULL
+  $column("заголовок"): TEXT
+  $column("описание"): TEXT
+  $column("urlИзображения"): TEXT
+  $column("полученоВ"): INTEGER NOT NULL
 }
 
-t_project::id ||-right-o{ t_note::projectId : owns
-t_note::id ||-down-|| t_note_fts::rowid : FTS_INDEX
-t_project::id ||-[hidden]down-|| t_link_preview::url : FTS_INDEX
+t_project::id ||-right-o{ t_note::проектId : содержит
+t_note::id ||-down-|| t_note_fts::rowid : ссылается
+t_project::id ||-[hidden]down-|| t_link_preview::url
 
 @enduml

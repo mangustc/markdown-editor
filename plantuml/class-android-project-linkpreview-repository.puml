@@ -26,10 +26,10 @@ remove Scalar
 remove StringList
 
 'TextState
-'remove TextState
-'remove MutableTextState
-'remove TextSelection
-'remove TextUndoState
+remove TextState
+remove MutableTextState
+remove TextSelection
+remove TextUndoState
 
 'Settings
 remove Settings
@@ -56,18 +56,18 @@ remove SortBy
 remove LinkPreview
 
 'Repositories
-remove ProjectRepository
-remove AndroidProjectRepository
-remove NoteDao
-remove ProjectDao
-remove LinkPreviewDao
-remove NoteEntity
-remove NoteEntityFts
-remove ProjectEntity
-remove LinkPreviewEntity
-remove NoteDb
-remove LinkPreviewRepository
-remove AndroidLinkPreviewRepository
+'remove ProjectRepository
+'remove AndroidProjectRepository
+'remove NoteDao
+'remove ProjectDao
+'remove LinkPreviewDao
+'remove NoteEntity
+'remove NoteEntityFts
+'remove ProjectEntity
+'remove LinkPreviewEntity
+'remove NoteDb
+'remove LinkPreviewRepository
+'remove AndroidLinkPreviewRepository
 remove SyncRepository
 remove YandexSyncRepository
 remove SyncRepositoryFactory
@@ -127,27 +127,21 @@ remove GetProjectFileInput
 'MarkdownParser
 remove MarkdownParser
 
-class ComposeTextUndoState as "ComposeСостояниеОтменыТекста" {
-    + состояниеОтмены: UndoState
-}
+hide ProjectRepository members
+hide LinkPreviewRepository members
 
-class ComposeTextState as "ComposeСостояниеТекста" {
-    + состояние: TextFieldState
-}
+NoteDb -[hidden]- NoteDao
 
-class ComposeMutableTextState as "ComposeИзменяемоеСостояниеТекста" {
-    + state: TextFieldBuffer
-}
+NoteDao -[hidden]- NoteEntity
+NoteDao -[hidden]- NoteEntityFts
+ProjectDao -[hidden]- ProjectEntity
+LinkPreviewDao -[hidden]- LinkPreviewEntity
 
-ComposeTextState ..|> TextState
-ComposeMutableTextState ..|> MutableTextState
-ComposeTextUndoState ..|> TextUndoState
+AndroidProjectRepository -[hidden]l- ProjectRepository
+AndroidProjectRepository -[hidden]- NoteDao
+AndroidProjectRepository -[hidden]- ProjectDao
 
-ComposeTextState ..> ComposeMutableTextState
-ComposeTextState "1" *-- "1" ComposeTextUndoState
-
-TextState -[hidden]l- ComposeMutableTextState
-
-TextUndoState -[hidden]- TextSelection
+AndroidLinkPreviewRepository -[hidden]l- LinkPreviewRepository
+AndroidLinkPreviewRepository -[hidden]- LinkPreviewDao
 
 @enduml

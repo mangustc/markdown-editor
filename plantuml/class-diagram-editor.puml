@@ -127,8 +127,30 @@ remove GetProjectFileInput
 'MarkdownParser
 'remove MarkdownParser
 
-MarkdownParser -[hidden]- TextState
+TextState -[hidden]- TextSelection
+TextState -[hidden]- TextUndoState
+TextState -[hidden]- MutableTextState
+MutableTextState -[hidden]- TextSelection
+
+FrontMatter -[hidden]- FrontMatterValue
+FrontMatterValue -[hidden]r- Scalar
+FrontMatterValue -[hidden]l- StringList
+
+SpanInfo -[hidden]- Heading
+SpanInfo -[hidden]- Bold
+SpanInfo -[hidden]- Italic
+SpanInfo -[hidden]u- CodeInline
+SpanInfo -[hidden]u- CodeBlock
+SpanInfo -[hidden]r- Image
+SpanInfo -[hidden]u- ListItem
+SpanInfo -[hidden]- Blockquote
+SpanInfo -[hidden]l- Link
+Link -[hidden]- LinkType
+Link -[hidden]- LinkType
+
 MutableTextState -[hidden]d- TextUndoState
 
 Bold -[hidden]- FrontMatter
+Image -[hidden]r- TextState
+
 @enduml

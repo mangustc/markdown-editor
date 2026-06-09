@@ -1,740 +1,737 @@
 @startuml
-interface Attachment {
-    +type: AttachmentType
-    +fileSystemPath: FileSystemPath
-    +displayName: String
+interface Attachment as "Вложение" {
+    +тип: ТипВложения
+    +путьФайловойСистемы: ПутьФайловойСистемы
+    +отображаемоеНазвание: Строка
 }
 
-enum AttachmentType {
-    FILE
-    IMAGE
+enum AttachmentType as "ТипВложения" {
+    ФАЙЛ
+    ИЗОБРАЖЕНИЕ
 }
 
-class PendingAttachment {
+class PendingAttachment as "ОжидающееВложение" {
 }
 
-class ProjectAttachment {
-    +relativePath: RelativePath
+class ProjectAttachment as "ВложениеПроекта" {
+    +относительныйПуть: ОтносительныйПуть
 }
 
-class InvalidProjectAttachment {
-    +relativePath: RelativePath
+class InvalidProjectAttachment as "НевалидноеВложениеПроекта" {
+    +относительныйПуть: ОтносительныйПуть
 }
 
-class MessageBody {
-    +text: String
-    +attachments: List<Attachment>
-    +links: Sequence<MatchResult>
-    +note: Note
+class MessageBody as "КраткаяЗаметка" {
+    +текст: Строка
+    +вложения: Список<Вложение>
+    +ссылки: Список<Строка>
+    +заметка: Заметка
 }
 
-interface TextState {
-    +text: CharSequence
-    +selection: TextSelection
-    +undoState: TextUndoState
-    +edit(block: MutableTextState.() -> Unit)
-    +setTextAndPlaceCursorAtEnd(text: String)
+interface TextState as "СостояниеТекста" {
+    +текст: CharSequence
+    +выделениеТекста: ВыделениеТекста
+    +состояниеОтмены: СостояниеОтменыТекста
+    +редактировать(блок: ИзменяемоеСостояниеТекста.() -> Unit)
+    +установитьТекстИПоместитьКурсорВКонец(текст: Строка)
 }
 
-class TextSelection {
-    +start: Int
-    +end: Int
-    +collapsed(): Boolean
-    +min(): Int
-    +max(): Int
-    +length(): Int
+class TextSelection as "ВыделениеТекста" {
+    +начало: Число
+    +конец: Число
+    +свернуто(): Булев
+    +мин(): Число
+    +макс(): Число
+    +длина(): Число
 }
 
-interface TextUndoState {
-    +canUndo: Boolean
-    +canRedo: Boolean
-    +undo()
-    +redo()
-    +clearHistory()
+interface TextUndoState as "СостояниеОтменыТекста" {
+    +можноОтменить: Булев
+    +можноПовторить: Булев
+    +отменить()
+    +повторить()
+    +очиститьИсторию()
 }
 
-interface MutableTextState {
-    +originalText: CharSequence
-    +selection: TextSelection
-    +length: Int
-    +replace(start: Int, end: Int, text: String)
-    +insert(index: Int, text: String)
-    +append(text: String)
-    +placeCursorAfterCharAt(index: Int)
+interface MutableTextState as "ИзменяемоеСостояниеТекста" {
+    +исходныйТекст: CharSequence
+    +выделениеТекста: ВыделениеТекста
+    +длина: Число
+    +заменить(начало: Число, конец: Число, текст: Строка)
+    +вставить(индекс: Число, текст: Строка)
+    +добавитьВКонец(текст: Строка)
+    +поместитьКурсорПослеСимволаНа(индекс: Число)
 }
 
-class FrontMatter {
-    +fields: Map<String, FrontMatterValue>
-    +createdAt(): String?
-    +tags(): List<String>
-    +get(key: String): FrontMatterValue?
-    +toTagString(): String
-    +toCreatedAtMillis(): Long?
-    +withField(key: String, value: FrontMatterValue): FrontMatter
-    +withRenamedKey(oldKey: String, newKey: String): FrontMatter
-    +withTag(tag: String): FrontMatter
-    +withoutTag(tag: String): FrontMatter
-    +withoutField(key: String): FrontMatter
-    +toString(): String
+class FrontMatter as "Метаданные" {
+    +поля: Словарь<Строка, ЗначениеМетаданных>
+    +созданоВ(): Строка?
+    +метки(): Список<Строка>
+    +получить(ключ: Строка): ЗначениеМетаданных?
+    +вСтрокуМеток(): Строка
+    +вСозданоВМиллисекундах(): ДлинноеЧисло?
+    +сПолем(ключ: Строка, значение: ЗначениеМетаданных): Метаданные
+    +сНовымКлючом(старыйКлюч: Строка, новыйКлюч: Строка): Метаданные
+    +сМеткой(метка: Строка): Метаданные
+    +безМетки(метка: Строка): Метаданные
+    +безПоля(ключ: Строка): Метаданные
+    +вСтроку(): Строка
 }
 
-interface FrontMatterValue {
+interface FrontMatterValue as "ЗначениеМетаданных" {
 }
 
-class Scalar {
-    +value: String
+class Scalar as "Скаляр" {
+    +значение: Строка
 }
 
-class StringList {
-    +values: List<String>
+class StringList as "СписокСтрок" {
+    +значения: Список<Строка>
 }
 
-class RelativePath {
-    +value: String
-    +splitParts(): List<String>
-    +appendRelativePath(relativePath: RelativePath): RelativePath
-    +basename(): String
-    +dirRelativePath(): RelativePath
+class RelativePath as "ОтносительныйПуть" {
+    +значение: Строка
+    +получитьЧасти(): Список<Строка>
+    +добавить(путь: ОтносительныйПуть): ОтносительныйПуть
+    +название(): Строка
+    +родитель(): ОтносительныйПуть
 }
 
-class Project {
-    +name: String
-    +rootFileSystemPath: FileSystemPath
-    +notesRelativePath: RelativePath
-    +assetsRelativePath: RelativePath
+class Project as "Проект" {
+    +название: Строка
+    +корневойПуть: ПутьФайловойСистемы
+    +путьЗаметок: ОтносительныйПуть
+    +путьРесурсов: ОтносительныйПуть
 }
 
-class ProjectFile {
-    +fileSystemPath: FileSystemPath
-    +relativePath: RelativePath
+class ProjectFile as "ФайлПроекта" {
+    +путьФайловойСистемы: ПутьФайловойСистемы
+    +относительныйПуть: ОтносительныйПуть
 }
 
-interface SpanInfo {
-    +range: TextRange
+interface SpanInfo as "Токен" {
+    +диапазон: ДиапазонТекста
 }
 
-class TextRange {
-    +start: Int
-    +end: Int
+class TextRange as "ДиапазонТекста" {
+    +начало: Число
+    +конец: Число
 }
 
-class Heading {
-    +level: Int
+class Heading as "Заголовок" {
+    +уровень: Число
 }
 
-class Bold {
+class Bold as "Жирный" {
 }
 
-class Italic {
+class Italic as "Курсив" {
 }
 
-class CodeInline {
+class CodeInline as "ВстроенныйКод" {
 }
 
-class CodeBlock {
+class CodeBlock as "БлокКода" {
 }
 
-class Image {
-    +payload: String
+class Image as "Изображение" {
+    +содержание: Строка
 }
 
-class Link {
-    +payload: String
-    +label: String
-    +payloadRange: TextRange
-    +labelRange: TextRange
-    +linkType(): LinkType
+class Link as "Ссылка" {
+    +содержание: Строка
+    +метка: Строка
+    +диапазонСодержания: ДиапазонТекста
+    +диапазонМетки: ДиапазонТекста
+    +типСсылки(): ТипСсылка
 }
 
-enum LinkType {
-    FILE
-    NOTE
+enum LinkType as "ТипСсылка" {
+    ФАЙЛ
+    ЗАМЕТКА
     HTTP
 }
 
-class ListItem {
-}
-
-class Blockquote {
+class ListItem as "ЭлементСписка" {
 }
-
-class Note {
-    +name: String
-    +projectFile: ProjectFile
-    +lastModified: Long
-    +createdAt: Long?
-    +tags: List<String>?
-    +body: String?
-}
-
-class Settings {
-    +reverseLayout: Boolean
-    +syncProvider: ValidSyncProvider
-    +yandexOauthToken: String
-}
-
-enum ValidSyncProvider {
-    NONE
-    YANDEX
-}
-
-class SearchQuery {
-    +bodyTerms: List<String>
-    +negatedBodyTerms: List<String>
-    +tagFilters: List<String>
-    +negatedTagFilters: List<String>
-    +propFilters: Map<String, String>
-    +nameFilter: String?
-    +negatedNameFilter: String?
-    +sortBy: SortBy
-    +pinnedFirst: Boolean
-    +isEmpty(): Boolean
-    +buildFtsMatchQuery(): String?
-    +positiveTagLikes(): List<String>
-    +negatedTagLikes(): List<String>
+
+class Blockquote as "Цитата" {
+}
+
+class Note as "Заметка" {
+    +имя: Строка
+    +файлПроекта: ФайлПроекта
+    +последнееИзменение: ДлинноеЧисло
+    +созданоВ: ДлинноеЧисло?
+    +метки: Список<Строка>?
+    +тело: Строка?
+}
+
+class Settings as "Настройки" {
+    +обратныйМакет: Булев
+    +сервис: ВалидныйСервисСинхронизации
+    +yandexOAuthТокен: Строка
+}
+
+enum ValidSyncProvider as "ВалидныйСервисСинхронизации" {
+    ОТСУТСТВУЕТ
+    ЯНДЕКС
+}
+
+class SearchQuery as "ПоисковойЗапрос" {
+    +терминыТела: Список<Строка>
+    +исключенныеТерминыТела: Список<Строка>
+    +фильтрыМеток: Список<Строка>
+    +исключенныеФильтрыМеток: Список<Строка>
+    +фильтрИмени: Строка?
+    +отрицаемыйФильтрИмени: Строка?
+    +сортировкаПо: СортировкаПо
+    +сначалаЗакрепленные: Булев
+    +построитьFtsЗапросСовпадения(): Строка?
 }
 
-enum SortBy {
-    LAST_MODIFIED
-    CREATED_AT
+enum SortBy as "СортировкаПо" {
+    ПОСЛЕДНЕЕ_ИЗМЕНЕНИЕ
+    СОЗДАНО_В
 }
 
-class LinkPreview {
-    +url: String
-    +title: String?
-    +description: String?
-    +imageUrl: String?
+class LinkPreview as "ИнформацияСсылка" {
+    +url: Строка
+    +заголовок: Строка?
+    +описание: Строка?
+    +urlИзображения: Строка?
 }
 
-class FileSystemPath {
-    +value: String
+class FileSystemPath as "ПутьФайловойСистемы" {
+    +значение: Строка
 }
 
-Attachment <|.. PendingAttachment
-Attachment <|.. ProjectAttachment
-Attachment <|.. InvalidProjectAttachment
-Attachment "1" *-- "1" FileSystemPath
-Attachment "1" *-- "1" AttachmentType
-ProjectAttachment "1" *-- "1" RelativePath
-InvalidProjectAttachment "1" *-- "1" RelativePath
+Attachment <|.[norank]. PendingAttachment
+Attachment <|.[norank]. ProjectAttachment
+Attachment <|.[norank]. InvalidProjectAttachment
+Attachment "1" *-[norank]- "1" FileSystemPath
+Attachment "1" *-[norank]- "1" AttachmentType
+ProjectAttachment "1" *-[norank]- "1" RelativePath
+InvalidProjectAttachment "1" *-[norank]- "1" RelativePath
 
-MessageBody "1" o-- "*" Attachment
-MessageBody "1" o-- "1" Note
+MessageBody "1" o-[norank]- "*" Attachment
+MessageBody "1" o-[norank]- "1" Note
 
-TextState "1" *-- "1" TextSelection
-TextState "1" *-- "1" TextUndoState
-TextState ..> MutableTextState
-MutableTextState "1" *-- "1" TextSelection
+TextState "1" *-[norank]- "1" TextSelection
+TextState "1" *-[norank]- "1" TextUndoState
+TextState .[norank].> MutableTextState
+MutableTextState "1" *-[norank]- "1" TextSelection
 
-FrontMatter "1" *-- "*" FrontMatterValue
-FrontMatterValue <|.. Scalar
-FrontMatterValue <|.. StringList
+FrontMatter "1" *-[norank]- "*" FrontMatterValue
+FrontMatterValue <|.[norank]. Scalar
+FrontMatterValue <|.[norank]. StringList
 
-Project "1" *-- "1" FileSystemPath
-Project "1" *-- "1" RelativePath : notesRelativePath
-Project "1" *-- "1" RelativePath : assetsRelativePath
+Project "1" *-[norank]- "1" FileSystemPath
+Project "1" *-[norank]- "1" RelativePath : путьЗаметок
+Project "1" *-[norank]- "1" RelativePath : путьРесурсов
 
-ProjectFile "1" *-- "1" FileSystemPath
-ProjectFile "1" *-- "1" RelativePath
-SpanInfo "1" *-- "1" TextRange
-SpanInfo <|.. Heading
-SpanInfo <|.. Bold
-SpanInfo <|.. Italic
-SpanInfo <|.. CodeInline
-SpanInfo <|.. CodeBlock
-SpanInfo <|.. Image
-SpanInfo <|.. ListItem
-SpanInfo <|.. Blockquote
-SpanInfo <|.. Link
-Link "1" *-- "1" TextRange : payloadRange
-Link "1" *-- "1" TextRange : labelRange
-Link "1" *-- "1" LinkType
+ProjectFile "1" *-[norank]- "1" FileSystemPath
+ProjectFile "1" *-[norank]- "1" RelativePath
+SpanInfo "1" *-[norank]- "1" TextRange
+SpanInfo <|.[norank]. Heading
+SpanInfo <|.[norank]. Bold
+SpanInfo <|.[norank]. Italic
+SpanInfo <|.[norank]. CodeInline
+SpanInfo <|.[norank]. CodeBlock
+SpanInfo <|.[norank]. Image
+SpanInfo <|.[norank]. ListItem
+SpanInfo <|.[norank]. Blockquote
+SpanInfo <|.[norank]. Link
+Link "1" *-[norank]- "1" TextRange : диапазонСодержания
+Link "1" *-[norank]- "1" TextRange : диапазонМетки
+Link "1" *-[norank]- "1" LinkType
 
-Note "1" *-- "1" ProjectFile
+Note "1" *-[norank]- "1" ProjectFile
 
-Settings "1" *-- "1" ValidSyncProvider
-SearchQuery "1" *-- "1" SortBy
+Settings "1" *-[norank]- "1" ValidSyncProvider
+SearchQuery "1" *-[norank]- "1" SortBy
 
-interface ProjectRepository {
-    +getNotes(project: Project, query: SearchQuery, includeText: Boolean, includeFrontMatter: Boolean): List<Note>
-    +getNotesPaged(project: Project, query: SearchQuery, includeText: Boolean, includeFrontMatter: Boolean): Flow<PagingData<Note>>
-    +getNote(project: Project, relativePath: RelativePath, includeText: Boolean, includeFrontMatter: Boolean): Note
-    +buildProject(projectPath: FileSystemPath): Project
-    +syncDatabase(project: Project)
-    +copyFromFileSystem(project: Project, fromPath: FileSystemPath, toDirPath: RelativePath): ProjectFile
-    +getAllTags(project: Project): List<String>
-    +writeFile(project: Project, relativePath: RelativePath, byteArray: ByteArray, fileExistsStrategy: FileExistsStrategy, createParents: Boolean): ProjectFile
-    +deleteFile(project: Project, relativePath: RelativePath)
-    +copyFile(project: Project, relativePath: RelativePath, newRelativePath: RelativePath, fileExistsStrategy: FileExistsStrategy, createParents: Boolean): ProjectFile
-    +moveFile(project: Project, relativePath: RelativePath, newRelativePath: RelativePath, fileExistsStrategy: FileExistsStrategy, createParents: Boolean): ProjectFile
-    +readFile(project: Project, relativePath: RelativePath): ByteArray
-    +getProjectFilesList(project: Project): List<ProjectFile>
-    +getProjectFile(project: Project, relativePath: RelativePath): ProjectFile
+interface ProjectRepository as "РепозиторийПроекта" {
+    +получитьЗаметки(проект: Проект, запрос: ПоисковойЗапрос, включитьТекст: Булев, включитьМетаданные: Булев): Список<Заметка>
+    +получитьЗаметкиПостранично(проект: Проект, запрос: ПоисковойЗапрос, включитьТекст: Булев, включитьМетаданные: Булев): Flow<PagingData<Заметка>>
+    +получитьЗаметку(проект: Проект, путь: ОтносительныйПуть, включитьТекст: Булев, включитьМетаданные: Булев): Заметка
+    +построитьПроект(путьПроекта: ПутьФайловойСистемы): Проект
+    +синхронизироватьБазуДанных(проект: Проект)
+    +копироватьИзФайловойСистемы(проект: Проект, изПути: ПутьФайловойСистемы, вПутьКаталога: ОтносительныйПуть): ФайлПроекта
+    +получитьВсеМетки(проект: Проект): Список<Строка>
+    +записатьФайл(проект: Проект, путь: ОтносительныйПуть, байты: ByteArray, стратегия: СтратегияСуществования, создатьРодителей: Булев): ФайлПроекта
+    +удалитьФайл(проект: Проект, путь: ОтносительныйПуть)
+    +копироватьФайл(проект: Проект, путь: ОтносительныйПуть, новыйПуть: ОтносительныйПуть, стратегия: СтратегияСуществования, создатьРодителей: Булев): ФайлПроекта
+    +переместитьФайл(проект: Проект, путь: ОтносительныйПуть, новыйПуть: ОтносительныйПуть, стратегия: СтратегияСуществования, создатьРодителей: Булев): ФайлПроекта
+    +прочитатьФайл(проект: Проект, путь: ОтносительныйПуть): ByteArray
+    +получитьСписокФайловПроекта(проект: Проект): Список<ФайлПроекта>
+    +получитьФайлПроекта(проект: Проект, путь: ОтносительныйПуть): ФайлПроекта
 }
 
-enum FileExistsStrategy {
-    OVERWRITE
-    AUTO_RENAME
+enum FileExistsStrategy as "СтратегияСуществования" {
+    ПЕРЕЗАПИСАТЬ
+    АВТО_ПЕРЕИМЕНОВАНИЕ
 }
 
-class AndroidProjectRepository {
-    +projectDao: ProjectDao
-    +noteDao: NoteDao
+class AndroidProjectRepository as "РепозиторийAndroidПроекта" {
+    +projectDao: DaoПроекта
+    +noteDao: DaoЗаметок
 }
 
-interface SettingsRepository {
-    +setSettings(project: Project, settings: Settings): Settings
-    +getSettings(project: Project): Settings
-    +setProjectPath(path: FileSystemPath)
-    +getProjectPath(): FileSystemPath?
+interface SettingsRepository as "РепозиторийНастроек" {
+    +установитьНастройки(проект: Проект, настройки: Настройки): Настройки
+    +получитьНастройки(проект: Проект): Настройки
+    +установитьПутьПроекта(путь: ПутьФайловойСистемы)
+    +получитьПутьПроекта(): ПутьФайловойСистемы?
 }
 
-class AndroidSettingsRepository {
+class AndroidSettingsRepository as "РепозиторийAndroidНастроек" {
 }
 
-interface LinkPreviewRepository {
-    +getLinkPreview(url: String): LinkPreview?
+interface LinkPreviewRepository as "РепозиторийИнформацияСсылка" {
+    +получитьИнформацияСсылка(url: Строка): ИнформацияСсылка?
 }
 
-class AndroidLinkPreviewRepository {
-    +linkPreviewDao: LinkPreviewDao
+class AndroidLinkPreviewRepository as "РепозиторийAndroidИнформацияСсылка" {
+    +linkPreviewDao: DaoИнформацияСсылка
 }
 
-interface SyncRepository {
-    +downloadFile(path: RelativePath): ByteArray?
-    +uploadFile(path: RelativePath, bytes: ByteArray)
-    +deleteFile(path: RelativePath)
+interface SyncRepository as "РепозиторийСинхронизации" {
+    +скачатьФайл(путь: ОтносительныйПуть): ByteArray?
+    +загрузитьФайл(путь: ОтносительныйПуть, байты: ByteArray)
+    +удалитьФайл(путь: ОтносительныйПуть)
 }
 
-class YandexSyncRepository {
-    +oauthToken: String
+class YandexSyncRepository as "РепозиторийYandexСинхронизации" {
+    +oauthToken: Строка
 }
 
-class SyncRepositoryFactory {
-    +create(settings: Settings): SyncRepository?
+class SyncRepositoryFactory as "ФабрикаРепозиторияСинхронизации" {
+    +создать(настройки: Настройки): РепозиторийСинхронизации?
 }
 
-abstract class NoteDb {
-    +projectDao(): ProjectDao
-    +noteDao(): NoteDao
-    +linkPreviewDao(): LinkPreviewDao
+abstract class NoteDb as "DbЗаметок" {
+    +projectDao(): DaoПроекта
+    +noteDao(): DaoЗаметок
+    +linkPreviewDao(): DaoИнформацияСсылка
 }
 
-interface NoteDao {
-    +insertNote(note: NoteEntity): Long
-    +deleteByUri(uri: String)
-    +getNoteByUri(uri: String): NoteEntity?
-    +searchNotes(query: SupportSQLiteQuery): List<NoteEntity>
-    +searchNotesPaged(query: SupportSQLiteQuery): PagingSource<Int, NoteEntity>
-    +getAllTags(projectId: Long): List<String>
+interface NoteDao as "DaoЗаметок" {
+    +вставитьЗаметку(заметка: СущностьЗаметка): ДлинноеЧисло
+    +удалитьПоUri(uri: Строка)
+    +получитьЗаметкуПоUri(uri: Строка): СущностьЗаметка?
+    +поискЗаметок(запрос: SupportSQLiteQuery): Список<СущностьЗаметка>
+    +поискЗаметокПостранично(запрос: SupportSQLiteQuery): PagingSource<Число, СущностьЗаметка>
+    +получитьВсеМетки(идентификаторПроекта: ДлинноеЧисло): Список<Строка>
 }
 
-interface ProjectDao {
-    +insertProject(project: ProjectEntity): Long
-    +getProjectId(rootPath: String): Long?
+interface ProjectDao as "DaoПроекта" {
+    +вставитьПроект(проект: СущностьПроекта): ДлинноеЧисло
+    +получитьИдентификаторПроекта(корневойПуть: Строка): ДлинноеЧисло?
 }
 
-interface LinkPreviewDao {
-    +getByUrl(url: String): LinkPreviewEntity?
-    +insert(entity: LinkPreviewEntity)
+interface LinkPreviewDao as "DaoИнформацияСсылка" {
+    +получитьПоUrl(url: Строка): СущностьИнформацияСсылка?
+    +вставить(сущность: СущностьИнформацияСсылка)
 }
 
-class NoteEntity {
-    +id: Long
-    +projectId: Long
-    +uri: String
-    +name: String
-    +lastModified: Long
-    +createdAt: Long?
-    +tags: String
-    +body: String
+class NoteEntity as "СущностьЗаметка" {
+    +id: ДлинноеЧисло
+    +идентификаторПроекта: ДлинноеЧисло
+    +uri: Строка
+    +название: Строка
+    +последнееИзменение: ДлинноеЧисло
+    +созданоВ: ДлинноеЧисло?
+    +метки: Строка
+    +тело: Строка
 }
 
-class NoteEntityFts {
-    +id: Long
-    +name: String
-    +body: String
+class NoteEntityFts as "СущностьЗаметкиFts" {
+    +id: ДлинноеЧисло
+    +название: Строка
+    +тело: Строка
 }
 
-class ProjectEntity {
-    +id: Long
-    +name: String
-    +rootPath: String
+class ProjectEntity as "СущностьПроекта" {
+    +id: ДлинноеЧисло
+    +название: Строка
+    +корневойПуть: Строка
 }
 
-class LinkPreviewEntity {
-    +url: String
-    +title: String?
-    +description: String?
-    +imageUrl: String?
-    +fetchedAt: Long
+class LinkPreviewEntity as "СущностьИнформацияСсылка" {
+    +url: Строка
+    +заголовок: Строка?
+    +описание: Строка?
+    +urlИзображения: Строка?
+    +полученоВ: ДлинноеЧисло
 }
 
-AndroidProjectRepository ..|> ProjectRepository
-AndroidSettingsRepository ..|> SettingsRepository
-AndroidLinkPreviewRepository ..|> LinkPreviewRepository
-YandexSyncRepository ..|> SyncRepository
+AndroidProjectRepository .[norank].|> ProjectRepository
+AndroidSettingsRepository .[norank].|> SettingsRepository
+AndroidLinkPreviewRepository .[norank].|> LinkPreviewRepository
+YandexSyncRepository .[norank].|> SyncRepository
+YandexSyncRepository <.. SyncRepositoryFactory
 
-NoteDb "1" *-- "1" NoteDao
-NoteDb "1" *-- "1" ProjectDao
-NoteDb "1" *-- "1" LinkPreviewDao
+NoteDb "1" *-[norank]- "1" NoteDao
+NoteDb "1" *-[norank]- "1" ProjectDao
+NoteDb "1" *-[norank]- "1" LinkPreviewDao
 
-AndroidProjectRepository "1" o-- "1" NoteDao
-AndroidProjectRepository "1" o-- "1" ProjectDao
-AndroidLinkPreviewRepository "1" o-- "1" LinkPreviewDao
+AndroidProjectRepository "1" o-[norank]- "1" NoteDao
+AndroidProjectRepository "1" o-[norank]- "1" ProjectDao
+AndroidLinkPreviewRepository "1" o-[norank]- "1" LinkPreviewDao
 
-NoteDao ..> NoteEntity
-ProjectDao ..> ProjectEntity
-LinkPreviewDao ..> LinkPreviewEntity
-NoteEntityFts ..> NoteEntity
+NoteDao .[norank].> NoteEntity
+ProjectDao .[norank].> ProjectEntity
+LinkPreviewDao .[norank].> LinkPreviewEntity
+NoteEntityFts .[norank].> NoteEntity
 
-SyncRepositoryFactory ..> SyncRepository
+SyncRepositoryFactory .[norank].> SyncRepository
 
-LinkPreviewRepository ..> LinkPreview
+LinkPreviewRepository .[norank].> LinkPreview
 
-ProjectRepository ..> FileExistsStrategy
-ProjectRepository ..> SearchQuery
-ProjectRepository ..> Project
-ProjectRepository ..> Note
-ProjectRepository ..> RelativePath
-ProjectRepository ..> ProjectFile
-ProjectRepository ..> FileSystemPath
+ProjectRepository .[norank].> FileExistsStrategy
+ProjectRepository .[norank].> SearchQuery
+ProjectRepository .[norank].> Project
+ProjectRepository .[norank].> Note
+ProjectRepository .[norank].> RelativePath
+ProjectRepository .[norank].> ProjectFile
+ProjectRepository .[norank].> FileSystemPath
 
-SettingsRepository ..> Settings
-SettingsRepository ..> Project
+SettingsRepository .[norank].> Settings
+SettingsRepository .[norank].> Project
 
-SyncRepository ..> RelativePath
+SyncRepository .[norank].> RelativePath
 
-interface UseCase<Input, Output> {
-    +invoke(input: Input): Output
+interface UseCase as "UC<Вход, Выход>" {
+    +invoke(вход: Вход): Выход
 }
 
-interface FlowUseCase<Input, Output> {
-    +invoke(input: Input): Flow<Output>
+interface FlowUseCase as "FlowUC<Вход, Выход>" {
+    +invoke(вход: Вход): Flow<Выход>
 }
 
-class SendNoteInput {
-    +project: Project
-    +body: String
-    +attachments: List<Attachment>
-    +editNote: Note?
+class SendNoteInput as "ВходОтправитьЗаметку" {
+    +проект: Проект
+    +тело: Строка
+    +вложения: Список<Вложение>
+    +редактируемаяЗаметка: Заметка?
 }
 
-class SendNoteUseCase<SendNoteInput, Unit> {
-    +projectRepository: ProjectRepository
-    +createNoteUseCase: CreateNoteUseCase
-    +copyToAssetsUseCase: CopyToAssetsUseCase
-    +saveNoteTextUseCase: SaveNoteTextUseCase
+class SendNoteUseCase as "ОтправитьЗаметкуUC<ВходОтправитьЗаметку, Unit>" {
+    +репозиторийПроекта: РепозиторийПроекта
+    +создатьЗаметкуUC: СоздатьЗаметкуUC
+    +копироватьВРесурсыUC: КопироватьВРесурсыUC
+    +сохранитьТекстЗаметкиUC: СохранитьТекстЗаметкиUC
 }
 
-class GetMessagesInput {
-    +project: Project
+class GetMessagesInput as "ВходПолучитьСообщения" {
+    +проект: Проект
 }
 
-class GetMessagesUseCase<GetMessagesInput, Flow<PagingData<MessageBody>>> {
-    +projectRepository: ProjectRepository
-    +getProjectFileUseCase: GetProjectFileUseCase
+class GetMessagesUseCase as "ПолучитьСообщенияUC<ВходПолучитьСообщения, Flow<PagingData<КраткаяЗаметка>>>" {
+    +репозиторийПроекта: РепозиторийПроекта
+    +получитьФайлПроектаUC: ПолучитьФайлПроектаUC
 }
 
-class GetNotesInput {
-    +project: Project
-    +searchQueryString: String
+class GetNotesInput as "ВходПолучитьЗаметки" {
+    +проект: Проект
+    +строкаПоисковогоЗапроса: Строка
 }
 
-class GetNotesUseCase<GetNotesInput, Flow<PagingData<Note>>> {
-    +projectRepository: ProjectRepository
+class GetNotesUseCase as "ПолучитьЗаметкиUC<ВходПолучитьЗаметки, Flow<PagingData<Заметка>>>" {
+    +репозиторийПроекта: РепозиторийПроекта
 }
 
-class GetPinnedMessagesInput {
-    +project: Project
+class GetPinnedMessagesInput as "ВходПолучитьЗакрепленныеСообщения" {
+    +проект: Проект
 }
 
-class GetPinnedMessagesUseCase<GetPinnedMessagesInput, List<MessageBody>> {
-    +projectRepository: ProjectRepository
-    +getProjectFileUseCase: GetProjectFileUseCase
+class GetPinnedMessagesUseCase as "ПолучитьЗакрепленныеСообщенияUC<ВходПолучитьЗакрепленныеСообщения, Список<КраткаяЗаметка>>" {
+    +репозиторийПроекта: РепозиторийПроекта
+    +получитьФайлПроектаUC: ПолучитьФайлПроектаUC
 }
 
-class CreateNoteInput {
-    +project: Project
-    +name: String
-    +tags: List<String>
-    +initialText: String
-    +includeText: Boolean
-    +includeFrontMatter: Boolean
+class CreateNoteInput as "ВходСоздатьЗаметку" {
+    +проект: Проект
+    +название: Строка
+    +метки: Список<Строка>
+    +начальныйТекст: Строка
+    +включитьТекст: Булев
+    +включитьМетаданные: Булев
 }
 
-class CreateNoteUseCase<CreateNoteInput, Note> {
-    +projectRepository: ProjectRepository
-    +getNoteUseCase: GetNoteUseCase
+class CreateNoteUseCase as "СоздатьЗаметкуUC<ВходСоздатьЗаметку, Заметка>" {
+    +репозиторийПроекта: РепозиторийПроекта
+    +получитьЗаметкуUC: ПолучитьЗаметкуUC
 }
 
-class ToggleNoteTagInput {
-    +project: Project
-    +note: Note
-    +tag: String
+class ToggleNoteTagInput as "ВходПереключитьМеткуЗаметки" {
+    +проект: Проект
+    +заметка: Заметка
+    +метка: Строка
 }
 
-class ToggleNoteTagUseCase<ToggleNoteTagInput, FrontMatter> {
-    +projectRepository: ProjectRepository
+class ToggleNoteTagUseCase as "ПереключитьМеткуЗаметкиUC<ВходПереключитьМеткуЗаметки, Метаданные>" {
+    +репозиторийПроекта: РепозиторийПроекта
 }
 
-class RenameNoteInput {
-    +project: Project
-    +note: Note
-    +newName: String
-    +includeText: Boolean
-    +includeFrontMatter: Boolean
+class RenameNoteInput as "ВходПереименоватьЗаметку" {
+    +проект: Проект
+    +заметка: Заметка
+    +новоеНазвание: Строка
+    +включитьТекст: Булев
+    +включитьМетаданные: Булев
 }
 
-class RenameNoteUseCase<RenameNoteInput, Note> {
-    +projectRepository: ProjectRepository
-    +getNoteUseCase: GetNoteUseCase
+class RenameNoteUseCase as "ПереименоватьЗаметкуUC<ВходПереименоватьЗаметку, Заметка>" {
+    +репозиторийПроекта: РепозиторийПроекта
+    +получитьЗаметкуUC: ПолучитьЗаметкуUC
 }
 
-class GetNoteInput {
-    +project: Project
-    +relativePath: RelativePath
-    +includeText: Boolean
-    +includeFrontMatter: Boolean
+class GetNoteInput as "ВходПолучитьЗаметку" {
+    +проект: Проект
+    +относительныйПуть: ОтносительныйПуть
+    +включитьТекст: Булев
+    +включитьМетаданные: Булев
 }
 
-class GetNoteUseCase<GetNoteInput, Note> {
-    +projectRepository: ProjectRepository
+class GetNoteUseCase as "ПолучитьЗаметкуUC<ВходПолучитьЗаметку, Заметка>" {
+    +репозиторийПроекта: РепозиторийПроекта
 }
 
-class SaveNoteTextInput {
-    +project: Project
-    +note: Note
-    +text: String
+class SaveNoteTextInput as "ВходСохранитьТекстЗаметки" {
+    +проект: Проект
+    +заметка: Заметка
+    +текст: Строка
 }
 
-class SaveNoteTextUseCase<SaveNoteTextInput, Unit> {
-    +projectRepository: ProjectRepository
+class SaveNoteTextUseCase as "СохранитьТекстЗаметкиUC<ВходСохранитьТекстЗаметки, Unit>" {
+    +репозиторийПроекта: РепозиторийПроекта
 }
 
-class DeleteNoteInput {
-    +project: Project
-    +note: Note
+class DeleteNoteInput as "ВходУдалитьЗаметку" {
+    +проект: Проект
+    +заметка: Заметка
 }
 
-class DeleteNoteUseCase<DeleteNoteInput, Unit> {
-    +projectRepository: ProjectRepository
+class DeleteNoteUseCase as "УдалитьЗаметкуUC<ВходУдалитьЗаметку, Unit>" {
+    +репозиторийПроекта: РепозиторийПроекта
 }
 
-class GetRealSpanInfoLinkTypeInput {
-    +project: Project
-    +span: SpanInfo.Link
+class GetRealSpanInfoLinkTypeInput as "ВходПолучитьРеальныйТипСсылкиТокена" {
+    +проект: Проект
+    +токен: Ссылка
 }
 
-class GetRealSpanInfoLinkTypeUseCase<GetRealSpanInfoLinkTypeInput, SpanInfo.Link.LinkType> {
-    +getProjectFileUseCase: GetProjectFileUseCase
+class GetRealSpanInfoLinkTypeUseCase as "ПолучитьРеальныйТипСсылкиТокенаUC<ВходПолучитьРеальныйТипСсылкиТокена, ТипСсылка>" {
+    +получитьФайлПроектаUC: ПолучитьФайлПроектаUC
 }
 
-class ApplyEditorEventInput {
-    +project: Project
-    +state: TextState
-    +event: EditorEvent
+class ApplyEditorEventInput as "ВходПрименитьСобытиеРедактора" {
+    +проект: Проект
+    +состояние: СостояниеТекста
+    +событие: EditorEvent
 }
 
-class ApplyEditorEventUseCase<ApplyEditorEventInput, Unit> {
-    +copyToAssetsUseCase: CopyToAssetsUseCase
+class ApplyEditorEventUseCase as "ПрименитьСобытиеРедактораUC<ВходПрименитьСобытиеРедактора, Unit>" {
+    +копироватьВРесурсыUC: КопироватьВРесурсыUC
 }
 
-class SyncProjectInput {
-    +project: Project
-    +settings: Settings
+class SyncProjectInput as "ВходСинхронизироватьПроект" {
+    +проект: Проект
+    +настройки: Настройки
 }
 
-class SyncProjectUseCase<SyncProjectInput, Unit> {
-    +projectRepository: ProjectRepository
-    +syncRepositoryFactory: SyncRepositoryFactory
+class SyncProjectUseCase as "СинхронизироватьПроектUC<ВходСинхронизироватьПроект, Unit>" {
+    +репозиторийПроекта: РепозиторийПроекта
+    +фабрикаРепозиторияСинхронизации: ФабрикаРепозиторияСинхронизации
 }
 
-class SelectProjectInput {
-    +projectPath: FileSystemPath
+class SelectProjectInput as "ВходВыбратьПроект" {
+    +путьПроекта: ПутьФайловойСистемы
 }
 
-class SelectProjectUseCase<SelectProjectInput, Project> {
-    +projectRepository: ProjectRepository
-    +settingsRepository: SettingsRepository
+class SelectProjectUseCase as "ВыбратьПроектUC<ВходВыбратьПроект, Проект>" {
+    +репозиторийПроекта: РепозиторийПроекта
+    +репозиторийНастроек: РепозиторийНастроек
 }
 
-class LoadSavedProjectUseCase<Unit, Project?> {
-    +projectRepository: ProjectRepository
-    +settingsRepository: SettingsRepository
+class LoadSavedProjectUseCase as "ЗагрузитьСохраненныйПроектUC<Unit, Проект?>" {
+    +репозиторийПроекта: РепозиторийПроекта
+    +репозиторийНастроек: РепозиторийНастроек
 }
 
-class GetSettingsInput {
-    +project: Project
+class GetSettingsInput as "ВходПолучитьНастройки" {
+    +проект: Проект
 }
 
-class GetSettingsUseCase<GetSettingsInput, Settings> {
-    +settingsRepository: SettingsRepository
+class GetSettingsUseCase as "ПолучитьНастройкиUC<ВходПолучитьНастройки, Настройки>" {
+    +репозиторийНастроек: РепозиторийНастроек
 }
 
-class SetSettingsInput {
-    +project: Project
-    +newSettings: Settings
+class SetSettingsInput as "ВходУстановитьНастройки" {
+    +проект: Проект
+    +новыеНастройки: Настройки
 }
 
-class SetSettingsUseCase<SetSettingsInput, Settings> {
-    +settingsRepository: SettingsRepository
+class SetSettingsUseCase as "УстановитьНастройкиUC<ВходУстановитьНастройки, Настройки>" {
+    +репозиторийНастроек: РепозиторийНастроек
 }
 
-class GetAllTagsInput {
-    +project: Project
+class GetAllTagsInput as "ВходПолучитьВсеМетки" {
+    +проект: Проект
 }
 
-class GetAllTagsUseCase<GetAllTagsInput, List<String>> {
-    +projectRepository: ProjectRepository
+class GetAllTagsUseCase as "ПолучитьВсеМеткиUC<ВходПолучитьВсеМетки, Список<Строка>>" {
+    +репозиторийПроекта: РепозиторийПроекта
 }
 
-class SyncDatabaseInput {
-    +project: Project
+class SyncDatabaseInput as "ВходСинхронизироватьБазуДанных" {
+    +проект: Проект
 }
 
-class SyncDatabaseUseCase<SyncDatabaseInput, Unit> {
-    +projectRepository: ProjectRepository
+class SyncDatabaseUseCase as "СинхронизироватьБазуДанныхUC<ВходСинхронизироватьБазуДанных, Unit>" {
+    +репозиторийПроекта: РепозиторийПроекта
 }
 
-class GetLinkPreviewInput {
-    +url: String
+class GetLinkPreviewInput as "ВходПолучитьИнформацияСсылка" {
+    +url: Строка
 }
 
-class GetLinkPreviewUseCase<GetLinkPreviewInput, LinkPreview?> {
+class GetLinkPreviewUseCase as "ПолучитьИнформацияСсылкаUC<ВходПолучитьИнформацияСсылка, ИнформацияСсылка?>" {
     +linkPreviewRepository: LinkPreviewRepository
 }
 
-class ApplySearchEventInput {
-    +state: TextState
-    +event: SearchEvent
+class ApplySearchEventInput as "ВходПрименитьСобытиеПоиска" {
+    +состояние: СостояниеТекста
+    +событие: SearchEvent
 }
 
-class ApplySearchEventUseCase<ApplySearchEventInput, Unit> {
+class ApplySearchEventUseCase as "ПрименитьСобытиеПоискаUC<ВходПрименитьСобытиеПоиска, Unit>" {
 }
 
-class CopyToAssetsInput {
-    +project: Project
-    +assetPath: FileSystemPath
+class CopyToAssetsInput as "ВходКопироватьВРесурсы" {
+    +проект: Проект
+    +путьРесурса: ПутьФайловойСистемы
 }
 
-class CopyToAssetsUseCase<CopyToAssetsInput, ProjectFile> {
-    +projectRepository: ProjectRepository
+class CopyToAssetsUseCase as "КопироватьВРесурсыUC<ВходКопироватьВРесурсы, ФайлПроекта>" {
+    +репозиторийПроекта: РепозиторийПроекта
 }
 
-class GetProjectFileInput {
-    +project: Project
-    +relativePath: RelativePath
+class GetProjectFileInput as "ВходПолучитьФайлПроекта" {
+    +проект: Проект
+    +относительныйПуть: ОтносительныйПуть
 }
 
-class GetProjectFileUseCase<GetProjectFileInput, ProjectFile> {
-    +projectRepository: ProjectRepository
+class GetProjectFileUseCase as "ПолучитьФайлПроектаUC<ВходПолучитьФайлПроекта, ФайлПроекта>" {
+    +репозиторийПроекта: РепозиторийПроекта
 }
 
-FlowUseCase <|.. GetMessagesUseCase
-GetMessagesUseCase ..> GetMessagesInput
-GetMessagesUseCase "1" o-- "1" ProjectRepository
-GetMessagesUseCase "1" o-- "1" GetProjectFileUseCase
+FlowUseCase <|.[norank]. GetMessagesUseCase
+GetMessagesUseCase .[norank].> GetMessagesInput
+GetMessagesUseCase "1" o-[norank]- "1" ProjectRepository
+GetMessagesUseCase "1" o-[norank]- "1" GetProjectFileUseCase
 
-FlowUseCase <|.. GetNotesUseCase
-GetNotesUseCase ..> GetNotesInput
-GetNotesUseCase "1" o-- "1" ProjectRepository
+FlowUseCase <|.[norank]. GetNotesUseCase
+GetNotesUseCase .[norank].> GetNotesInput
+GetNotesUseCase "1" o-[norank]- "1" ProjectRepository
 
-UseCase <|.. SendNoteUseCase
-SendNoteUseCase ..> SendNoteInput
-SendNoteUseCase "1" o-- "1" ProjectRepository
-SendNoteUseCase "1" o-- "1" CreateNoteUseCase
-SendNoteUseCase "1" o-- "1" CopyToAssetsUseCase
-SendNoteUseCase "1" o-- "1" SaveNoteTextUseCase
+UseCase <|.[norank]. SendNoteUseCase
+SendNoteUseCase .[norank].> SendNoteInput
+SendNoteUseCase "1" o-[norank]- "1" ProjectRepository
+SendNoteUseCase "1" o-[norank]- "1" CreateNoteUseCase
+SendNoteUseCase "1" o-[norank]- "1" CopyToAssetsUseCase
+SendNoteUseCase "1" o-[norank]- "1" SaveNoteTextUseCase
 
-UseCase <|.. GetPinnedMessagesUseCase
-GetPinnedMessagesUseCase ..> GetPinnedMessagesInput
-GetPinnedMessagesUseCase "1" o-- "1" ProjectRepository
-GetPinnedMessagesUseCase "1" o-- "1" GetProjectFileUseCase
+UseCase <|.[norank]. GetPinnedMessagesUseCase
+GetPinnedMessagesUseCase .[norank].> GetPinnedMessagesInput
+GetPinnedMessagesUseCase "1" o-[norank]- "1" ProjectRepository
+GetPinnedMessagesUseCase "1" o-[norank]- "1" GetProjectFileUseCase
 
-UseCase <|.. CreateNoteUseCase
-CreateNoteUseCase ..> CreateNoteInput
-CreateNoteUseCase "1" o-- "1" ProjectRepository
-CreateNoteUseCase "1" o-- "1" GetNoteUseCase
+UseCase <|.[norank]. CreateNoteUseCase
+CreateNoteUseCase .[norank].> CreateNoteInput
+CreateNoteUseCase "1" o-[norank]- "1" ProjectRepository
+CreateNoteUseCase "1" o-[norank]- "1" GetNoteUseCase
 
-UseCase <|.. ToggleNoteTagUseCase
-ToggleNoteTagUseCase ..> ToggleNoteTagInput
-ToggleNoteTagUseCase "1" o-- "1" ProjectRepository
+UseCase <|.[norank]. ToggleNoteTagUseCase
+ToggleNoteTagUseCase .[norank].> ToggleNoteTagInput
+ToggleNoteTagUseCase "1" o-[norank]- "1" ProjectRepository
 
-UseCase <|.. RenameNoteUseCase
-RenameNoteUseCase ..> RenameNoteInput
-RenameNoteUseCase "1" o-- "1" ProjectRepository
-RenameNoteUseCase "1" o-- "1" GetNoteUseCase
+UseCase <|.[norank]. RenameNoteUseCase
+RenameNoteUseCase .[norank].> RenameNoteInput
+RenameNoteUseCase "1" o-[norank]- "1" ProjectRepository
+RenameNoteUseCase "1" o-[norank]- "1" GetNoteUseCase
 
-UseCase <|.. GetNoteUseCase
-GetNoteUseCase ..> GetNoteInput
-GetNoteUseCase "1" o-- "1" ProjectRepository
+UseCase <|.[norank]. GetNoteUseCase
+GetNoteUseCase .[norank].> GetNoteInput
+GetNoteUseCase "1" o-[norank]- "1" ProjectRepository
 
-UseCase <|.. SaveNoteTextUseCase
-SaveNoteTextUseCase ..> SaveNoteTextInput
-SaveNoteTextUseCase "1" o-- "1" ProjectRepository
+UseCase <|.[norank]. SaveNoteTextUseCase
+SaveNoteTextUseCase .[norank].> SaveNoteTextInput
+SaveNoteTextUseCase "1" o-[norank]- "1" ProjectRepository
 
-UseCase <|.. DeleteNoteUseCase
-DeleteNoteUseCase ..> DeleteNoteInput
-DeleteNoteUseCase "1" o-- "1" ProjectRepository
+UseCase <|.[norank]. DeleteNoteUseCase
+DeleteNoteUseCase .[norank].> DeleteNoteInput
+DeleteNoteUseCase "1" o-[norank]- "1" ProjectRepository
 
-UseCase <|.. GetRealSpanInfoLinkTypeUseCase
-GetRealSpanInfoLinkTypeUseCase ..> GetRealSpanInfoLinkTypeInput
-GetRealSpanInfoLinkTypeUseCase "1" o-- "1" GetProjectFileUseCase
+UseCase <|.[norank]. GetRealSpanInfoLinkTypeUseCase
+GetRealSpanInfoLinkTypeUseCase .[norank].> GetRealSpanInfoLinkTypeInput
+GetRealSpanInfoLinkTypeUseCase "1" o-[norank]- "1" GetProjectFileUseCase
 
-UseCase <|.. ApplyEditorEventUseCase
-ApplyEditorEventUseCase ..> ApplyEditorEventInput
-ApplyEditorEventUseCase "1" o-- "1" CopyToAssetsUseCase
+UseCase <|.[norank]. ApplyEditorEventUseCase
+ApplyEditorEventUseCase .[norank].> ApplyEditorEventInput
+ApplyEditorEventUseCase "1" o-[norank]- "1" CopyToAssetsUseCase
 
-UseCase <|.. SyncProjectUseCase
-SyncProjectUseCase ..> SyncProjectInput
-SyncProjectUseCase "1" o-- "1" ProjectRepository
-SyncProjectUseCase "1" o-- "1" SyncRepositoryFactory
+UseCase <|.[norank]. SyncProjectUseCase
+SyncProjectUseCase .[norank].> SyncProjectInput
+SyncProjectUseCase "1" o-[norank]- "1" ProjectRepository
+SyncProjectUseCase "1" o-[norank]- "1" SyncRepositoryFactory
 
-UseCase <|.. SelectProjectUseCase
-SelectProjectUseCase ..> SelectProjectInput
-SelectProjectUseCase "1" o-- "1" ProjectRepository
-SelectProjectUseCase "1" o-- "1" SettingsRepository
+UseCase <|.[norank]. SelectProjectUseCase
+SelectProjectUseCase .[norank].> SelectProjectInput
+SelectProjectUseCase "1" o-[norank]- "1" ProjectRepository
+SelectProjectUseCase "1" o-[norank]- "1" SettingsRepository
 
-UseCase <|.. LoadSavedProjectUseCase
-LoadSavedProjectUseCase "1" o-- "1" ProjectRepository
-LoadSavedProjectUseCase "1" o-- "1" SettingsRepository
+UseCase <|.[norank]. LoadSavedProjectUseCase
+LoadSavedProjectUseCase "1" o-[norank]- "1" ProjectRepository
+LoadSavedProjectUseCase "1" o-[norank]- "1" SettingsRepository
 
-UseCase <|.. GetSettingsUseCase
-GetSettingsUseCase ..> GetSettingsInput
-GetSettingsUseCase "1" o-- "1" SettingsRepository
+UseCase <|.[norank]. GetSettingsUseCase
+GetSettingsUseCase .[norank].> GetSettingsInput
+GetSettingsUseCase "1" o-[norank]- "1" SettingsRepository
 
-UseCase <|.. SetSettingsUseCase
-SetSettingsUseCase ..> SetSettingsInput
-SetSettingsUseCase "1" o-- "1" SettingsRepository
+UseCase <|.[norank]. SetSettingsUseCase
+SetSettingsUseCase .[norank].> SetSettingsInput
+SetSettingsUseCase "1" o-[norank]- "1" SettingsRepository
 
-UseCase <|.. GetAllTagsUseCase
-GetAllTagsUseCase ..> GetAllTagsInput
-GetAllTagsUseCase "1" o-- "1" ProjectRepository
+UseCase <|.[norank]. GetAllTagsUseCase
+GetAllTagsUseCase .[norank].> GetAllTagsInput
+GetAllTagsUseCase "1" o-[norank]- "1" ProjectRepository
 
-UseCase <|.. SyncDatabaseUseCase
-SyncDatabaseUseCase ..> SyncDatabaseInput
-SyncDatabaseUseCase "1" o-- "1" ProjectRepository
+UseCase <|.[norank]. SyncDatabaseUseCase
+SyncDatabaseUseCase .[norank].> SyncDatabaseInput
+SyncDatabaseUseCase "1" o-[norank]- "1" ProjectRepository
 
-UseCase <|.. CopyToAssetsUseCase
-CopyToAssetsUseCase ..> CopyToAssetsInput
-CopyToAssetsUseCase "1" o-- "1" ProjectRepository
+UseCase <|.[norank]. CopyToAssetsUseCase
+CopyToAssetsUseCase .[norank].> CopyToAssetsInput
+CopyToAssetsUseCase "1" o-[norank]- "1" ProjectRepository
 
-UseCase <|.. GetLinkPreviewUseCase
-GetLinkPreviewUseCase ..> GetLinkPreviewInput
-GetLinkPreviewUseCase "1" o-- "1" LinkPreviewRepository
+UseCase <|.[norank]. GetLinkPreviewUseCase
+GetLinkPreviewUseCase .[norank].> GetLinkPreviewInput
+GetLinkPreviewUseCase "1" o-[norank]- "1" LinkPreviewRepository
 
-UseCase <|.. ApplySearchEventUseCase
-ApplySearchEventUseCase ..> ApplySearchEventInput
+UseCase <|.[norank]. ApplySearchEventUseCase
+ApplySearchEventUseCase .[norank].> ApplySearchEventInput
 
-UseCase <|.. GetProjectFileUseCase
-GetProjectFileUseCase ..> GetProjectFileInput
+UseCase <|.[norank]. GetProjectFileUseCase
+GetProjectFileUseCase .[norank].> GetProjectFileInput
 
-class MarkdownParser {
-    +parse(text: String): List<SpanInfo>
-    +stripAttachments(text: String, spans: List<SpanInfo>): String
+class MarkdownParser as "MarkdownОбработчик" {
+    +получитьТокены(текст: Строка): Список<Токен>
+    +удалитьВложения(текст: Строка, токены: Список<Токен>): Строка
 }
 
-MarkdownParser ..> SpanInfo
+MarkdownParser .[norank].> SpanInfo
 
 @enduml

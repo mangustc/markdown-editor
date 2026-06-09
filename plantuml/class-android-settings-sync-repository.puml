@@ -1,5 +1,5 @@
 @startuml
-left to right direction
+'left to right direction
 
 skinparam ClassBackgroundColor #FFFFFF
 
@@ -26,10 +26,10 @@ remove Scalar
 remove StringList
 
 'TextState
-'remove TextState
-'remove MutableTextState
-'remove TextSelection
-'remove TextUndoState
+remove TextState
+remove MutableTextState
+remove TextSelection
+remove TextUndoState
 
 'Settings
 remove Settings
@@ -68,11 +68,11 @@ remove LinkPreviewEntity
 remove NoteDb
 remove LinkPreviewRepository
 remove AndroidLinkPreviewRepository
-remove SyncRepository
-remove YandexSyncRepository
-remove SyncRepositoryFactory
-remove SettingsRepository
-remove AndroidSettingsRepository
+'remove SyncRepository
+'remove YandexSyncRepository
+'remove SyncRepositoryFactory
+'remove SettingsRepository
+'remove AndroidSettingsRepository
 remove FileExistsStrategy
 
 'UseCases
@@ -127,27 +127,23 @@ remove GetProjectFileInput
 'MarkdownParser
 remove MarkdownParser
 
-class ComposeTextUndoState as "ComposeСостояниеОтменыТекста" {
-    + состояниеОтмены: UndoState
-}
+'hide SettingsRepository members
+'hide SyncRepository members
 
-class ComposeTextState as "ComposeСостояниеТекста" {
-    + состояние: TextFieldState
-}
+'ProjectRepository -[hidden]- AndroidProjectRepository
+'ProjectRepository -[hidden]- NoteDb
+'ProjectRepository -[hidden]- LinkPreviewRepository
+'NoteEntity -[hidden]- NoteEntityFts
+'ProjectEntity -[hidden]r- NoteEntityFts
+'LinkPreviewEntity -[hidden]- NoteEntity
 
-class ComposeMutableTextState as "ComposeИзменяемоеСостояниеТекста" {
-    + state: TextFieldBuffer
-}
+'NoteDb -[hidden]- AndroidProjectRepository
 
-ComposeTextState ..|> TextState
-ComposeMutableTextState ..|> MutableTextState
-ComposeTextUndoState ..|> TextUndoState
+'AndroidLinkPreviewRepository -[hidden]u- LinkPreviewRepository
+SettingsRepository -[hidden]r- AndroidSettingsRepository
+SettingsRepository -[hidden]- SyncRepository
 
-ComposeTextState ..> ComposeMutableTextState
-ComposeTextState "1" *-- "1" ComposeTextUndoState
-
-TextState -[hidden]l- ComposeMutableTextState
-
-TextUndoState -[hidden]- TextSelection
+SyncRepository -[hidden]r- YandexSyncRepository
+SyncRepository -[hidden]- SyncRepositoryFactory
 
 @enduml

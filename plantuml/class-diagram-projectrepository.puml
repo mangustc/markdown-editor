@@ -1,6 +1,4 @@
 @startuml
-left to right direction
-
 skinparam ClassBackgroundColor #FFFFFF
 
 !include class-diagram.puml
@@ -26,37 +24,37 @@ remove Scalar
 remove StringList
 
 'TextState
-'remove TextState
-'remove MutableTextState
-'remove TextSelection
-'remove TextUndoState
+remove TextState
+remove MutableTextState
+remove TextSelection
+remove TextUndoState
 
 'Settings
 remove Settings
 remove ValidSyncProvider
 
 'Project
-remove Project
-remove RelativePath
-remove FileSystemPath
-remove ProjectFile
+'remove Project
+'remove RelativePath
+'remove FileSystemPath
+'remove ProjectFile
 remove Attachment
 remove AttachmentType
 remove ProjectAttachment
 remove InvalidProjectAttachment
 remove PendingAttachment
 remove MessageBody
-remove Note
+'remove Note
 
 'SearchQuery
-remove SearchQuery
-remove SortBy
+'remove SearchQuery
+'remove SortBy
 
 'LinkPreview
 remove LinkPreview
 
 'Repositories
-remove ProjectRepository
+'remove ProjectRepository
 remove AndroidProjectRepository
 remove NoteDao
 remove ProjectDao
@@ -64,6 +62,7 @@ remove LinkPreviewDao
 remove NoteEntity
 remove NoteEntityFts
 remove ProjectEntity
+'remove FileExistsStrategy
 remove LinkPreviewEntity
 remove NoteDb
 remove LinkPreviewRepository
@@ -73,81 +72,77 @@ remove YandexSyncRepository
 remove SyncRepositoryFactory
 remove SettingsRepository
 remove AndroidSettingsRepository
-remove FileExistsStrategy
 
 'UseCases
 remove UseCase
 remove FlowUseCase
 remove GetMessagesUseCase
-remove GetMessagesInput
-remove GetNotesUseCase
-remove GetNotesInput
 remove CreateNoteUseCase
 remove CreateNoteInput
 remove ApplyEditorEventInput
-remove ApplyEditorEventUseCase
 remove GetRealSpanInfoLinkTypeUseCase
-remove GetRealSpanInfoLinkTypeInput
 remove GetPinnedMessagesUseCase
-remove GetPinnedMessagesInput
 remove ToggleNoteTagUseCase
-remove ToggleNoteTagInput
 remove SyncProjectUseCase
-remove SyncProjectInput
+remove ApplyEditorEventUseCase
 remove SendNoteInput
-remove SendNoteUseCase
 remove DeleteNoteUseCase
 remove DeleteNoteInput
 remove GetNoteInput
 remove GetNoteUseCase
 remove RenameNoteUseCase
-remove RenameNoteInput
+remove CopyToAssetsUseCase
 remove SaveNoteTextUseCase
-remove SaveNoteTextInput
+remove GetAllTagsUseCase
 remove SelectProjectInput
-remove SelectProjectUseCase
 remove SyncDatabaseInput
+remove SendNoteUseCase
 remove SyncDatabaseUseCase
 remove LoadSavedProjectUseCase
+remove GetSettingsUseCase
+remove SelectProjectUseCase
 remove SetSettingsUseCase
 remove SetSettingsInput
 remove GetLinkPreviewUseCase
 remove GetLinkPreviewInput
-remove GetSettingsUseCase
+remove GetMessagesInput
+remove GetPinnedMessagesInput
+remove ToggleNoteTagInput
+remove RenameNoteInput
+remove SaveNoteTextInput
+remove GetRealSpanInfoLinkTypeInput
+remove SyncProjectInput
 remove GetSettingsInput
-remove GetAllTagsUseCase
 remove GetAllTagsInput
 remove ApplySearchEventUseCase
 remove ApplySearchEventInput
-remove CopyToAssetsUseCase
 remove CopyToAssetsInput
+remove GetNotesUseCase
+remove GetNotesInput
 remove GetProjectFileUseCase
 remove GetProjectFileInput
 
 'MarkdownParser
 remove MarkdownParser
 
-class ComposeTextUndoState as "ComposeСостояниеОтменыТекста" {
-    + состояниеОтмены: UndoState
-}
+ProjectRepository -[hidden]- Note
+ProjectRepository -[hidden]- FileSystemPath
+ProjectRepository -[hidden]- RelativePath
+ProjectRepository -[hidden]- ProjectFile
+ProjectRepository -[hidden]- Project
+ProjectRepository -[hidden]- SearchQuery
+ProjectRepository -[hidden]- FileExistsStrategy
 
-class ComposeTextState as "ComposeСостояниеТекста" {
-    + состояние: TextFieldState
-}
+ProjectFile -[hidden]- RelativePath
+ProjectFile -[hidden]l- Note
+RelativePath -[hidden]l- FileSystemPath
+Note -[hidden]- FileSystemPath
+FileSystemPath -[hidden]- Project
+RelativePath -[hidden]- Project
+ProjectFile -[hidden]- SearchQuery
+FileExistsStrategy -[hidden]l- Note
 
-class ComposeMutableTextState as "ComposeИзменяемоеСостояниеТекста" {
-    + state: TextFieldBuffer
-}
-
-ComposeTextState ..|> TextState
-ComposeMutableTextState ..|> MutableTextState
-ComposeTextUndoState ..|> TextUndoState
-
-ComposeTextState ..> ComposeMutableTextState
-ComposeTextState "1" *-- "1" ComposeTextUndoState
-
-TextState -[hidden]l- ComposeMutableTextState
-
-TextUndoState -[hidden]- TextSelection
+SearchQuery -[hidden]- SortBy
+SearchQuery -[hidden]l- RelativePath
 
 @enduml
